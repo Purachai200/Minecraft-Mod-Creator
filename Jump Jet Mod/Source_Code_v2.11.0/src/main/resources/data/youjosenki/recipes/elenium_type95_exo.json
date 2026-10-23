@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "D9D",
+    "BIB",
+    "PFP"
+  ],
+  "key": {
+    "D": { "item": "minecraft:diamond" },
+    "9": { "item": "youjosenki:elenium_type95_flight_unit" },
+    "B": { "item": "minecraft:copper_block" },
+    "I": { "item": "minecraft:iron_block" },
+    "P": { "item": "minecraft:piston" },
+    "F": { "item": "minecraft:firework_rocket" }
+  },
+  "result": {
+    "item": "youjosenki:elenium_type95_exo",
+    "count": 1
+  }
+}

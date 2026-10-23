@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "youjosenki:item/heavy_industrial_rocket_pack",
+    "layer1": "youjosenki:item/heavy_industrial_rocket_pack_overlay"
+  }
+}

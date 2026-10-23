@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "youjosenki:item/abyssal_scuba_rig",
+    "layer1": "youjosenki:item/abyssal_scuba_rig_overlay"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "youjosenki:item/valkyrie_thrust_boots",
+    "layer1": "youjosenki:item/valkyrie_thrust_boots_overlay"
+  }
+}

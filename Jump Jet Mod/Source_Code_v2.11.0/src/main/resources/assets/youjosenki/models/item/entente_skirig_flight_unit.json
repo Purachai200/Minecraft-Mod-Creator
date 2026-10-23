@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "youjosenki:item/entente_skirig_flight_unit",
+    "layer1": "youjosenki:item/entente_skirig_flight_unit_overlay"
+  }
+}

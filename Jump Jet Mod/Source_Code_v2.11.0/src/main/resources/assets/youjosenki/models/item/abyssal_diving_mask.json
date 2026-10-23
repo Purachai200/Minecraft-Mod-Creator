@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "youjosenki:item/abyssal_diving_mask",
+    "layer1": "youjosenki:item/abyssal_diving_mask_overlay"
+  }
+}

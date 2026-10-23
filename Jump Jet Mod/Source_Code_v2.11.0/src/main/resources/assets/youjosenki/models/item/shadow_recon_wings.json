@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "youjosenki:item/shadow_recon_wings",
+    "layer1": "youjosenki:item/shadow_recon_wings_overlay"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "youjosenki:item/titan_siege_frame",
+    "layer1": "youjosenki:item/titan_siege_frame_overlay"
+  }
+}

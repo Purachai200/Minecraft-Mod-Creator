@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "youjosenki:item/urban_scout_exolegs",
+    "layer1": "youjosenki:item/urban_scout_exolegs_overlay"
+  }
+}

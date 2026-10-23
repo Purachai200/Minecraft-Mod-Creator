@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "youjosenki:item/aquasurf_skimmer_unit",
+    "layer1": "youjosenki:item/aquasurf_skimmer_unit_overlay"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "youjosenki:item/elenium_type95_flight_unit",
+    "layer1": "youjosenki:item/elenium_type95_flight_unit_overlay"
+  }
+}

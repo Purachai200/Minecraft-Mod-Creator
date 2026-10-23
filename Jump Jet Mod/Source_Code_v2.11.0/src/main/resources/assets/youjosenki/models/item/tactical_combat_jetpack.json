@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "youjosenki:item/tactical_combat_jetpack",
+    "layer1": "youjosenki:item/tactical_combat_jetpack_overlay"
+  }
+}
