@@ -88,6 +88,12 @@ minecraft {
         client {
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             property 'forge.enabledGameTestNamespaces', mod_id
+            // Dev-only rig screenshot showcase (client/debug/ClientAutoTest): JUMPJET_AUTOTEST=<name> ./gradlew runClient
+            if (System.getenv('JUMPJET_AUTOTEST')) {
+                property 'youjosenki.autotest', System.getenv('JUMPJET_AUTOTEST')
+                property 'youjosenki.autotest.rigs', System.getenv('JUMPJET_AUTOTEST_RIGS') ?: ''
+                args '--quickPlaySingleplayer', System.getenv('JUMPJET_AUTOTEST_WORLD') ?: 'New World'
+            }
         }
 
         server {

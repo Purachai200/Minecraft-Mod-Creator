@@ -73,8 +73,8 @@ public class FlightRigGeoModel extends GeoModel<EleniumFlightUnitItem> {
         rotX("right_leg_heel_nozzle", vector * 0.8F);
         rotX("left_leg_heel_nozzle", vector * 0.8F);
         rotX("twin_drive_torso_injectors", vector * 0.6F);
-        // Siege pods face rearward: pitched down to hover, levelling out at speed
-        rotX("siege_frame_thrusters", flying ? -0.9F + Mth.clamp(speed, 0.0F, 0.9F) + jitter : -0.25F);
+        // Siege pods face rearward: pitched down to hover, levelling out at speed (sign verified in autotest screenshots)
+        rotX("siege_frame_thrusters", flying ? 0.9F - Mth.clamp(speed, 0.0F, 0.9F) + jitter : 0.25F);
         // Exo boost pack kicks rearward whenever the wearer is airborne (boost jump / dash)
         float kick = entity.onGround() ? 0.0F : (sprinting ? 0.7F : 0.35F) + jitter;
         rotX("urban_exo_harness_thruster_left", kick);

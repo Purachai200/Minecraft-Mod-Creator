@@ -1009,7 +1009,9 @@ public class EleniumFlightUnitItem extends Item implements ICurioItem, DyeableLe
                     }
                 }
 
-                boolean isMoving = player.getDeltaMovement().horizontalDistanceSqr() > 0.0005;
+                // Position delta, not getDeltaMovement(): the server never integrates a client-driven player's velocity
+                double movedX = player.getX() - player.xo, movedZ = player.getZ() - player.zo;
+                boolean isMoving = movedX * movedX + movedZ * movedZ > 0.0005;
 
                 // Drain energy only in Survival / Adventure mode on server
                 // Dynamic energy scaling: Consecutive/higher boost steps consume significantly more energy!

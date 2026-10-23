@@ -127,7 +127,7 @@ def paint_base_face(px, mat, face, rect, seed):
             elif mat == "hose":  # ribbed braided hose
                 lum = 120 + (26 if (lx if fw > fh else ly) % 2 == 0 else 0) + n * 6
             elif mat == "rail":  # machined gunmetal rail with lightening holes
-                lum = 140 + 30 * (1 - ty) + n * 6
+                lum = 140 + 30 * (1 - ty) + n * 3
                 if fw >= 3 and fh >= 4 and lx == fw // 2 and ly % 3 == 1:
                     lum = 60
             elif mat == "bright":  # polished bezel / collars
@@ -138,7 +138,7 @@ def paint_base_face(px, mat, face, rect, seed):
             elif mat == "gauge":
                 lum = 200 if (lx in (0, fw - 1) or ly in (0, fh - 1)) else 80 + n * 10
             elif mat == "nozzle":  # heat-scorched bell: darkens + temper bands toward the exit
-                lum = 190 - ty * 80 + n * 10
+                lum = 190 - ty * 80 + n * 4
                 if ly % 3 == 2:
                     lum -= 18
                 if face == "bottom":  # throat
@@ -146,13 +146,13 @@ def paint_base_face(px, mat, face, rect, seed):
                     lum = 150 if edge == 0 else 35 + n * 10
             elif mat == "tank":  # cylinder: fake curvature + weld seams + stencil band
                 curve = math.cos((tx - 0.32) * math.pi * 0.9)
-                lum = 120 + 110 * max(0.0, curve) + n * 8
+                lum = 120 + 110 * max(0.0, curve) + n * 3
                 if fh > 8 and ly in (1, fh - 2):
                     lum -= 45
                 if fh > 8 and ly == fh // 3:
                     lum += 18
             elif mat == "aero":  # skin panel: rivet rows, panel line, leading-edge polish
-                lum = 200 - ty * 25 + n * 7
+                lum = 200 - ty * 25 + n * 3
                 if ly == 0:
                     lum = 240
                 if fw > 6 and lx % 6 == 5:
@@ -160,7 +160,7 @@ def paint_base_face(px, mat, face, rect, seed):
                 if fh > 3 and ly == fh - 2 and lx % 2 == 0:
                     lum += 28
             else:  # armor plate: bevel, panel seams, corner rivets, edge wear
-                lum = 196 - ty * 30 + n * 9
+                lum = 196 - ty * 30 + n * 4
                 if fw >= 8 and lx == fw // 2:
                     lum -= 30
                 if fh >= 8 and ly == fh // 2:
@@ -217,13 +217,11 @@ def build_armor():
                 paint_overlay_face(over, mat, face, rect)
             else:
                 paint_base_face(base, mat, face, rect, seed=u * 131 + v)
-    # Emissive-only parts must stay cut out of the base layer
-    for u, v, w, h, d in boxes:
-        if MATERIAL.get((u, v)) in EMISSIVE:
-            for rect in faces(u, v, w, h, d).values():
-                for y in range(rect[1], min(rect[3], 128)):
-                    for x in range(rect[0], min(rect[2], 128)):
-                        base[y][x] = (0, 0, 0, 0)
+    # GeckoLib's glowmask only marks which BASE pixels glow, so emissive colours must live in the base too
+    for y in range(128):
+        for x in range(128):
+            if over[y][x][3]:
+                base[y][x] = over[y][x][:3] + (255,)
     d = os.path.join(ASSETS, "textures/models/armor")
     write_png(os.path.join(d, "elenium_flight_unit.png"), base)
     write_png(os.path.join(d, "elenium_flight_unit_glowmask.png"), over)  # GeckoLib AutoGlowingGeoLayer
