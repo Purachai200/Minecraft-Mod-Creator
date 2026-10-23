@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "PEP",
+    "DWD",
+    "OFO"
+  ],
+  "key": {
+    "P": { "item": "minecraft:phantom_membrane" },
+    "E": { "item": "minecraft:ender_pearl" },
+    "D": { "item": "minecraft:diamond" },
+    "W": { "item": "youjosenki:republic_type101_flight_unit" },
+    "O": { "item": "minecraft:obsidian" },
+    "F": { "item": "minecraft:firework_rocket" }
+  },
+  "result": {
+    "item": "youjosenki:shadow_recon_wings",
+    "count": 1
+  }
+}

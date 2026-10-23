@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Youjo Senki Flight Unit - Complete 3D Model Showcase (All 7 Designs)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    body {
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    canvas {
+      cursor: grab;
+    }
+    canvas:active {
+      cursor: grabbing;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4">
+  <div class="max-w-6xl mx-auto space-y-4">
+    
+    <!-- Header -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+            Complete Fleet Showcase v2.10.0
+          </span>
+          <span class="text-xs text-[var(--muted-foreground)]">10 Unique Flight & Specialized Apparatus Designs</span>
+        </div>
+        <h1 class="text-xl font-bold mt-1 text-[var(--foreground)] tracking-tight">
+          Youjo Senki & Jump Jet Mod — 3D Equipment Showcase
+        </h1>
+        <p class="text-sm text-[var(--muted-foreground)] mt-0.5">
+          เลือกสลับดูโมเดล 3D ได้ครบทุกรุ่นใน mod ทั้ง 10 แบบ พร้อมหมุน 360 องศา และแยกส่วนประกอบ
+        </p>
+      </div>
+
+      <!-- Quick Action Controls -->
+      <div class="flex items-center gap-2">
+        <button id="btnAutoRotate" class="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] bg-[var(--content)] hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors">
+          🔄 หมุนอัตโนมัติ: <span id="autoRotateText" class="font-bold text-cyan-400">ON</span>
+        </button>
+        <button id="btnResetView" class="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] bg-[var(--content)] hover:bg-[var(--border)] transition-colors">
+          🎯 รีเซ็ตมุมมอง
+        </button>
+      </div>
+    </div>
+
+    <!-- 7-Model Selection Tab Bar -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-2.5 shadow-sm overflow-x-auto">
+      <div class="flex items-center gap-2 min-w-max">
+        <button class="model-tab active px-3.5 py-2 rounded-xl text-xs font-bold border border-cyan-500/40 bg-cyan-500/15 text-cyan-300 transition-all flex items-center gap-2" data-model="MAGE_UNIT">
+          <span>🎖️</span> 1. Imperial Mage (Type 95/97)
+        </button>
+        <button class="model-tab px-3.5 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--content)] hover:bg-[var(--border)] text-[var(--foreground)] transition-all flex items-center gap-2" data-model="BACK_JETPACK">
+          <span>🚀</span> 2. Combat Jetpack (Model 1923)
+        </button>
+        <button class="model-tab px-3.5 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--content)] hover:bg-[var(--border)] text-[var(--foreground)] transition-all flex items-center gap-2" data-model="TACTICAL_WINGS">
+          <span>🦅</span> 3. Apex Delta-Wings (Type 101)
+        </button>
+        <button class="model-tab px-3.5 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--content)] hover:bg-[var(--border)] text-[var(--foreground)] transition-all flex items-center gap-2" data-model="HEAVY_ROCKET">
+          <span>🛡️</span> 4. Titan Heavy Rocket (Type 82)
+        </button>
+        <button class="model-tab px-3.5 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--content)] hover:bg-[var(--border)] text-[var(--foreground)] transition-all flex items-center gap-2" data-model="TWIN_DRIVE_EXO">
+          <span>⚡</span> 5. Type 95 Exoskeleton
+        </button>
+        <button class="model-tab px-3.5 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--content)] hover:bg-[var(--border)] text-[var(--foreground)] transition-all flex items-center gap-2" data-model="SIEGE_ARTILLERY">
+          <span>💥</span> 6. Titan Heavy Siege Frame
+        </button>
+        <button class="model-tab px-3.5 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--content)] hover:bg-[var(--border)] text-[var(--foreground)] transition-all flex items-center gap-2" data-model="THRUST_BOOTS">
+          <span>⛸️</span> 7. Valkyrie Thrust Boots
+        </button>
+        <button class="model-tab px-3.5 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--content)] hover:bg-[var(--border)] text-[var(--foreground)] transition-all flex items-center gap-2" data-model="HYDRO_SKIMMER">
+          <span>🏄</span> 8. Aquasurf Hydro-Glider
+        </button>
+        <button class="model-tab px-3.5 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--content)] hover:bg-[var(--border)] text-[var(--foreground)] transition-all flex items-center gap-2" data-model="TACTICAL_SCUBA">
+          <span>🤿</span> 9. Abyssal Scuba Rig
+        </button>
+        <button class="model-tab px-3.5 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--content)] hover:bg-[var(--border)] text-[var(--foreground)] transition-all flex items-center gap-2" data-model="DIVING_MASK">
+          <span>🥽</span> 10. Abyssal Diving Mask
+        </button>
+        <button class="model-tab px-3.5 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--content)] hover:bg-[var(--border)] text-[var(--foreground)] transition-all flex items-center gap-2" data-model="URBAN_EXO_LEGS">
+          <span>🦾</span> 11. Urban CoD:AW Exo (Arms+Spine+Legs)
+        </button>
+      </div>
+    </div>
+
+    <!-- Main 3D Canvas & Inspector Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      
+      <!-- 3D Viewport (8 Cols) -->
+      <div class="lg:col-span-8 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col">
+        <div class="absolute top-6 left-6 z-10 pointer-events-none flex flex-col gap-1">
+          <span id="currentModelBadge" class="text-xs font-mono uppercase text-cyan-400 bg-black/70 px-2.5 py-1 rounded-md border border-cyan-500/30 backdrop-blur-sm">
+            Model: Imperial Aerial Mage Rig
+          </span>
+          <span id="partCountLabel" class="text-xs font-mono text-zinc-400 bg-black/70 px-2.5 py-1 rounded-md backdrop-blur-sm">
+            Total Elements: 28 Box Geometries
+          </span>
+        </div>
+
+        <!-- Wing Animation Button (Only for Tactical Wings) -->
+        <div id="wingAnimContainer" class="absolute top-6 right-6 z-10 hidden">
+          <button id="btnToggleWings" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-cyan-500 text-black shadow-lg hover:bg-cyan-400 transition-all flex items-center gap-1.5">
+            <span>🪽</span> กางปีก/พับปีก (Deploy/Fold)
+          </button>
+        </div>
+
+        <div class="relative w-full aspect-square max-h-[520px] rounded-xl overflow-hidden bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 border border-zinc-800 flex items-center justify-center">
+          <canvas id="viewport3D" class="w-full h-full block"></canvas>
+          
+          <div class="absolute bottom-3 right-3 text-xs text-zinc-500 pointer-events-none font-mono">
+            Scroll: Zoom | Left Click: Orbit 360°
+          </div>
+        </div>
+
+        <!-- Camera / Zoom Slider -->
+        <div class="mt-4 flex items-center justify-between text-xs text-[var(--muted-foreground)] px-2">
+          <span>ระยะซูม (Camera Distance)</span>
+          <input type="range" id="zoomSlider" min="20" max="65" value="40" class="w-48 accent-cyan-400 cursor-pointer">
+          <span id="zoomValue" class="font-mono text-cyan-400">40u</span>
+        </div>
+      </div>
+
+      <!-- Controls & Part Inspector (4 Cols) -->
+      <div class="lg:col-span-4 space-y-4">
+        
+        <!-- Model Info Sheet -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <h2 id="modelTitle" class="text-sm font-bold uppercase tracking-wider text-[var(--foreground)]">
+              Imperial Aerial Mage Rig
+            </h2>
+            <span id="modelTier" class="text-xs font-bold text-cyan-400 font-mono">TIER-1 MAGITECH</span>
+          </div>
+          <p id="modelDesc" class="text-xs text-[var(--muted-foreground)] leading-relaxed">
+            อุปกรณ์บินมาตรฐานของจักรวรรดิ (Tanya Type 95 / 97) ประกอบด้วยเครื่องคำนวณเวทมนตร์เอเลเนียมกลางอก หม้อต้มกระดูกงูหลัง และท่อไอพ่นเดี่ยวรัดขาขวาพร้อมสกี
+          </p>
+        </div>
+
+        <!-- Component Isolation Selector -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-[var(--foreground)] flex items-center gap-2">
+            <span>🔍</span> แยกดูชิ้นส่วนเฉพาะจุด
+          </h2>
+          <div id="subpartList" class="grid grid-cols-1 gap-1.5">
+            <!-- Dynamically populated per model -->
+          </div>
+        </div>
+
+        <!-- Material / Dye Preset -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-[var(--foreground)] flex items-center gap-2">
+            <span>🎨</span> สีย้อมเกราะ (Armor Dyeing Presets)
+          </h2>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="color-btn active px-3 py-2 rounded-xl text-xs font-medium border border-cyan-500/40 bg-zinc-800 text-zinc-100 flex items-center gap-2" data-color="#2c353d">
+              <span class="w-3.5 h-3.5 rounded-full bg-[#2c353d] border border-white/20"></span>
+              <span>Imperial Gray</span>
+            </button>
+            <button class="color-btn px-3 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-zinc-800 text-zinc-100 flex items-center gap-2" data-color="#1b242e">
+              <span class="w-3.5 h-3.5 rounded-full bg-[#1b242e] border border-white/20"></span>
+              <span>Allied Navy</span>
+            </button>
+            <button class="color-btn px-3 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-zinc-800 text-zinc-100 flex items-center gap-2" data-color="#3d493a">
+              <span class="w-3.5 h-3.5 rounded-full bg-[#3d493a] border border-white/20"></span>
+              <span>Alpine Forest</span>
+            </button>
+            <button class="color-btn px-3 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-zinc-800 text-zinc-100 flex items-center gap-2" data-color="#5c2424">
+              <span class="w-3.5 h-3.5 rounded-full bg-[#5c2424] border border-white/20"></span>
+              <span>Russy Crimson</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Technical Capabilities -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm text-xs space-y-2">
+          <h3 class="font-bold text-[var(--foreground)] uppercase tracking-wider flex items-center justify-between">
+            <span>Performance Specs</span>
+            <span id="specSoundProfile" class="text-cyan-400 font-mono">PROTOTYPE_MANA</span>
+          </h3>
+          <div class="grid grid-cols-2 gap-2 text-zinc-400 pt-1">
+            <div class="bg-black/30 p-2 rounded-lg border border-zinc-800">
+              <div class="text-zinc-500 text-[11px]">เพดานบินสูงสุด</div>
+              <div id="specCeiling" class="text-sm font-bold text-zinc-200 font-mono">320 m</div>
+            </div>
+            <div class="bg-black/30 p-2 rounded-lg border border-zinc-800">
+              <div class="text-zinc-500 text-[11px]">ความเร็ว Cruising</div>
+              <div id="specSpeed" class="text-sm font-bold text-cyan-400 font-mono">0.082 F</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // ==========================================
+    // 3D Canvas Geometry & Multi-Model Engine
+    // ==========================================
+    const canvas = document.getElementById('viewport3D');
+    const ctx = canvas.getContext('2d');
+
+    let width = 0;
+    let height = 0;
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      width = rect.width;
+      height = rect.height;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Camera & Animation State
+    let rotX = 0.22;
+    let rotY = -0.55;
+    let cameraDist = 40;
+    let isAutoRotating = true;
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+
+    let currentModel = 'MAGE_UNIT';
+    let activeFilter = 'all';
+    let armorColor = '#2c353d';
+    let wingsDeployed = true;
+
+    // Materials Palette
+    const MAT_LEATHER = '#654321';
+    const MAT_LEATHER_DARK = '#4a2f15';
+    const MAT_BRASS = '#d4af37';
+    const MAT_BRASS_LIGHT = '#ffd700';
+    const MAT_STEEL_DARK = '#1a1f24';
+    const MAT_STEEL_MED = '#3a444c';
+    const MAT_COPPER = '#b87333';
+    const MAT_MANA_CYAN = '#00f0ff';
+    const MAT_ROCKET_ORANGE = '#ff6600';
+
+    // Model Database
+    const MODEL_SPECS = {
+      MAGE_UNIT: {
+        title: "Imperial Aerial Mage Rig (Type 95 / 97)",
+        tier: "IMPERIAL ELENIUM RIG",
+        desc: "อุปกรณ์บินรุ่นประวัติศาสตร์ของจักรวรรดิ ใช้เครื่องคำนวณเวทมนตร์เอเลเนียมกลางอก หม้อต้มกระดูกงูหลัง และท่อไอพ่นขาเดียวพร้อมสกีรองบูท",
+        ceiling: "320 m",
+        speed: "0.082 F",
+        sound: "PROTOTYPE_MANA_CORE",
+        subparts: [
+          { id: 'all', name: '🌐 แสดงทั้งชุด (Complete Rig)' },
+          { id: 'core', name: '💎 เครื่องคำนวณ Elenium Core' },
+          { id: 'harness', name: '🎖️ สายรัดสนามยุทธวิธี 3D' },
+          { id: 'boiler', name: '🚀 หม้อต้มกระดูกงูหลัง' },
+          { id: 'leg', name: '⚙️ ท่อเจ็ตขาและสกีฝ่าเท้า' }
+        ]
+      },
+      BACK_JETPACK: {
+        title: "Conventional Combat Jetpack (Allied 1923)",
+        tier: "MILITARY TURBOJET",
+        desc: "เจ็ตแพ็คคู่มาตรฐานของกองทัพพันธมิตรและนาวิกโยธิน ทวินเทอร์ไบน์กระบอกคู่ ท่อจ่ายเชื้อเพลิงเชื่อมต่อแบบ Braided และวงแหวนปรับทิศทางไอพ่น Gimbal",
+        ceiling: "250 m",
+        speed: "0.076 F",
+        sound: "MODERN_MILITARY_JET",
+        subparts: [
+          { id: 'all', name: '🌐 แสดงทั้งชุด (Complete Jetpack)' },
+          { id: 'harness', name: '🎖️ สายรัดสนามยุทธวิธี 3D' },
+          { id: 'turbines', name: '🔥 ท่อเทอร์ไบน์คู่และกรวยรับลม' },
+          { id: 'manifold', name: '🎛️ กล่องกระจายเชื้อเพลิงและเกจวัด' },
+          { id: 'nozzles', name: '💨 หัวฉีดเวกเตอร์ Gimbal' }
+        ]
+      },
+      TACTICAL_WINGS: {
+        title: "Tactical Apex Delta-Wings (Republic Type 101)",
+        tier: "SUPERSONIC GLIDER",
+        desc: "อุปกรณ์บินปีกเดลต้าความเร็วเหนือเสียงของสาธารณรัฐฟรองซัวส์ ปีกกวาดแอโรไดนามิก แพนหางดิ่งระบายความร้อน และท่อไอพ่นไมโครเจ็ตปลายปีก",
+        ceiling: "340 m",
+        speed: "0.084 F",
+        sound: "AERODYNAMIC_STREAM",
+        subparts: [
+          { id: 'all', name: '🌐 แสดงทั้งชุด (Complete Glider-Jet)' },
+          { id: 'harness', name: '🎖️ สายรัดสนามยุทธวิธี 3D' },
+          { id: 'fuselage', name: '🕹️ กล่องระบบการบิน Avionics & แพนหาง' },
+          { id: 'wings', name: '🪽 ปีกเดลต้าและท่อไอพ่นปลายปีก' }
+        ]
+      },
+      HEAVY_ROCKET: {
+        title: "Titan Industrial Rocket Rig (Federation 82)",
+        tier: "HEAVY INDUSTRIAL",
+        desc: "แท่นขับเคลื่อนจรวดหนักของสหพันธรัฐรุสซี ท่อเชื้อเพลิงขนาดยักษ์คู่ โครงเหล็กกันกระแทก Roll-cage บล็อกขับดัน RCS และหัวฉีดไอพ่นระเบิดพลังสูง",
+        ceiling: "190 m",
+        speed: "0.060 F",
+        sound: "HEAVY_ROCKET_BOOSTER",
+        subparts: [
+          { id: 'all', name: '🌐 แสดงทั้งชุด (Complete Heavy Rig)' },
+          { id: 'harness', name: '🎖️ สายรัดสนามยุทธวิธี 3D' },
+          { id: 'tanks', name: '🛢️ ถังเชื้อเพลิงจรวดคู่และโครงเหล็ก' },
+          { id: 'rcs', name: '🎯 บล็อกขับดันควบคุมทิศทาง RCS' },
+          { id: 'blast_nozzles', name: '💥 หัวขับดันจรวดทำลายล้าง' }
+        ]
+      },
+      TWIN_DRIVE_EXO: {
+        title: "Type 95 Exoskeleton (Twin-Drive Quad-Core)",
+        tier: "ADVANCED PROTOTYPE",
+        desc: "โครงสร้างเสริมกำลัง Exoskeleton ขับเคลื่อนด้วยแกนเวทมนตร์คู่ซิงโครไนซ์ ครีบระบายความร้อนบ่า และระบบไอพ่นสองขาสมบูรณ์แบบ",
+        ceiling: "380 m",
+        speed: "0.086 F",
+        sound: "PROTOTYPE_MANA_CORE",
+        subparts: [
+          { id: 'all', name: '🌐 แสดงทั้งชุด (Complete Exoskeleton)' },
+          { id: 'harness', name: '🎖️ สายรัดสนามยุทธวิธี 3D' },
+          { id: 'dual_core', name: '💎 แกนเวทมนตร์คู่และตัวเชื่อม Coupler' },
+          { id: 'shoulder_fins', name: '🛡️ ครีบระบายความร้อนระดับสูง' },
+          { id: 'dual_legs', name: '⚙️ ระบบขากลไกคู่ (Dual Struts)' }
+        ]
+      },
+      SIEGE_ARTILLERY: {
+        title: "Titan Mk-II Heavy Siege Assault Frame",
+        tier: "SIEGE JUGGERNAUT",
+        desc: "เกราะโครงปืนใหญ่จู่โจมหนัก คานซับแรงถีบปืนใหญ่เหนือหัวไหล่ แผ่นเกราะหน้าอกยึดสลักหนาแน่น เมทริกซ์ท่อขับดัน 4 ทิศทาง (2x2 Grid)",
+        ceiling: "220 m",
+        speed: "0.064 F",
+        sound: "HEAVY_ROCKET_BOOSTER",
+        subparts: [
+          { id: 'all', name: '🌐 แสดงทั้งชุด (Complete Siege Frame)' },
+          { id: 'harness', name: '🎖️ สายรัดสนามยุทธวิธี 3D' },
+          { id: 'gantries', name: '🏗️ คานซับแรงสะท้อนปืนใหญ่เหนือไหล่' },
+          { id: 'mantlet', name: '🛡️ แผ่นเกราะชีลด์หน้าอกยึดสลัก' },
+          { id: 'quad_thrusters', name: '💨 เมทริกซ์ 4 ท่อขับดันและขาค้ำ' }
+        ]
+      },
+      THRUST_BOOTS: {
+        title: "Valkyrie Kinetic Hover-Thrust Boots",
+        tier: "TACTICAL SKATER",
+        desc: "รองเท้าบูตขับเคลื่อนร็อกเก็ตคู่สำหรับเลียดพื้นและโฉบโจมตี สนับแข้งหุ้มเกราะ หัวขับดันความเร็วสูงข้างข้อเท้า และครีบปรับสมดุลอากาศพลศาสตร์",
+        ceiling: "200 m",
+        speed: "0.080 F",
+        sound: "MODERN_MILITARY_JET",
+        subparts: [
+          { id: 'all', name: '🌐 แสดงทั้งชุด (Complete Boots)' },
+          { id: 'harness', name: '🎖️ สายรัดสนามยุทธวิธี 3D' },
+          { id: 'greaves', name: '🛡️ สนับแข้งเกราะป้องกันหน้าแข้ง' },
+          { id: 'rocket_pods', name: '🚀 ท่อร็อกเก็ตขับเคลื่อนท้ายข้อเท้า' },
+          { id: 'hover_vanes', name: '🪽 ครีบปรับสมดุลโฮเวอร์ข้างลำขา' }
+        ]
+      },
+      HYDRO_SKIMMER: {
+        title: "Aquasurf Hydro-Glider Rig (Water Skimmer)",
+        tier: "AQUATIC SURFACE JET",
+        desc: "อุปกรณ์บินโฉบผิวน้ำ มีแรงลอยตัวสูง ใส่แล้วไม่จมน้ำ ดำน้ำไม่ได้ เคลื่อนที่บนน้ำได้รวดเร็วประหนึ่งสกีน้ำ เพดานบินต่ำเลียดพื้น (76m) เดินบนบกช้า",
+        ceiling: "76 m",
+        speed: "0.065 F (น้ำ ~65 km/h)",
+        sound: "AERODYNAMIC_STREAM",
+        subparts: [
+          { id: 'all', name: '🌐 แสดงทั้งชุด (Complete Hydro-Glider)' },
+          { id: 'harness', name: '🎖️ สายรัดสนามยุทธวิธี 3D' },
+          { id: 'skis', name: '🏄 สกีน้ำ Hydrofoil ทวินโพนทูน' },
+          { id: 'waterjet', name: '💧 ปั๊มไอพ่นขับดันน้ำ Waterjet' },
+          { id: 'rudder', name: '🎛️ แพนหางควบคุมและแผ่นชีลด์อก' }
+        ]
+      },
+      TACTICAL_SCUBA: {
+        title: "Abyssal Combat Scuba Rig (Deep-Sea Diver)",
+        tier: "SUB-SURFACE TACTICAL",
+        desc: "ชุดดำน้ำยุทธวิธี ถังอากาศอัดความดันสูงคู่ด้านหลัง ชุดกรองอากาศ Rebreather หน้าอก เมื่อใส่คู่กับ Abyssal Diving Mask จะได้สถานะดำน้ำสมบูรณ์ 2 ชิ้น (หายใจไม่จำกัด, มองเห็นชัดเจน, ว่ายน้ำเร็ว)",
+        ceiling: "64 m (ใต้น้ำลึก)",
+        speed: "ว่ายน้ำเร็ว / บนบกช้า",
+        sound: "PROTOTYPE_MANA_CORE",
+        subparts: [
+          { id: 'all', name: '🌐 แสดงทั้งชุด (Complete Scuba Rig)' },
+          { id: 'harness', name: '🎖️ สายรัดสนามยุทธวิธี 3D' },
+          { id: 'cylinders', name: '🤿 ถังอากาศแรงดันสูงคู่ & วาล์วทองเหลือง' },
+          { id: 'rebreather', name: '🫧 เครื่องกรองอากาศ Rebreather & มาตรวัด' },
+          { id: 'hoses', name: '🫁 ท่อส่งอากาศข้ามหัวไหล่ & บัลลาสต์ถ่วง' }
+        ]
+      },
+      DIVING_MASK: {
+        title: "Abyssal Tactical Diving Mask (Panoramic Visor & Rebreather)",
+        tier: "SUB-SURFACE HEAD AUXILIARY",
+        desc: "หน้ากากดำน้ำทางยุทธวิธี ติดตั้งกระจก Visor มุมกว้างมองเห็นใต้น้ำชัดเจน หน้ากากกรองปาก-จมูก พร้อมวาล์วเรกูเลเตอร์คู่ข้างแก้ม เมื่อสวมคู่กับ Abyssal Scuba Rig จะได้สถานะดำน้ำสมบูรณ์ 2/2",
+        ceiling: "ใต้น้ำลึก (Deep Abyssal)",
+        speed: "ช่วยหายใจ & มุมมองใต้น้ำ",
+        sound: "PROTOTYPE_MANA_CORE",
+        subparts: [
+          { id: 'all', name: '🌐 แสดงทั้งชุด (Complete Diving Mask)' },
+          { id: 'visor', name: '🥽 กระจกหน้ากาก Panoramic Visor & ขอบซีล' },
+          { id: 'mask_body', name: '😷 หน้ากากครอบปาก-จมูก (Oral-Nasal Mask)' },
+          { id: 'regulators', name: '⚙️ วาล์วเรกูเลเตอร์คู่ & ไดอะแฟรมพูด' },
+          { id: 'straps', name: '🎗️ สายรัดศีรษะซิลิโคนคู่ (Headstraps)' }
+        ]
+      },
+      URBAN_EXO_LEGS: {
+        title: "Urban Tactical Kinetic Exoskeleton (CoD:AW Full Rig)",
+        tier: "STARTER FULL EXOSKELETON",
+        desc: "โครงสร้างเอ็กโซสเกเลตันครบชุด สไตล์ Call of Duty: Advanced Warfare ติดตั้งกระดูกสันหลังจักรกล 4 ปล้อง เสาอากาศบ่า คานแขนกลไฮดรอลิก และโครงขารับแรงกระแทก กระโดดได้สูง พุ่งตัวระยะสั้นได้ ซับแรงตก ไม่รองรับการบิน ใส่ร่วมกับชุดบินอื่นได้",
+        ceiling: "100 m",
+        speed: "พุ่งตัว / กระโดดสูง (+25% Ground)",
+        sound: "MODERN_MILITARY_JET",
+        subparts: [
+          { id: 'all', name: '🌐 แสดงทั้งชุด (Complete CoD:AW Exo)' },
+          { id: 'spine', name: '🦴 กระดูกสันหลังจักรกล & กล่องพลังงานบน' },
+          { id: 'arms', name: '🦾 คานข้อต่อแขนกล & รางไฮดรอลิก (Arms)' },
+          { id: 'harness', name: '🎖️ เข็มขัดอุ้งเชิงกราน & คาปาซิเตอร์ล่าง' },
+          { id: 'struts', name: '⚙️ โครงคานเอ็กโซสเกเลตันต้นขา & สนับแข้ง' },
+          { id: 'pistons', name: '💨 ลูกสูบไฮดรอลิกดีดตัวน่องขา' },
+          { id: 'spring_soles', name: '👟 แผ่นสปริงรองส้นเท้าซับแรงกระแทก' }
+        ]
+      }
+    };
+
+    // Shared Base Harness Builder
+    function buildBaseHarness(elems) {
+      // Shoulder Straps (Left & Right)
+      elems.push({ x: 2.3, y: 3.5, z: 0.1, w: 2.1, h: 10.5, d: 4.8, c: MAT_LEATHER, g: 'harness', name: 'Shoulder Strap L' });
+      elems.push({ x: -2.3, y: 3.5, z: 0.1, w: 2.1, h: 10.5, d: 4.8, c: MAT_LEATHER, g: 'harness', name: 'Shoulder Strap R' });
+      // Shoulder Epaulet Pads
+      elems.push({ x: 2.6, y: 8.8, z: 0.1, w: 2.6, h: 1.1, d: 5.2, c: MAT_LEATHER_DARK, g: 'harness', name: 'Epaulet Pad L' });
+      elems.push({ x: -2.6, y: 8.8, z: 0.1, w: 2.6, h: 1.1, d: 5.2, c: MAT_LEATHER_DARK, g: 'harness', name: 'Epaulet Pad R' });
+      // Tactical Sternum Cross Latch
+      elems.push({ x: 0.0, y: 4.8, z: 2.5, w: 3.8, h: 1.6, d: 0.7, c: MAT_LEATHER, g: 'harness', name: 'Sternum Strap' });
+      elems.push({ x: 0.0, y: 4.8, z: 2.8, w: 1.8, h: 2.0, d: 0.5, c: MAT_BRASS, g: 'harness', name: 'Quick-Release Buckle' });
+      // Tactical Waist Cummerbund Belt
+      elems.push({ x: 0.0, y: -2.8, z: 0.0, w: 8.8, h: 2.2, d: 4.9, c: MAT_LEATHER_DARK, g: 'harness', name: 'Combat Belt' });
+      elems.push({ x: 0.0, y: -2.8, z: 2.6, w: 2.4, h: 2.5, d: 0.6, c: MAT_BRASS, g: 'harness', name: 'Belt Buckle' });
+      // Utility Pouches
+      elems.push({ x: 4.6, y: -2.8, z: 0.0, w: 1.1, h: 2.8, d: 2.4, c: MAT_LEATHER, g: 'harness', name: 'Ammo Pouch L' });
+      elems.push({ x: -4.6, y: -2.8, z: 0.0, w: 1.1, h: 2.8, d: 2.4, c: MAT_LEATHER, g: 'harness', name: 'Ammo Pouch R' });
+      // Spinal Mounting Rails on back
+      elems.push({ x: -1.6, y: 3.5, z: -2.6, w: 1.2, h: 8.5, d: 0.6, c: MAT_STEEL_DARK, g: 'harness', name: 'Spine Rail R' });
+      elems.push({ x: 1.6, y: 3.5, z: -2.6, w: 1.2, h: 8.5, d: 0.6, c: MAT_STEEL_DARK, g: 'harness', name: 'Spine Rail L' });
+    }
+
+    // Builder Functions for All 7 Models
+    function buildElements() {
+      const elems = [];
+      buildBaseHarness(elems);
+
+      switch (currentModel) {
+        case 'MAGE_UNIT': {
+          // Elenium Core
+          elems.push({ x: 0.0, y: 0.2, z: 3.2, w: 6.8, h: 6.6, d: 3.2, c: armorColor, g: 'core', name: 'Core Housing' });
+          elems.push({ x: 0.0, y: 3.8, z: 3.0, w: 5.8, h: 1.3, d: 2.8, c: MAT_STEEL_DARK, g: 'core', name: 'Top Cowl' });
+          elems.push({ x: 1.8, y: 4.6, z: 2.8, w: 1.8, h: 1.1, d: 2.0, c: MAT_STEEL_DARK, g: 'core', name: 'Intake L' });
+          elems.push({ x: -1.8, y: 4.6, z: 2.8, w: 1.8, h: 1.1, d: 2.0, c: MAT_STEEL_DARK, g: 'core', name: 'Intake R' });
+          elems.push({ x: 3.7, y: 0.2, z: 2.8, w: 0.8, h: 5.5, d: 2.4, c: MAT_COPPER, g: 'core', name: 'Radiator L' });
+          elems.push({ x: -3.7, y: 0.2, z: 2.8, w: 0.8, h: 5.5, d: 2.4, c: MAT_COPPER, g: 'core', name: 'Radiator R' });
+          elems.push({ x: 0.0, y: 0.3, z: 4.7, w: 4.6, h: 4.6, d: 0.6, c: MAT_BRASS, g: 'core', name: 'Outer Bezel' });
+          elems.push({ x: 0.0, y: 0.3, z: 5.0, w: 3.6, h: 3.6, d: 0.5, c: MAT_BRASS_LIGHT, g: 'core', name: 'Inner Bezel' });
+          elems.push({ x: 0.0, y: 0.3, z: 5.4, w: 2.6, h: 2.6, d: 0.8, c: MAT_MANA_CYAN, g: 'core', emissive: true, name: 'Computation Crystal' });
+          elems.push({ x: -2.8, y: 3.3, z: 3.7, w: 1.1, h: 1.6, d: 1.6, c: MAT_BRASS, g: 'core', name: 'Gauge R' });
+          elems.push({ x: 2.8, y: 3.3, z: 3.7, w: 1.1, h: 1.6, d: 1.6, c: MAT_BRASS, g: 'core', name: 'Gauge L' });
+          elems.push({ x: -1.4, y: -3.8, z: 2.8, w: 1.6, h: 1.4, d: 2.0, c: MAT_STEEL_DARK, g: 'core', name: 'Nozzle R' });
+          elems.push({ x: 1.4, y: -3.8, z: 2.8, w: 1.6, h: 1.4, d: 2.0, c: MAT_STEEL_DARK, g: 'core', name: 'Nozzle L' });
+
+          // Boiler
+          elems.push({ x: 0.0, y: 2.5, z: -2.8, w: 7.2, h: 8.0, d: 2.2, c: armorColor, g: 'boiler', name: 'Manifold Plate' });
+          elems.push({ x: 0.0, y: 3.0, z: -4.0, w: 3.4, h: 9.0, d: 2.2, c: MAT_COPPER, g: 'boiler', name: 'Boiler Tank' });
+          elems.push({ x: 0.0, y: 3.2, z: -5.3, w: 1.4, h: 6.5, d: 0.8, c: MAT_STEEL_DARK, g: 'boiler', name: 'Spine Fins' });
+          elems.push({ x: 4.1, y: 0.8, z: 0.0, w: 0.9, h: 1.3, d: 5.2, c: MAT_COPPER, g: 'boiler', name: 'Conduit L' });
+          elems.push({ x: -4.1, y: 0.8, z: 0.0, w: 0.9, h: 1.3, d: 5.2, c: MAT_COPPER, g: 'boiler', name: 'Conduit R' });
+
+          // Leg Flugapparat
+          elems.push({ x: -2.5, y: -6.5, z: 0.0, w: 2.2, h: 2.2, d: 3.2, c: MAT_LEATHER, g: 'leg', name: 'Thigh Cuff' });
+          elems.push({ x: -3.2, y: -9.5, z: 0.8, w: 1.2, h: 4.4, d: 1.2, c: MAT_BRASS, g: 'leg', name: 'Knee Damper' });
+          elems.push({ x: -2.5, y: -8.8, z: 1.8, w: 1.8, h: 2.2, d: 0.8, c: armorColor, g: 'leg', name: 'Knee Guard' });
+          elems.push({ x: -3.6, y: -12.5, z: 0.0, w: 1.8, h: 5.2, d: 2.6, c: armorColor, g: 'leg', name: 'Calf Turbine' });
+          elems.push({ x: -3.6, y: -10.0, z: 1.4, w: 1.5, h: 1.4, d: 1.6, c: MAT_STEEL_DARK, g: 'leg', name: 'Turbine Scoop' });
+          elems.push({ x: -2.2, y: -15.8, z: 0.2, w: 4.4, h: 1.3, d: 7.8, c: MAT_STEEL_MED, g: 'leg', name: 'Boot Stirrup' });
+          elems.push({ x: -2.2, y: -14.6, z: 4.2, w: 4.0, h: 1.6, d: 1.8, c: MAT_STEEL_DARK, g: 'leg', name: 'Toe Guard' });
+          elems.push({ x: -2.2, y: -14.2, z: -3.8, w: 2.6, h: 2.4, d: 2.6, c: MAT_STEEL_DARK, g: 'leg', name: 'Heel Thruster' });
+          elems.push({ x: -2.2, y: -14.2, z: -4.8, w: 1.6, h: 1.6, d: 0.8, c: MAT_MANA_CYAN, emissive: true, g: 'leg', name: 'Heel Flare' });
+          break;
+        }
+
+        case 'BACK_JETPACK': {
+          // Dual Turbines
+          elems.push({ x: -2.6, y: 3.2, z: -3.8, w: 3.2, h: 9.0, d: 3.2, c: armorColor, g: 'turbines', name: 'Turbine Nacelle R' });
+          elems.push({ x: 2.6, y: 3.2, z: -3.8, w: 3.2, h: 9.0, d: 3.2, c: armorColor, g: 'turbines', name: 'Turbine Nacelle L' });
+          // Intake Cowls & Spinner Cones
+          elems.push({ x: -2.6, y: 8.2, z: -3.8, w: 3.6, h: 1.4, d: 3.6, c: MAT_STEEL_DARK, g: 'turbines', name: 'Intake Cowl R' });
+          elems.push({ x: 2.6, y: 8.2, z: -3.8, w: 3.6, h: 1.4, d: 3.6, c: MAT_STEEL_DARK, g: 'turbines', name: 'Intake Cowl L' });
+          elems.push({ x: -2.6, y: 9.1, z: -3.8, w: 1.0, h: 0.8, d: 1.0, c: MAT_BRASS, g: 'turbines', name: 'Spinner Cone R' });
+          elems.push({ x: 2.6, y: 9.1, z: -3.8, w: 1.0, h: 0.8, d: 1.0, c: MAT_BRASS, g: 'turbines', name: 'Spinner Cone L' });
+
+          // Center Manifold & Fuel Distributor
+          elems.push({ x: 0.0, y: 2.8, z: -3.2, w: 4.2, h: 6.0, d: 2.4, c: MAT_STEEL_MED, g: 'manifold', name: 'Fuel Distributor Box' });
+          elems.push({ x: 0.0, y: 2.8, z: -4.5, w: 5.6, h: 1.0, d: 1.0, c: MAT_COPPER, g: 'manifold', name: 'Cross-Feed Fuel Line' });
+          elems.push({ x: 0.0, y: 3.6, z: -4.5, w: 2.2, h: 2.2, d: 0.6, c: MAT_BRASS, g: 'manifold', name: 'Avionics Gauges' });
+
+          // Exhaust Bells & Vectoring Rings
+          elems.push({ x: -2.6, y: -2.2, z: -3.8, w: 2.6, h: 2.4, d: 2.6, c: MAT_STEEL_DARK, g: 'nozzles', name: 'Exhaust Bell R' });
+          elems.push({ x: 2.6, y: -2.2, z: -3.8, w: 2.6, h: 2.4, d: 2.6, c: MAT_STEEL_DARK, g: 'nozzles', name: 'Exhaust Bell L' });
+          elems.push({ x: -2.6, y: -2.6, z: -3.8, w: 3.0, h: 0.8, d: 3.0, c: MAT_BRASS, g: 'nozzles', name: 'Gimbal Vector Ring R' });
+          elems.push({ x: 2.6, y: -2.6, z: -3.8, w: 3.0, h: 0.8, d: 3.0, c: MAT_BRASS, g: 'nozzles', name: 'Gimbal Vector Ring L' });
+          elems.push({ x: -2.6, y: -3.3, z: -3.8, w: 1.6, h: 0.8, d: 1.6, c: MAT_MANA_CYAN, emissive: true, g: 'nozzles', name: 'Plasma Jet R' });
+          elems.push({ x: 2.6, y: -3.3, z: -3.8, w: 1.6, h: 0.8, d: 1.6, c: MAT_MANA_CYAN, emissive: true, g: 'nozzles', name: 'Plasma Jet L' });
+          break;
+        }
+
+        case 'TACTICAL_WINGS': {
+          // Center Avionics Fuselage
+          elems.push({ x: 0.0, y: 3.0, z: -3.4, w: 5.6, h: 8.5, d: 2.6, c: armorColor, g: 'fuselage', name: 'Avionics Pack' });
+          elems.push({ x: 0.0, y: 7.8, z: -4.5, w: 1.0, h: 6.8, d: 3.2, c: MAT_STEEL_DARK, g: 'fuselage', name: 'Vertical Stabilizer Fin' });
+          elems.push({ x: -2.8, y: 7.2, z: -3.0, w: 1.8, h: 2.2, d: 2.6, c: MAT_STEEL_DARK, g: 'fuselage', name: 'Shoulder Intake R' });
+          elems.push({ x: 2.8, y: 7.2, z: -3.0, w: 1.8, h: 2.2, d: 2.6, c: MAT_STEEL_DARK, g: 'fuselage', name: 'Shoulder Intake L' });
+
+          // Swept Delta Wings (Interpolated based on wingsDeployed state)
+          const wingSpan = wingsDeployed ? 8.5 : 4.5;
+          const wingZ = wingsDeployed ? -3.4 : -5.8;
+          elems.push({ x: -wingSpan, y: 3.5, z: wingZ, w: 8.5, h: 3.2, d: 0.8, c: armorColor, g: 'wings', name: 'Delta Wing R' });
+          elems.push({ x: wingSpan, y: 3.5, z: wingZ, w: 8.5, h: 3.2, d: 0.8, c: armorColor, g: 'wings', name: 'Delta Wing L' });
+          // Wingtip Micro-Jet Pods
+          elems.push({ x: -wingSpan * 1.5, y: 3.2, z: wingZ, w: 1.8, h: 4.4, d: 2.2, c: MAT_STEEL_DARK, g: 'wings', name: 'Wingtip Jet Pod R' });
+          elems.push({ x: wingSpan * 1.5, y: 3.2, z: wingZ, w: 1.8, h: 4.4, d: 2.2, c: MAT_STEEL_DARK, g: 'wings', name: 'Wingtip Jet Pod L' });
+          elems.push({ x: -wingSpan * 1.5, y: 0.6, z: wingZ, w: 1.2, h: 1.4, d: 1.2, c: MAT_MANA_CYAN, emissive: true, g: 'wings', name: 'Wing Nozzle R' });
+          elems.push({ x: wingSpan * 1.5, y: 0.6, z: wingZ, w: 1.2, h: 1.4, d: 1.2, c: MAT_MANA_CYAN, emissive: true, g: 'wings', name: 'Wing Nozzle L' });
+          break;
+        }
+
+        case 'HEAVY_ROCKET': {
+          // Mounting Frame
+          elems.push({ x: 0.0, y: 2.5, z: -3.2, w: 8.2, h: 9.8, d: 2.4, c: MAT_STEEL_DARK, g: 'tanks', name: 'Heavy Frame Bulkhead' });
+          // Massive Rocket Cylinders
+          elems.push({ x: -3.4, y: 3.2, z: -4.5, w: 4.2, h: 12.0, d: 4.2, c: armorColor, g: 'tanks', name: 'Heavy Rocket Tank R' });
+          elems.push({ x: 3.4, y: 3.2, z: -4.5, w: 4.2, h: 12.0, d: 4.2, c: armorColor, g: 'tanks', name: 'Heavy Rocket Tank L' });
+          // Roll-Cage Protection Bars
+          elems.push({ x: -5.8, y: 3.2, z: -4.5, w: 0.8, h: 9.0, d: 3.4, c: MAT_STEEL_MED, g: 'tanks', name: 'Roll-Cage Bar R' });
+          elems.push({ x: 5.8, y: 3.2, z: -4.5, w: 0.8, h: 9.0, d: 3.4, c: MAT_STEEL_MED, g: 'tanks', name: 'Roll-Cage Bar L' });
+          // Inter-tank Bridge
+          elems.push({ x: 0.0, y: 3.2, z: -4.5, w: 3.2, h: 2.0, d: 2.4, c: MAT_STEEL_MED, g: 'tanks', name: 'Bridge Manifold' });
+
+          // Upper RCS Vernier Thrusters
+          elems.push({ x: -3.4, y: 9.8, z: -4.5, w: 3.2, h: 1.6, d: 3.2, c: MAT_BRASS, g: 'rcs', name: 'RCS Block R' });
+          elems.push({ x: 3.4, y: 9.8, z: -4.5, w: 3.2, h: 1.6, d: 3.2, c: MAT_BRASS, g: 'rcs', name: 'RCS Block L' });
+
+          // Large Heavy Blast Nozzles
+          elems.push({ x: -3.4, y: -4.0, z: -4.5, w: 3.4, h: 2.8, d: 3.4, c: MAT_STEEL_DARK, g: 'blast_nozzles', name: 'Heavy Blast Bell R' });
+          elems.push({ x: 3.4, y: -4.0, z: -4.5, w: 3.4, h: 2.8, d: 3.4, c: MAT_STEEL_DARK, g: 'blast_nozzles', name: 'Heavy Blast Bell L' });
+          elems.push({ x: -3.4, y: -5.5, z: -4.5, w: 2.2, h: 1.4, d: 2.2, c: MAT_ROCKET_ORANGE, emissive: true, g: 'blast_nozzles', name: 'Rocket Combustion Flame R' });
+          elems.push({ x: 3.4, y: -5.5, z: -4.5, w: 2.2, h: 1.4, d: 2.2, c: MAT_ROCKET_ORANGE, emissive: true, g: 'blast_nozzles', name: 'Rocket Combustion Flame L' });
+          break;
+        }
+
+        case 'TWIN_DRIVE_EXO': {
+          // Front Dual-Core Housing
+          elems.push({ x: 0.0, y: 0.2, z: 3.2, w: 7.4, h: 7.0, d: 3.2, c: armorColor, g: 'dual_core', name: 'Dual Core Housing' });
+          elems.push({ x: -1.8, y: 0.2, z: 4.8, w: 3.2, h: 4.4, d: 0.6, c: MAT_BRASS, g: 'dual_core', name: 'Bezel Frame R' });
+          elems.push({ x: 1.8, y: 0.2, z: 4.8, w: 3.2, h: 4.4, d: 0.6, c: MAT_BRASS, g: 'dual_core', name: 'Bezel Frame L' });
+          elems.push({ x: -1.8, y: 0.2, z: 5.2, w: 2.0, h: 3.0, d: 0.8, c: MAT_MANA_CYAN, emissive: true, g: 'dual_core', name: 'Synchronized Core R' });
+          elems.push({ x: 1.8, y: 0.2, z: 5.2, w: 2.0, h: 3.0, d: 0.8, c: MAT_MANA_CYAN, emissive: true, g: 'dual_core', name: 'Synchronized Core L' });
+          elems.push({ x: 0.0, y: 0.2, z: 5.4, w: 0.8, h: 2.2, d: 0.8, c: MAT_BRASS_LIGHT, g: 'dual_core', name: 'Inter-Core Coupler' });
+
+          // Shoulder Radiator Winglets & Rear Thrusters
+          elems.push({ x: -4.5, y: 8.5, z: -2.2, w: 1.6, h: 4.2, d: 2.2, c: MAT_STEEL_DARK, g: 'shoulder_fins', name: 'Radiator Fin R' });
+          elems.push({ x: 4.5, y: 8.5, z: -2.2, w: 1.6, h: 4.2, d: 2.2, c: MAT_STEEL_DARK, g: 'shoulder_fins', name: 'Radiator Fin L' });
+          elems.push({ x: 0.0, y: 2.5, z: -2.8, w: 7.0, h: 8.0, d: 2.4, c: armorColor, g: 'shoulder_fins', name: 'Injection Manifold' });
+          elems.push({ x: -2.2, y: -2.2, z: -3.2, w: 1.8, h: 2.2, d: 1.8, c: MAT_STEEL_DARK, g: 'shoulder_fins', name: 'Triple Thruster R' });
+          elems.push({ x: 0.0, y: -2.2, z: -3.2, w: 1.8, h: 2.2, d: 1.8, c: MAT_STEEL_DARK, g: 'shoulder_fins', name: 'Triple Thruster C' });
+          elems.push({ x: 2.2, y: -2.2, z: -3.2, w: 1.8, h: 2.2, d: 1.8, c: MAT_STEEL_DARK, g: 'shoulder_fins', name: 'Triple Thruster L' });
+
+          // Dual Leg Struts (Both Legs Equipped)
+          [-2.5, 2.5].forEach(sideX => {
+            const side = sideX > 0 ? 'L' : 'R';
+            elems.push({ x: sideX, y: -6.5, z: 0.0, w: 2.2, h: 2.2, d: 3.2, c: MAT_LEATHER, g: 'dual_legs', name: `Thigh Cuff ${side}` });
+            elems.push({ x: sideX + (sideX > 0 ? 0.7 : -0.7), y: -9.5, z: 0.8, w: 1.2, h: 4.4, d: 1.2, c: MAT_BRASS, g: 'dual_legs', name: `Piston ${side}` });
+            elems.push({ x: sideX + (sideX > 0 ? 1.1 : -1.1), y: -12.5, z: 0.0, w: 1.8, h: 5.2, d: 2.6, c: armorColor, g: 'dual_legs', name: `Calf Jet ${side}` });
+            elems.push({ x: sideX, y: -15.8, z: 0.2, w: 4.4, h: 1.3, d: 7.8, c: MAT_STEEL_MED, g: 'dual_legs', name: `Stirrup Ski ${side}` });
+          });
+          break;
+        }
+
+        case 'SIEGE_ARTILLERY': {
+          // Over-Shoulder Recoil Gantries
+          elems.push({ x: -4.2, y: 7.5, z: 0.0, w: 2.2, h: 3.8, d: 6.5, c: MAT_STEEL_DARK, g: 'gantries', name: 'Recoil Gantry R' });
+          elems.push({ x: 4.2, y: 7.5, z: 0.0, w: 2.2, h: 3.8, d: 6.5, c: MAT_STEEL_DARK, g: 'gantries', name: 'Recoil Gantry L' });
+          elems.push({ x: -4.2, y: 8.2, z: 3.4, w: 1.8, h: 1.8, d: 1.0, c: MAT_MANA_CYAN, emissive: true, g: 'gantries', name: 'Targeting Optic R' });
+          elems.push({ x: 4.2, y: 8.2, z: 3.4, w: 1.8, h: 1.8, d: 1.0, c: MAT_MANA_CYAN, emissive: true, g: 'gantries', name: 'Targeting Optic L' });
+
+          // Front Bolted Mantlet
+          elems.push({ x: 0.0, y: 1.5, z: 2.8, w: 8.4, h: 8.6, d: 1.6, c: armorColor, g: 'mantlet', name: 'Front Chest Mantlet' });
+          elems.push({ x: 0.0, y: 1.5, z: 3.6, w: 5.0, h: 4.0, d: 0.6, c: MAT_STEEL_DARK, g: 'mantlet', name: 'Heavy Armor Plate' });
+
+          // Rear Reactor & Quad Thrusters (2x2 Matrix)
+          elems.push({ x: 0.0, y: 2.2, z: -3.5, w: 9.0, h: 9.5, d: 3.0, c: MAT_STEEL_DARK, g: 'quad_thrusters', name: 'Siege Reactor Box' });
+          elems.push({ x: -2.4, y: 4.0, z: -5.4, w: 3.0, h: 3.0, d: 2.2, c: MAT_STEEL_MED, g: 'quad_thrusters', name: 'Quad Thruster Top-R' });
+          elems.push({ x: 2.4, y: 4.0, z: -5.4, w: 3.0, h: 3.0, d: 2.2, c: MAT_STEEL_MED, g: 'quad_thrusters', name: 'Quad Thruster Top-L' });
+          elems.push({ x: -2.4, y: 0.2, z: -5.4, w: 3.0, h: 3.0, d: 2.2, c: MAT_STEEL_MED, g: 'quad_thrusters', name: 'Quad Thruster Bot-R' });
+          elems.push({ x: 2.4, y: 0.2, z: -5.4, w: 3.0, h: 3.0, d: 2.2, c: MAT_STEEL_MED, g: 'quad_thrusters', name: 'Quad Thruster Bot-L' });
+          elems.push({ x: -3.8, y: -4.5, z: -3.5, w: 1.4, h: 3.2, d: 2.6, c: MAT_STEEL_DARK, g: 'quad_thrusters', name: 'Landing Skid R' });
+          elems.push({ x: 3.8, y: -4.5, z: -3.5, w: 1.4, h: 3.2, d: 2.6, c: MAT_STEEL_DARK, g: 'quad_thrusters', name: 'Landing Skid L' });
+          break;
+        }
+
+        case 'THRUST_BOOTS': {
+          [-2.5, 2.5].forEach(sideX => {
+            const side = sideX > 0 ? 'L' : 'R';
+            // Armored Shin Greaves
+            elems.push({ x: sideX, y: -10.5, z: 0.0, w: 4.8, h: 7.5, d: 4.8, c: armorColor, g: 'greaves', name: `Shin Greave ${side}` });
+            // Rear Supersonic Rocket Thrusters
+            elems.push({ x: sideX, y: -11.5, z: -3.5, w: 3.6, h: 4.5, d: 2.8, c: MAT_STEEL_DARK, g: 'rocket_pods', name: `Rocket Thruster ${side}` });
+            elems.push({ x: sideX, y: -14.2, z: -3.5, w: 2.8, h: 2.0, d: 2.2, c: MAT_STEEL_MED, g: 'rocket_pods', name: `Exhaust Bell ${side}` });
+            elems.push({ x: sideX, y: -15.4, z: -3.5, w: 1.8, h: 1.0, d: 1.8, c: MAT_MANA_CYAN, emissive: true, g: 'rocket_pods', name: `Hover Thrust Core ${side}` });
+            // Lateral Hover Winglets
+            elems.push({ x: sideX + (sideX > 0 ? 2.8 : -2.8), y: -11.5, z: 0.0, w: 1.2, h: 3.2, d: 3.8, c: MAT_STEEL_DARK, g: 'hover_vanes', name: `Hover Winglet ${side}` });
+            // Toe & Heel Plates
+            elems.push({ x: sideX, y: -15.2, z: 3.2, w: 4.4, h: 1.5, d: 2.2, c: MAT_STEEL_MED, g: 'greaves', name: `Toe Kick Plate ${side}` });
+          });
+          break;
+        }
+
+        case 'HYDRO_SKIMMER': {
+          // Buoyant Chest Plate & Wave Deflector
+          elems.push({ x: 0.0, y: 1.5, z: 2.8, w: 7.0, h: 6.8, d: 1.2, c: armorColor, g: 'rudder', name: 'Buoyant Chest Mantlet' });
+          elems.push({ x: 0.0, y: -2.0, z: 3.2, w: 5.6, h: 2.2, d: 1.0, c: MAT_STEEL_DARK, g: 'rudder', name: 'Wave Deflector Prow' });
+
+          // Rear Waterjet Cowling Housing
+          elems.push({ x: 0.0, y: 1.8, z: -3.2, w: 7.6, h: 8.5, d: 3.2, c: armorColor, g: 'waterjet', name: 'Waterjet Pump Housing' });
+          elems.push({ x: -2.2, y: -1.2, z: -5.0, w: 2.4, h: 2.4, d: 2.2, c: MAT_STEEL_DARK, g: 'waterjet', name: 'Waterjet Nozzle R' });
+          elems.push({ x: 2.2, y: -1.2, z: -5.0, w: 2.4, h: 2.4, d: 2.2, c: MAT_STEEL_DARK, g: 'waterjet', name: 'Waterjet Nozzle L' });
+          elems.push({ x: -2.2, y: -1.2, z: -5.6, w: 1.6, h: 1.6, d: 0.8, c: MAT_MANA_CYAN, emissive: true, g: 'waterjet', name: 'Hydro Jet Stream R' });
+          elems.push({ x: 2.2, y: -1.2, z: -5.6, w: 1.6, h: 1.6, d: 0.8, c: MAT_MANA_CYAN, emissive: true, g: 'waterjet', name: 'Hydro Jet Stream L' });
+          // Dorsal Hydro Stabilizer Fin
+          elems.push({ x: 0.0, y: 5.5, z: -3.6, w: 1.0, h: 9.0, d: 3.8, c: MAT_STEEL_MED, g: 'rudder', name: 'Dorsal Stabilizer Fin' });
+
+          // Twin Hydrofoil Skis (along legs)
+          [-2.6, 2.6].forEach(sideX => {
+            const side = sideX > 0 ? 'L' : 'R';
+            const sign = sideX > 0 ? 1 : -1;
+            elems.push({ x: sideX + sign * 1.8, y: -10.5, z: 0.2, w: 2.4, h: 2.8, d: 14.0, c: armorColor, g: 'skis', name: `Pontoon Ski Body ${side}` });
+            elems.push({ x: sideX + sign * 1.8, y: -9.2, z: 7.8, w: 2.0, h: 2.2, d: 3.2, c: MAT_STEEL_MED, g: 'skis', name: `Upturned Wave Prow ${side}` });
+            elems.push({ x: sideX + sign * 1.8, y: -8.8, z: -6.5, w: 0.8, h: 3.0, d: 2.4, c: MAT_STEEL_DARK, g: 'skis', name: `Steering Rudder ${side}` });
+            elems.push({ x: sideX + sign * 1.0, y: -8.0, z: 0.0, w: 1.4, h: 2.8, d: 2.0, c: MAT_STEEL_DARK, g: 'skis', name: `Ski Pylon Mount ${side}` });
+          });
+          break;
+        }
+
+        case 'TACTICAL_SCUBA': {
+          // Rear Twin High-Pressure Oxygen / Trimix Cylinders
+          elems.push({ x: -2.4, y: 2.2, z: -3.6, w: 3.6, h: 12.0, d: 3.6, c: armorColor, g: 'cylinders', name: 'Diving Cylinder R' });
+          elems.push({ x: 2.4, y: 2.2, z: -3.6, w: 3.6, h: 12.0, d: 3.6, c: armorColor, g: 'cylinders', name: 'Diving Cylinder L' });
+          // Steel Bands
+          elems.push({ x: 0.0, y: 5.5, z: -3.6, w: 9.0, h: 1.2, d: 4.0, c: MAT_STEEL_DARK, g: 'cylinders', name: 'Upper Tank Band' });
+          elems.push({ x: 0.0, y: -0.5, z: -3.6, w: 9.0, h: 1.2, d: 4.0, c: MAT_STEEL_DARK, g: 'cylinders', name: 'Lower Tank Band' });
+          // Valves & Manifold
+          elems.push({ x: -2.4, y: 8.8, z: -3.6, w: 2.4, h: 1.4, d: 2.4, c: MAT_BRASS, g: 'cylinders', name: 'Tank Valve R' });
+          elems.push({ x: 2.4, y: 8.8, z: -3.6, w: 2.4, h: 1.4, d: 2.4, c: MAT_BRASS, g: 'cylinders', name: 'Tank Valve L' });
+          elems.push({ x: 0.0, y: 8.8, z: -3.6, w: 3.0, h: 0.8, d: 0.8, c: MAT_COPPER, g: 'cylinders', name: 'Manifold Cross-Pipe' });
+          elems.push({ x: 3.6, y: 9.5, z: -3.6, w: 1.6, h: 1.6, d: 1.2, c: MAT_BRASS_LIGHT, g: 'cylinders', name: 'Pressure Regulator Dial' });
+
+          // Front Rebreather Scrubber Canister & Depth Gauge
+          elems.push({ x: 0.0, y: 1.5, z: 3.2, w: 6.4, h: 5.8, d: 1.8, c: MAT_STEEL_DARK, g: 'rebreather', name: 'Rebreather Scrubber' });
+          elems.push({ x: 0.0, y: 2.2, z: 4.2, w: 2.4, h: 2.4, d: 0.8, c: MAT_BRASS, g: 'rebreather', name: 'Depth Gauge Dial' });
+
+          // Ribbed Shoulder Breathing Hoses
+          elems.push({ x: 2.6, y: 7.2, z: 0.0, w: 1.6, h: 1.6, d: 6.0, c: MAT_LEATHER_DARK, g: 'hoses', name: 'Breathing Hose L' });
+          elems.push({ x: -2.6, y: 7.2, z: 0.0, w: 1.6, h: 1.6, d: 6.0, c: MAT_LEATHER_DARK, g: 'hoses', name: 'Breathing Hose R' });
+
+          // Lead Ballast Dive-Weights (4 Blocks around waist)
+          elems.push({ x: -3.8, y: -3.5, z: 2.5, w: 1.6, h: 2.2, d: 1.0, c: MAT_STEEL_MED, g: 'hoses', name: 'Lead Weight Front-R' });
+          elems.push({ x: 3.8, y: -3.5, z: 2.5, w: 1.6, h: 2.2, d: 1.0, c: MAT_STEEL_MED, g: 'hoses', name: 'Lead Weight Front-L' });
+          elems.push({ x: -3.8, y: -3.5, z: -2.5, w: 1.6, h: 2.2, d: 1.0, c: MAT_STEEL_MED, g: 'hoses', name: 'Lead Weight Rear-R' });
+          elems.push({ x: 3.8, y: -3.5, z: -2.5, w: 1.6, h: 2.2, d: 1.0, c: MAT_STEEL_MED, g: 'hoses', name: 'Lead Weight Rear-L' });
+          break;
+        }
+
+        case 'DIVING_MASK': {
+          // Panoramic Tempered Glass Visor Frame & Lens
+          elems.push({ x: 0.0, y: 7.2, z: 4.2, w: 8.4, h: 3.2, d: 1.0, c: MAT_STEEL_DARK, g: 'visor', name: 'Visor Frame' });
+          elems.push({ x: 0.0, y: 7.2, z: 4.6, w: 8.0, h: 2.6, d: 0.4, c: MAT_MANA_CYAN, emissive: true, g: 'visor', name: 'Tempered Glass Lens' });
+
+          // Oral-Nasal Rebreather Mask Body
+          elems.push({ x: 0.0, y: 4.6, z: 4.6, w: 6.4, h: 4.0, d: 2.0, c: armorColor, g: 'mask_body', name: 'Rebreather Facemask' });
+
+          // Dual Cheek Regulator Intake/Exhaust Valve Housings
+          elems.push({ x: -3.8, y: 4.4, z: 4.2, w: 1.6, h: 2.4, d: 2.0, c: MAT_COPPER, g: 'regulators', name: 'Cheek Regulator Valve R' });
+          elems.push({ x: 3.8, y: 4.4, z: 4.2, w: 1.6, h: 2.4, d: 2.0, c: MAT_COPPER, g: 'regulators', name: 'Cheek Regulator Valve L' });
+
+          // Central Chin Speech Diaphragm & Exhaust Port
+          elems.push({ x: 0.0, y: 3.2, z: 5.4, w: 2.4, h: 2.0, d: 0.8, c: MAT_BRASS, g: 'regulators', name: 'Speech Diaphragm & Purge' });
+
+          // Silicone Retention Headstraps
+          elems.push({ x: 0.0, y: 7.5, z: 0.0, w: 8.8, h: 1.2, d: 8.8, c: MAT_LEATHER_DARK, g: 'straps', name: 'Upper Temple Strap' });
+          elems.push({ x: 0.0, y: 4.8, z: 0.0, w: 8.8, h: 1.0, d: 8.4, c: MAT_LEATHER_DARK, g: 'straps', name: 'Lower Occipital Strap' });
+          break;
+        }
+
+        case 'URBAN_EXO_LEGS': {
+          // Upper Back Capacitor & Junction Hub
+          elems.push({ x: 0.0, y: 3.5, z: -3.0, w: 6.0, h: 4.0, d: 2.0, c: armorColor, g: 'spine', name: 'Upper Back Power Hub' });
+          // Tactical Communications Antenna (Left Shoulder)
+          elems.push({ x: -2.8, y: 9.0, z: -3.0, w: 0.6, h: 7.0, d: 0.6, c: MAT_STEEL_DARK, g: 'spine', name: 'Comms Antenna' });
+          // Tactical Sensor (Right Shoulder)
+          elems.push({ x: 2.2, y: 5.5, z: -3.0, w: 1.6, h: 1.8, d: 1.6, c: MAT_MANA_CYAN, emissive: true, g: 'spine', name: 'Shoulder Sensor' });
+
+          // Articulated Spinal Column Vertebrae (4 Mechanical Vertebra Segments)
+          elems.push({ x: 0.0, y: 1.2, z: -2.8, w: 2.6, h: 1.2, d: 1.4, c: MAT_STEEL_DARK, g: 'spine', name: 'Spine Vertebra T1' });
+          elems.push({ x: 0.0, y: -0.1, z: -2.8, w: 2.2, h: 1.2, d: 1.3, c: MAT_STEEL_MED, g: 'spine', name: 'Spine Vertebra T2' });
+          elems.push({ x: 0.0, y: -1.3, z: -2.8, w: 2.2, h: 1.2, d: 1.3, c: MAT_STEEL_DARK, g: 'spine', name: 'Spine Vertebra L1' });
+          elems.push({ x: 0.0, y: -2.5, z: -2.8, w: 2.6, h: 1.2, d: 1.4, c: MAT_STEEL_MED, g: 'spine', name: 'Spine Vertebra L2' });
+
+          // Pelvic Bracing Girdle & Lower Capacitor
+          elems.push({ x: 0.0, y: -3.8, z: 0.0, w: 9.0, h: 2.6, d: 5.0, c: MAT_LEATHER_DARK, g: 'harness', name: 'Pelvic Girdle Belt' });
+          elems.push({ x: 0.0, y: -3.5, z: -3.0, w: 5.0, h: 3.8, d: 1.8, c: armorColor, g: 'harness', name: 'Lower Kinetic Capacitor' });
+          elems.push({ x: -5.0, y: -4.0, z: 0.0, w: 1.2, h: 2.4, d: 2.4, c: MAT_BRASS, g: 'harness', name: 'Hip Rotary Hub R' });
+          elems.push({ x: 5.0, y: -4.0, z: 0.0, w: 1.2, h: 2.4, d: 2.4, c: MAT_BRASS, g: 'harness', name: 'Hip Rotary Hub L' });
+
+          // CoD:AW Arm Actuators (Left & Right)
+          [-5.5, 5.5].forEach(sideX => {
+            const side = sideX > 0 ? 'L' : 'R';
+            const sign = sideX > 0 ? 1 : -1;
+            // Shoulder Cantilever Ball Arch
+            elems.push({ x: sideX - sign * 0.5, y: 5.2, z: 0.0, w: 3.8, h: 1.6, d: 3.2, c: MAT_STEEL_DARK, g: 'arms', name: `Cantilever Arch ${side}` });
+            // Outer Upper Arm Hydraulic Strut
+            elems.push({ x: sideX + sign * 0.8, y: 2.5, z: 0.0, w: 1.4, h: 6.0, d: 2.2, c: MAT_STEEL_MED, g: 'arms', name: `Upper Arm Strut ${side}` });
+            // Rotary Elbow Joint Hub
+            elems.push({ x: sideX + sign * 0.9, y: -1.0, z: 0.0, w: 1.8, h: 2.4, d: 2.8, c: MAT_BRASS, g: 'arms', name: `Elbow Actuator ${side}` });
+            // Forearm Dual Actuator Rails
+            elems.push({ x: sideX + sign * 0.8, y: -3.8, z: 0.0, w: 1.3, h: 4.8, d: 2.0, c: armorColor, g: 'arms', name: `Forearm Rails ${side}` });
+            // Wrist Cuff & Palm Brace
+            elems.push({ x: sideX, y: -6.5, z: 0.0, w: 4.4, h: 1.5, d: 4.4, c: MAT_STEEL_DARK, g: 'arms', name: `Wrist Cuff ${side}` });
+          });
+
+          // Dual Leg Exoskeleton Armatures
+          [-2.5, 2.5].forEach(sideX => {
+            const side = sideX > 0 ? 'L' : 'R';
+            const sign = sideX > 0 ? 1 : -1;
+            // Lateral Thigh Strut
+            elems.push({ x: sideX + sign * 1.5, y: -7.5, z: 0.0, w: 1.2, h: 6.5, d: 2.0, c: MAT_STEEL_MED, g: 'struts', name: `Thigh Strut ${side}` });
+            // Knee Rotary Actuator Hub
+            elems.push({ x: sideX + sign * 1.6, y: -11.0, z: 0.0, w: 1.6, h: 2.6, d: 3.0, c: MAT_BRASS, g: 'struts', name: `Knee Actuator Hub ${side}` });
+            // Rear Hydraulic Compression Piston Cylinder
+            elems.push({ x: sideX, y: -12.5, z: -2.8, w: 2.4, h: 6.0, d: 1.8, c: armorColor, g: 'pistons', name: `Piston Cylinder ${side}` });
+            elems.push({ x: sideX, y: -9.5, z: -2.8, w: 1.6, h: 2.5, d: 1.4, c: MAT_BRASS, g: 'pistons', name: `Piston Rod ${side}` });
+            // Shin Armored Guard
+            elems.push({ x: sideX, y: -12.5, z: 2.8, w: 4.0, h: 6.0, d: 1.0, c: MAT_STEEL_DARK, g: 'struts', name: `Shin Guard ${side}` });
+            // Ankle Pivot
+            elems.push({ x: sideX + sign * 1.4, y: -15.5, z: 0.0, w: 1.2, h: 2.2, d: 2.2, c: MAT_STEEL_DARK, g: 'struts', name: `Ankle Pivot ${side}` });
+            // Dual-Plate Kinetic Spring Sole with Cleats
+            elems.push({ x: sideX, y: -16.8, z: 0.4, w: 4.4, h: 1.2, d: 8.5, c: MAT_STEEL_MED, g: 'spring_soles', name: `Kinetic Spring Sole ${side}` });
+            elems.push({ x: sideX, y: -17.5, z: 0.4, w: 4.0, h: 0.6, d: 8.0, c: MAT_BRASS, g: 'spring_soles', name: `Ground Cleats ${side}` });
+          });
+          break;
+        }
+      }
+
+      return elems;
+    }
+
+    // 3D Math Utilities
+    function rotatePoint(p, rx, ry) {
+      const cosY = Math.cos(ry);
+      const sinY = Math.sin(ry);
+      const x1 = p.x * cosY + p.z * sinY;
+      const z1 = -p.x * sinY + p.z * cosY;
+
+      const cosX = Math.cos(rx);
+      const sinX = Math.sin(rx);
+      const y2 = p.y * cosX - z1 * sinX;
+      const z2 = p.y * sinX + z1 * cosX;
+
+      return { x: x1, y: y2, z: z2 };
+    }
+
+    function projectPoint(p, dist, scale) {
+      const fov = 650;
+      const sz = p.z + dist;
+      if (sz <= 1) return { x: 0, y: 0, z: -9999, valid: false };
+      const factor = fov / sz;
+      return {
+        x: width / 2 + p.x * factor * scale,
+        y: height / 2 - p.y * factor * scale,
+        z: p.z,
+        factor,
+        valid: true
+      };
+    }
+
+    const lightDir = { x: 0.45, y: 0.75, z: 0.5 };
+    const lightLen = Math.hypot(lightDir.x, lightDir.y, lightDir.z);
+    lightDir.x /= lightLen;
+    lightDir.y /= lightLen;
+    lightDir.z /= lightLen;
+
+    function hexToRgb(hex) {
+      const bigint = parseInt(hex.replace('#', ''), 16);
+      return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+    }
+
+    // Main Render Loop
+    let pulseTime = 0;
+    function render() {
+      ctx.clearRect(0, 0, width, height);
+
+      if (isAutoRotating) {
+        rotY += 0.008;
+      }
+      pulseTime += 0.04;
+
+      const elements = buildElements();
+      const faces = [];
+      const scale = 1.0;
+
+      elements.forEach(elem => {
+        if (activeFilter !== 'all' && elem.g !== activeFilter) {
+          return;
+        }
+
+        const hw = elem.w / 2;
+        const hh = elem.h / 2;
+        const hd = elem.d / 2;
+
+        const v = [
+          { x: elem.x - hw, y: elem.y - hh, z: elem.z - hd },
+          { x: elem.x + hw, y: elem.y - hh, z: elem.z - hd },
+          { x: elem.x + hw, y: elem.y + hh, z: elem.z - hd },
+          { x: elem.x - hw, y: elem.y + hh, z: elem.z - hd },
+          { x: elem.x - hw, y: elem.y - hh, z: elem.z + hd },
+          { x: elem.x + hw, y: elem.y - hh, z: elem.z + hd },
+          { x: elem.x + hw, y: elem.y + hh, z: elem.z + hd },
+          { x: elem.x - hw, y: elem.y + hh, z: elem.z + hd }
+        ];
+
+        const rotated = v.map(p => rotatePoint(p, rotX, rotY));
+        const projected = rotated.map(p => projectPoint(p, cameraDist, scale));
+
+        const boxFaces = [
+          { idx: [4, 5, 6, 7], normal: { x: 0, y: 0, z: 1 } },
+          { idx: [1, 0, 3, 2], normal: { x: 0, y: 0, z: -1 } },
+          { idx: [7, 6, 2, 3], normal: { x: 0, y: 1, z: 0 } },
+          { idx: [0, 1, 5, 4], normal: { x: 0, y: -1, z: 0 } },
+          { idx: [0, 4, 7, 3], normal: { x: -1, y: 0, z: 0 } },
+          { idx: [5, 1, 2, 6], normal: { x: 1, y: 0, z: 0 } }
+        ];
+
+        boxFaces.forEach(face => {
+          const p0 = projected[face.idx[0]];
+          const p1 = projected[face.idx[1]];
+          const p2 = projected[face.idx[2]];
+          const p3 = projected[face.idx[3]];
+
+          if (!p0.valid || !p1.valid || !p2.valid || !p3.valid) return;
+
+          const cp = (p1.x - p0.x) * (p2.y - p0.y) - (p1.y - p0.y) * (p2.x - p0.x);
+          if (cp >= 0) return;
+
+          const rn = rotatePoint(face.normal, rotX, rotY);
+          const dot = Math.max(0.2, rn.x * lightDir.x + rn.y * lightDir.y + rn.z * lightDir.z);
+          const avgZ = (rotated[face.idx[0]].z + rotated[face.idx[1]].z + rotated[face.idx[2]].z + rotated[face.idx[3]].z) / 4;
+
+          faces.push({
+            pts: [p0, p1, p2, p3],
+            z: avgZ,
+            color: elem.c,
+            emissive: elem.emissive || false,
+            dot
+          });
+        });
+      });
+
+      faces.sort((a, b) => a.z - b.z);
+
+      faces.forEach(f => {
+        ctx.beginPath();
+        ctx.moveTo(f.pts[0].x, f.pts[0].y);
+        ctx.lineTo(f.pts[1].x, f.pts[1].y);
+        ctx.lineTo(f.pts[2].x, f.pts[2].y);
+        ctx.lineTo(f.pts[3].x, f.pts[3].y);
+        ctx.closePath();
+
+        if (f.emissive) {
+          const pulse = (Math.sin(pulseTime) + 1) * 0.5;
+          const glowAlpha = 0.85 + pulse * 0.15;
+          ctx.fillStyle = f.color === MAT_ROCKET_ORANGE ? `rgba(255, 102, 0, ${glowAlpha})` : `rgba(0, 240, 255, ${glowAlpha})`;
+          ctx.shadowColor = f.color === MAT_ROCKET_ORANGE ? '#ff6600' : '#00f0ff';
+          ctx.shadowBlur = 16;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        } else {
+          const rgb = hexToRgb(f.color);
+          const shade = f.dot;
+          const r = Math.min(255, Math.floor(rgb.r * (0.45 + shade * 0.65)));
+          const g = Math.min(255, Math.floor(rgb.g * (0.45 + shade * 0.65)));
+          const b = Math.min(255, Math.floor(rgb.b * (0.45 + shade * 0.65)));
+
+          ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+          ctx.fill();
+
+          ctx.strokeStyle = `rgba(${Math.floor(r * 0.6)}, ${Math.floor(g * 0.6)}, ${Math.floor(b * 0.6)}, 0.75)`;
+          ctx.lineWidth = 0.75;
+          ctx.stroke();
+        }
+      });
+
+      requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+
+    // Mouse Drag
+    canvas.addEventListener('mousedown', e => {
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+      isAutoRotating = false;
+      document.getElementById('autoRotateText').textContent = 'OFF';
+      document.getElementById('autoRotateText').className = 'font-bold text-zinc-400';
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    window.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+
+      rotY += dx * 0.009;
+      rotX += dy * 0.009;
+      rotX = Math.max(-1.4, Math.min(1.4, rotX));
+    });
+
+    // Zoom
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      cameraDist += e.deltaY * 0.03;
+      cameraDist = Math.max(20, Math.min(65, cameraDist));
+      document.getElementById('zoomSlider').value = cameraDist;
+      document.getElementById('zoomValue').textContent = Math.round(cameraDist) + 'u';
+    });
+
+    document.getElementById('zoomSlider').addEventListener('input', e => {
+      cameraDist = parseFloat(e.target.value);
+      document.getElementById('zoomValue').textContent = Math.round(cameraDist) + 'u';
+    });
+
+    // Auto Rotate Toggle
+    document.getElementById('btnAutoRotate').addEventListener('click', () => {
+      isAutoRotating = !isAutoRotating;
+      const text = document.getElementById('autoRotateText');
+      text.textContent = isAutoRotating ? 'ON' : 'OFF';
+      text.className = isAutoRotating ? 'font-bold text-cyan-400' : 'font-bold text-zinc-400';
+    });
+
+    // Reset View
+    document.getElementById('btnResetView').addEventListener('click', () => {
+      rotX = 0.22;
+      rotY = -0.55;
+      cameraDist = 40;
+      document.getElementById('zoomSlider').value = 40;
+      document.getElementById('zoomValue').textContent = '40u';
+    });
+
+    // Switch Active Model Function
+    function setModel(modelKey) {
+      currentModel = modelKey;
+      activeFilter = 'all';
+
+      const spec = MODEL_SPECS[modelKey];
+      document.getElementById('modelTitle').textContent = spec.title;
+      document.getElementById('modelTier').textContent = spec.tier;
+      document.getElementById('modelDesc').textContent = spec.desc;
+      document.getElementById('currentModelBadge').textContent = `Model: ${spec.title}`;
+      document.getElementById('specCeiling').textContent = spec.ceiling;
+      document.getElementById('specSpeed').textContent = spec.speed;
+      document.getElementById('specSoundProfile').textContent = spec.sound;
+
+      // Wing Toggle Visibility
+      const wingContainer = document.getElementById('wingAnimContainer');
+      if (modelKey === 'TACTICAL_WINGS') {
+        wingContainer.classList.remove('hidden');
+      } else {
+        wingContainer.classList.add('hidden');
+      }
+
+      // Populate Subparts
+      const subpartList = document.getElementById('subpartList');
+      subpartList.innerHTML = '';
+      spec.subparts.forEach((sp, idx) => {
+        const btn = document.createElement('button');
+        btn.className = `part-btn text-left px-3 py-2 rounded-xl text-xs font-medium border transition-all ${idx === 0 ? 'active border-cyan-500/40 bg-cyan-500/10 text-cyan-400' : 'border-[var(--border)] bg-[var(--content)] hover:bg-[var(--border)] text-[var(--foreground)]'}`;
+        btn.dataset.part = sp.id;
+        btn.textContent = sp.name;
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.part-btn').forEach(b => {
+            b.classList.remove('active', 'border-cyan-500/40', 'bg-cyan-500/10', 'text-cyan-400');
+            b.classList.add('border-[var(--border)]', 'bg-[var(--content)]', 'text-[var(--foreground)]');
+          });
+          btn.classList.add('active', 'border-cyan-500/40', 'bg-cyan-500/10', 'text-cyan-400');
+          btn.classList.remove('border-[var(--border)]', 'bg-[var(--content)]', 'text-[var(--foreground)]');
+          activeFilter = sp.id;
+        });
+        subpartList.appendChild(btn);
+      });
+
+      const elems = buildElements();
+      document.getElementById('partCountLabel').textContent = `Total Elements: ${elems.length} Box Geometries`;
+    }
+
+    // Model Tab Buttons
+    document.querySelectorAll('.model-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.model-tab').forEach(t => {
+          t.classList.remove('active', 'border-cyan-500/40', 'bg-cyan-500/15', 'text-cyan-300');
+          t.classList.add('border-[var(--border)]', 'bg-[var(--content)]', 'text-[var(--foreground)]');
+        });
+        tab.classList.add('active', 'border-cyan-500/40', 'bg-cyan-500/15', 'text-cyan-300');
+        tab.classList.remove('border-[var(--border)]', 'bg-[var(--content)]', 'text-[var(--foreground)]');
+        setModel(tab.dataset.model);
+      });
+    });
+
+    // Toggle Wings Button
+    document.getElementById('btnToggleWings').addEventListener('click', () => {
+      wingsDeployed = !wingsDeployed;
+      document.getElementById('btnToggleWings').innerHTML = wingsDeployed ? '<span>🪽</span> ปีกกาง (Deployed)' : '<span>🪽</span> ปีกพับ (Folded)';
+    });
+
+    // Color Finishes
+    document.querySelectorAll('.color-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('border-cyan-500/40'));
+        btn.classList.add('border-cyan-500/40');
+        armorColor = btn.dataset.color;
+      });
+    });
+
+    // Initial setup
+    setModel('MAGE_UNIT');
+  </script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+{
+  "titan_get_battery": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/titan_get_battery"
+    ]
+  },
+  "ion_fire": {
+    "category": "hostile",
+    "sounds": [
+      "titancombat:titan/ion/ion_fire"
+    ]
+  },
+  "ion_reload": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/ion/ion_reload"
+    ]
+  },
+  "titan_step": {
+    "category": "neutral",
+    "sounds": [
+      "titancombat:titan/titan_step_1",
+      "titancombat:titan/titan_step_2",
+      "titancombat:titan/titan_step_3",
+      "titancombat:titan/titan_step_4"
+    ]
+  },
+  "titan_dash": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/titan_dash_1",
+      "titancombat:titan/titan_dash_2",
+      "titancombat:titan/titan_dash_3"
+    ]
+  },
+  "titan_cabin_enter": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/cabin_enter"
+    ]
+  },
+  "titan_cabin_exit": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/cabin_exit"
+    ]
+  },
+  "titan_melee": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/titan_melee"
+    ]
+  },
+  "titan_melee_impact": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/titan_melee_impact"
+    ]
+  },
+  "ronin_sword": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/ronin_sword"
+    ]
+  },
+  "ronin_sword_impact": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/ronin_sword_impact"
+    ]
+  },
+  "scorch_fire": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/scorch_fire"
+    ]
+  },
+  "tone_fire": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/tone_fire"
+    ]
+  },
+  "ronin_fire": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/ronin_fire"
+    ]
+  },
+  "monarch_fire": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/monarch_fire"
+    ]
+  },
+  "legion_fire": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/legion_fire"
+    ]
+  },
+  "northstar_fire": {
+    "category": "player",
+    "sounds": [
+      "titancombat:titan/northstar_fire"
+    ]
+  }
+}

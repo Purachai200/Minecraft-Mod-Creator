@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "titancombat:block/battery_charger_side",
+    "down": "titancombat:block/battery_charger_bottom",
+    "up": "titancombat:block/battery_charger_top",
+    "north": "titancombat:block/battery_charger_front",
+    "south": "titancombat:block/battery_charger_side",
+    "west": "titancombat:block/battery_charger_side",
+    "east": "titancombat:block/battery_charger_side"
+  }
+}

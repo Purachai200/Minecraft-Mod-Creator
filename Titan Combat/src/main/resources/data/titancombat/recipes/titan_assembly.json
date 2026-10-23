@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "titancombat:chassis_frame"
+    },
+    {
+      "item": "titancombat:cockpit_module"
+    },
+    {
+      "item": "titancombat:hydraulic_actuator"
+    },
+    {
+      "item": "titancombat:fusion_reactor"
+    },
+    {
+      "item": "titancombat:weapon_mount"
+    }
+  ],
+  "result": {
+    "item": "titancombat:titan_drop_beacon",
+    "count": 1
+  }
+}

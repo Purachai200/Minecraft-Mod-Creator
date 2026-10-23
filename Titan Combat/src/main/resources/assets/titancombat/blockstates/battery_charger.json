@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "titancombat:block/battery_charger" },
+    "facing=east":  { "model": "titancombat:block/battery_charger", "y": 90 },
+    "facing=south": { "model": "titancombat:block/battery_charger", "y": 180 },
+    "facing=west":  { "model": "titancombat:block/battery_charger", "y": 270 }
+  }
+}

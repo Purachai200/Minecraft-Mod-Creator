@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "BIB",
+    "FRF",
+    "LCL"
+  ],
+  "key": {
+    "B": { "item": "minecraft:iron_block" },
+    "I": { "item": "minecraft:iron_ingot" },
+    "F": { "item": "minecraft:fire_charge" },
+    "R": { "item": "minecraft:blast_furnace" },
+    "L": { "item": "minecraft:leather" },
+    "C": { "item": "minecraft:copper_block" }
+  },
+  "result": {
+    "item": "youjosenki:heavy_industrial_rocket_pack",
+    "count": 1
+  }
+}

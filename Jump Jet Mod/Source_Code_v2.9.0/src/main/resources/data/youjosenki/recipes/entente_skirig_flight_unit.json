@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "LIL",
+    "SAS",
+    "CFC"
+  ],
+  "key": {
+    "L": { "item": "minecraft:leather" },
+    "I": { "item": "minecraft:iron_ingot" },
+    "S": { "item": "minecraft:snowball" },
+    "A": { "item": "minecraft:amethyst_shard" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "F": { "item": "minecraft:firework_rocket" }
+  },
+  "result": {
+    "item": "youjosenki:entente_skirig_flight_unit",
+    "count": 1
+  }
+}
