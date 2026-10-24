@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "titan-viewer",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--directory",
+        "/Users/purachai/Desktop/Mod Minecraft/Mod Minecraft Creator/Titan Combat"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "jumpjet-viewer",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766",
+        "--directory",
+        "/private/tmp/claude-501/-Users-purachai-Desktop-Mod-Minecraft-Mod-Minecraft-Creator/1c820fa5-9f8a-4dd3-9986-2bcfef26bf82/scratchpad/viewer"
+      ],
+      "port": 8766
+    }
+  ]
+}
