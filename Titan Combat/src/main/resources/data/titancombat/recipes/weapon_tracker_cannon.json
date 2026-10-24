@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "IOI",
+    "BMB",
+    "I I"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "O": {
+      "item": "minecraft:observer"
+    },
+    "B": {
+      "item": "minecraft:iron_block"
+    },
+    "M": {
+      "item": "titancombat:weapon_mount"
+    }
+  },
+  "result": {
+    "item": "titancombat:weapon_tracker_cannon",
+    "count": 1
+  }
+}

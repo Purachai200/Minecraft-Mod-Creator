@@ -9,7 +9,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class ModNetworking {
-    private static final String PROTOCOL_VERSION = "1.0";
+    private static final String PROTOCOL_VERSION = "3";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(TitanCombatMod.MODID, "main"),
             () -> PROTOCOL_VERSION,
@@ -27,6 +27,18 @@ public class ModNetworking {
                 .decoder(MechControlC2SPacket::new)
                 .encoder(MechControlC2SPacket::toBytes)
                 .consumerMainThread(MechControlC2SPacket::handle)
+                .add();
+
+        INSTANCE.messageBuilder(TitanWeaponActionC2SPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(TitanWeaponActionC2SPacket::new)
+                .encoder(TitanWeaponActionC2SPacket::toBytes)
+                .consumerMainThread(TitanWeaponActionC2SPacket::handle)
+                .add();
+
+        INSTANCE.messageBuilder(TitanFireC2SPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(TitanFireC2SPacket::new)
+                .encoder(TitanFireC2SPacket::toBytes)
+                .consumerMainThread(TitanFireC2SPacket::handle)
                 .add();
 
         INSTANCE.messageBuilder(MechEjectC2SPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)

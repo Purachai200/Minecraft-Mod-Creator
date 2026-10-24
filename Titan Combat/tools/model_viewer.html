@@ -1,0 +1,248 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Titan Model Viewer</title>
+<style>
+  :root { --bg:#0b1118; --fg:#cfe8ff; --accent:#00e5ff; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:12px/1.4 monospace; overflow:hidden; }
+  #ui { position:absolute; top:8px; left:8px; background:#000a; padding:8px; border:1px solid #0e3a4a; width:330px; max-height:96vh; overflow:auto; z-index:2 }
+  #ui label { display:block; margin-top:6px; }
+  #ui input[type=text] { width:100%; box-sizing:border-box; background:#061018; color:var(--fg); border:1px solid #234; }
+  select { width:100%; background:#061018; color:var(--fg); border:1px solid #234; }
+  #info { white-space:pre; margin-top:8px; color:#9fe; }
+  canvas { display:block; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <b style="color:var(--accent)">TITAN MODEL VIEWER</b>
+  <label>Geo URL <input id="geo" type="text"></label>
+  <label>Texture URL <input id="tex" type="text"></label>
+  <label>Animation file URL <input id="animfile" type="text"></label>
+  <label>Layers (comma separated animation names, later wins per bone)
+    <input id="layers" type="text"></label>
+  <label>Time (s) <input id="time" type="range" min="0" max="6" step="0.01" value="0" style="width:100%"></label>
+  <label><input id="play" type="checkbox"> play</label>
+  <label>Rider offset (blocks, x y z in entity space) <input id="rider" type="text" value=""></label>
+  <label>Hide bones (comma) <input id="hide" type="text" value=""></label>
+  <button id="load">Load</button>
+  <div id="info"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+<script>
+// Minimal Bedrock geometry + animation renderer (Blockbench conventions: x mirrored, Euler ZYX, rx/ry negated).
+const D2R = Math.PI / 180;
+// Bedrock pack JSON may carry // comments
+async function fetchJson(u) { const t = await (await fetch(u)).text(); return JSON.parse(t.replace(/^\s*\/\/.*$/mg, '')); }
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a2633);
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.05, 500);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(5, 10, -7); scene.add(sun);
+const grid = new THREE.GridHelper(16, 16, 0x335566, 0x223344); scene.add(grid);
+
+// Simple orbit camera
+let yaw = 0.6, pitch = 0.25, dist = 14, target = new THREE.Vector3(0, 3.5, 0);
+function updCam() {
+  camera.position.set(target.x + dist * Math.sin(yaw) * Math.cos(pitch), target.y + dist * Math.sin(pitch), target.z + dist * Math.cos(yaw) * Math.cos(pitch));
+  camera.lookAt(target);
+}
+let drag = null;
+renderer.domElement.addEventListener('mousedown', e => drag = [e.clientX, e.clientY]);
+addEventListener('mouseup', () => drag = null);
+addEventListener('mousemove', e => { if (!drag) return; yaw -= (e.clientX - drag[0]) * 0.01; pitch = Math.max(-1.5, Math.min(1.5, pitch + (e.clientY - drag[1]) * 0.01)); drag = [e.clientX, e.clientY]; updCam(); });
+renderer.domElement.addEventListener('wheel', e => { dist *= e.deltaY > 0 ? 1.1 : 0.9; updCam(); });
+window.setView = (y, p, d, ty) => { yaw = y; pitch = p; dist = d; if (ty !== undefined) target.y = ty; updCam(); };
+updCam();
+
+let root = null, bones = {}, rest = {}, animData = null, riderMesh = null;
+const models = []; // {root, bones, rest}
+
+function boxGeometry(cube, texW, texH) {
+  const [ox, oy, oz] = cube.origin, [sx, sy, sz] = cube.size;
+  const inf = cube.inflate || 0;
+  // Mirror x: bedrock x -> -x
+  const x0 = -(ox + sx) - inf, x1 = -ox + inf, y0 = oy - inf, y1 = oy + sy + inf, z0 = oz - inf, z1 = oz + sz + inf;
+  const g = new THREE.BufferGeometry();
+  const pos = [], uv = [], idx = [];
+  // faces: [name, corners(4) in order for quad, normal]
+  const F = {
+    north: [[x1, y1, z0], [x0, y1, z0], [x0, y0, z0], [x1, y0, z0]],
+    south: [[x0, y1, z1], [x1, y1, z1], [x1, y0, z1], [x0, y0, z1]],
+    east:  [[x0, y1, z0], [x0, y1, z1], [x0, y0, z1], [x0, y0, z0]],
+    west:  [[x1, y1, z1], [x1, y1, z0], [x1, y0, z0], [x1, y0, z1]],
+    up:    [[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]],
+    down:  [[x0, y0, z1], [x1, y0, z1], [x1, y0, z0], [x0, y0, z0]],
+  };
+  let faceUV = {};
+  if (Array.isArray(cube.uv)) {
+    const [u, v] = cube.uv; const w = Math.floor(sx), h = Math.floor(sy), d = Math.floor(sz);
+    faceUV = {
+      east: [u, v + d, d, h], north: [u + d, v + d, w, h], west: [u + d + w, v + d, d, h], south: [u + d + w + d, v + d, w, h],
+      up: [u + d, v, w, d], down: [u + d + w, v + d, w, -d],
+    };
+    if (cube.mirror) { /* ignore mirror detail */ }
+  } else if (cube.uv) {
+    for (const k in cube.uv) { const f = cube.uv[k]; if (f) faceUV[k] = [f.uv[0], f.uv[1], f.uv_size[0], f.uv_size[1]]; }
+  }
+  for (const name in F) {
+    const fu = faceUV[name]; if (!fu) continue;
+    const base = pos.length / 3;
+    F[name].forEach(p => pos.push(...p));
+    let [u, v, w, h] = fu;
+    const u0 = u / texW, u1 = (u + w) / texW, v0 = 1 - v / texH, v1 = 1 - (v + h) / texH;
+    uv.push(u0, v0, u1, v0, u1, v1, u0, v1);
+    idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  }
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+
+function eul(r) { return new THREE.Euler(-r[0] * D2R, -r[1] * D2R, r[2] * D2R, 'ZYX'); }
+
+async function load(append) {
+  const geoUrl = append ? append.geo : document.getElementById('geo').value, texUrl = append ? append.tex : document.getElementById('tex').value;
+  const geo = await fetchJson(geoUrl);
+  const g = (geo['minecraft:geometry'] || [])[0];
+  const texW = g.description.texture_width, texH = g.description.texture_height;
+  const tex = await new THREE.TextureLoader().loadAsync(texUrl);
+  tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
+  const mat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.1, side: THREE.DoubleSide });
+  if (!append) { models.forEach(m => scene.remove(m.root)); models.length = 0; }
+  root = new THREE.Group(); root.scale.setScalar(1 / 16); scene.add(root);
+  bones = {}; rest = {}; models.push({ root, bones, rest });
+  for (const b of g.bones) {
+    const grp = new THREE.Group(); grp.name = b.name;
+    const pv = b.pivot || [0, 0, 0];
+    grp.userData.pivot = new THREE.Vector3(-pv[0], pv[1], pv[2]);
+    // inner holds geometry offset by -pivot so rotation is around pivot
+    const inner = new THREE.Group(); inner.position.copy(grp.userData.pivot).multiplyScalar(-1); grp.add(inner); grp.userData.inner = inner;
+    for (const c of (b.cubes || [])) {
+      let m = new THREE.Mesh(boxGeometry(c, texW, texH), mat);
+      if (c.rotation) {
+        const cp = c.pivot || [0, 0, 0]; const piv = new THREE.Vector3(-cp[0], cp[1], cp[2]);
+        const holder = new THREE.Group(); holder.position.copy(piv); holder.rotation.copy(eul(c.rotation));
+        m.position.copy(piv).multiplyScalar(-1); holder.add(m); inner.add(holder);
+      } else inner.add(m);
+    }
+    bones[b.name] = grp; rest[b.name] = { rot: b.rotation || [0, 0, 0], parent: b.parent };
+  }
+  for (const b of g.bones) {
+    const grp = bones[b.name];
+    const parent = b.parent && bones[b.parent];
+    if (parent) { grp.position.copy(grp.userData.pivot).sub(parent.userData.pivot); parent.add(grp); }
+    else { grp.position.copy(grp.userData.pivot); root.add(grp); }
+  }
+  if (append) { apply(); return; }
+  const au = document.getElementById('animfile').value;
+  animData = au ? (await fetchJson(au)).animations : {};
+  riderMesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.8, 0.6), new THREE.MeshBasicMaterial({ color: 0xff3366, wireframe: true }));
+  scene.add(riderMesh);
+  apply();
+}
+
+function evalMolang(v, t) {
+  if (typeof v === 'number') return v;
+  if (typeof v !== 'string') return 0;
+  try {
+    const s = v.toLowerCase().replace(/math\./g, 'M.').replace(/(q|query)\.anim_time/g, 't').replace(/(q|query)\.life_time/g, 't')
+      .replace(/(v|variable|q|query)\.[a-z_0-9\.]+/g, '0');
+    const M = { sin: x => Math.sin(x * D2R), cos: x => Math.cos(x * D2R), abs: Math.abs, clamp: (x, a, b) => Math.min(b, Math.max(a, x)), lerp: (a, b, k) => a + (b - a) * k, pi: Math.PI, random: () => 0.5, floor: Math.floor, ceil: Math.ceil, sqrt: Math.sqrt, pow: Math.pow, min: Math.min, max: Math.max, mod: (a, b) => a % b, round: Math.round };
+    return Function('M', 't', 'return (' + s + ')')(M, t);
+  } catch (e) { return 0; }
+}
+function vec(v, t) { if (Array.isArray(v)) return v.map(x => evalMolang(x, t)); const n = evalMolang(v, t); return [n, n, n]; }
+function kfVal(k, which) { if (Array.isArray(k) || typeof k !== 'object') return k; return k[which] ?? k.post ?? k.pre; }
+function sample(ch, t, len, loop) {
+  if (ch === undefined) return null;
+  if (Array.isArray(ch) || typeof ch !== 'object' || ch.post || ch.pre) { return vec(kfVal(ch, 'post'), t); }
+  const keys = Object.keys(ch).map(parseFloat).sort((a, b) => a - b);
+  const ks = Object.keys(ch).sort((a, b) => parseFloat(a) - parseFloat(b));
+  if (loop && len) t = t % len;
+  if (t <= keys[0]) return vec(kfVal(ch[ks[0]], 'pre'), t);
+  if (t >= keys[keys.length - 1]) return vec(kfVal(ch[ks[ks.length - 1]], 'post'), t);
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (t >= keys[i] && t <= keys[i + 1]) {
+      const a = vec(kfVal(ch[ks[i]], 'post'), t), b = vec(kfVal(ch[ks[i + 1]], 'pre'), t);
+      const f = (t - keys[i]) / (keys[i + 1] - keys[i]);
+      return a.map((x, j) => x + (b[j] - x) * f);
+    }
+  }
+  return null;
+}
+
+function apply() {
+  if (!root) return;
+  const keep = [bones, rest];
+  for (const m of models) { bones = m.bones; rest = m.rest; applyOne(); }
+  [bones, rest] = keep;
+  postApply();
+}
+function applyOne() {
+  const t = parseFloat(document.getElementById('time').value);
+  const hide = document.getElementById('hide').value.split(',').map(s => s.trim()).filter(Boolean);
+  for (const n in bones) { const b = bones[n]; b.rotation.copy(eul(rest[n].rot)); b.userData.inner.position.copy(b.userData.pivot).multiplyScalar(-1); b.scale.setScalar(1); b.visible = !hide.includes(n); b.userData.off = [0, 0, 0]; }
+  const layers = document.getElementById('layers').value.split(',').map(s => s.trim()).filter(Boolean);
+  for (const name of layers) {
+    const a = animData[name]; if (!a) continue;
+    const len = parseFloat(a.animation_length) || 0, loop = a.loop === true;
+    for (const bn in (a.bones || {})) {
+      const b = bones[bn]; if (!b) continue; const ch = a.bones[bn];
+      const r = sample(ch.rotation, t, len, loop);
+      if (r) { const rr = rest[bn].rot; b.rotation.copy(eul([rr[0] + r[0], rr[1] + r[1], rr[2] + r[2]])); }
+      const p = sample(ch.position, t, len, loop);
+      if (p) b.userData.off = [-p[0], p[1], p[2]];
+      const s = sample(ch.scale, t, len, loop);
+      if (s) b.scale.set(s[0], s[1], s[2]);
+    }
+  }
+  for (const n in bones) { const b = bones[n]; const o = b.userData.off; const parent = b.parent; const base = (parent && parent.userData && parent.userData.pivot) ? b.userData.pivot.clone().sub(parent.userData.pivot) : b.userData.pivot.clone(); b.position.set(base.x + o[0], base.y + o[1], base.z + o[2]); }
+}
+function postApply() {
+  scene.updateMatrixWorld(true);
+  const r = document.getElementById('rider').value.split(/[ ,]+/).map(parseFloat);
+  if (riderMesh && r.length === 3 && r.every(x => !isNaN(x))) { riderMesh.visible = true; riderMesh.position.set(-r[0], r[1] + 0.9, r[2]); } else if (riderMesh) riderMesh.visible = false;
+  const info = [];
+  for (const n of ['seat', 'eye', 'body3', 'rightHand', 'leftHand']) if (bones[n]) { const v = worldPivot(n); info.push(n.padEnd(10) + v.map(x => x.toFixed(2)).join(', ')); }
+  document.getElementById('info').textContent = 'world pivots (blocks, bedrock x):\n' + info.join('\n');
+}
+// World position of a bone pivot in blocks, reported in bedrock coordinates (x un-mirrored)
+function worldPivot(n) { const b = bones[n]; const v = new THREE.Vector3(); b.getWorldPosition(v); return [-v.x, v.y, v.z]; }
+window.worldPivot = worldPivot;
+window.cubeWorldBox = n => { const b = bones[n]; const box = new THREE.Box3().setFromObject(b); return [[-box.max.x, box.min.y, box.min.z], [-box.min.x, box.max.y, box.max.z]]; };
+window.findBones = () => { const out = []; scene.traverse(o => { if (o.name) out.push(o.name); }); return out; };
+// Load one of the mod's titans with its standard textures/animations
+window.analyze = async (id) => {
+  const A = '../src/main/resources/assets/titancombat/';
+  await setParams({ geo: A + 'geo/' + id + '_titan.geo.json', tex: A + 'textures/entity/titan/' + id + '/' + id + '_titan.png', animfile: A + 'animations/' + id + '_titan.animation.json', layers: '' });
+};
+window.addModel = (geo, tex) => load({ geo, tex });
+window.loadAnims = async (url) => { const a = (await fetchJson(url)).animations; Object.assign(animData, a); return Object.keys(a); };
+// First-person camera: Bedrock player-space eye point looking +Z (x is mirrored in the scene).
+window.fpCam = (eyeY, fov) => { camera.fov = fov || 70; camera.updateProjectionMatrix(); camera.position.set(0, eyeY / 16, 0); camera.lookAt(0, eyeY / 16, 10); grid.visible = false; };
+window.setParams = async (p) => { for (const k in p) document.getElementById(k).value = p[k]; if (p.geo || p.tex || p.animfile) await load(); else apply(); return 'ok'; };
+
+let last = performance.now();
+function loop(now) {
+  if (document.getElementById('play').checked) { const el = document.getElementById('time'); el.value = (parseFloat(el.value) + (now - last) / 1000) % 6; apply(); }
+  last = now; renderer.render(scene, camera); requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+['time', 'layers', 'rider', 'hide'].forEach(id => document.getElementById(id).addEventListener('input', apply));
+document.getElementById('load').onclick = load;
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+const A = 'src/main/resources/assets/titancombat/';
+document.getElementById('geo').value = '../' + A + 'geo/ion_titan.geo.json';
+document.getElementById('tex').value = '../' + A + 'textures/entity/titan/ion/ion_titan.png';
+document.getElementById('animfile').value = '../' + A + 'animations/ion_titan.animation.json';
+document.getElementById('layers').value = 'animation.ion_titan.idle.leg, animation.ion_titan.idle.arm';
+</script>
+</body>
+</html>

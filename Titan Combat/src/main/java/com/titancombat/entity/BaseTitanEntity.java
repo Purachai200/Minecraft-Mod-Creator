@@ -15,6 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -44,6 +45,7 @@ import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
+import software.bernie.geckolib.core.animation.Animation;
 import software.bernie.geckolib.core.animation.AnimationController;
 import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.core.animation.RawAnimation;
@@ -68,8 +70,40 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
             SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Boolean> DATA_IS_MELEEING =
             SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Integer> DATA_WEAPON =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> DATA_MAGAZINE =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> DATA_RELOAD_TICKS =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Boolean> DATA_WEAPON_LOWERED =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Boolean> DATA_IS_SITTING =
             SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Integer> DATA_SALUTE_TICKS =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> DATA_FLIGHT_MODULE =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Boolean> DATA_IS_FLYING =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.BOOLEAN);
+
+    // Entity events (server -> clients) for one-shot client effects: camera shake, muzzle flash, thrusters.
+    public static final byte EVENT_MELEE_IMPACT = 70;
+    public static final byte EVENT_WEAPON_FIRE = 71;
+    public static final byte EVENT_DASH = 72;
+    public static final byte EVENT_EMBARK = 73;
+    public static final byte EVENT_MELEE_SWING = 74;
+    public static final byte EVENT_JUMP = 75;
+
+    /** Thruster fuel for a jump-jet hop. */
+    public static final float JUMP_COST = 25.0F;
+
+    /** Length of the boarding sequence (entry_stand_front is 3 s); the pilot can't drive or shoot during it. */
+    private static final int BOARDING_TICKS = 60;
+
+    /** Set by the client input handler; only meaningful on the client that is piloting. */
+    public static boolean clientSprintHeld = false;
+    public static boolean clientJumpHeld = false;
 
     protected final SimpleContainer titanInventory = new SimpleContainer(TitanMenu.CONTAINER_SIZE);
 
@@ -77,7 +111,41 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     protected int fireAnimTimer = 0;
     protected int meleeCooldown = 0;
     protected int meleeAnimTimer = 0;
+    private int pendingMeleeTicks = -1;
+    private int boardingTicks = 0;
     private boolean isEmergencyEjecting = false;
+
+    // Client-side locomotion tracking: drives gait selection and animation playback rate.
+    public enum Gait { IDLE, WALK, RUN, DASH }
+    private Gait gait = Gait.IDLE;
+    private double observedSpeed = 0.0D; // blocks per second, smoothed
+    private int dashAnimTicks = 0;
+    private float smoothedForward = 0.0F;
+    private float smoothedStrafe = 0.0F;
+
+    // Legs lag behind the torso when turning; the torso twist is rendered from the difference.
+    private float legYaw;
+    private boolean legYawValid = false;
+
+    // Client-side smoothed values for the procedural animation layer (TitanModel).
+    private float proceduralWeight, proceduralWeightO;
+    private float leanForward, leanForwardO, leanSide, leanSideO;
+    private double lastSpeed;
+    private int airTicks;
+    private boolean wasOnGround = true;
+
+    // Uneven ground (client): eased step height and per-foot ground offsets for leg IK.
+    private float stepOffset, stepOffsetO;
+    private float pelvisDrop, pelvisDropO;
+    private float legLiftLeft, legLiftLeftO, legLiftRight, legLiftRightO;
+    private float ikWeight, ikWeightO;
+    private int ikHoldTicks;
+    private float lowerBlend, lowerBlendO; // 1 = weapon arm lowered (H)
+    private float gaitLift, gaitLiftO;     // model lift so walking feet don't sink into the ground
+
+    // 0 = kneeling cockpit position, 1 = standing; eased so the pilot rises with the chassis.
+    private float standBlend = 1.0F;
+    private int standUpAtTick = -1;
 
     private Vec3 lastNavPos = Vec3.ZERO;
     private int navStuckTicks = 0;
@@ -113,6 +181,52 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         this.entityData.define(DATA_IS_FIRING, false);
         this.entityData.define(DATA_IS_MELEEING, false);
         this.entityData.define(DATA_IS_SITTING, false);
+        // Titans arrive unarmed (-1); a weapon module has to be installed in the bay before they can shoot.
+        this.entityData.define(DATA_WEAPON, -1);
+        this.entityData.define(DATA_MAGAZINE, 0);
+        this.entityData.define(DATA_RELOAD_TICKS, 0);
+        this.entityData.define(DATA_WEAPON_LOWERED, false);
+        this.entityData.define(DATA_SALUTE_TICKS, 0);
+        this.entityData.define(DATA_FLIGHT_MODULE, -1);
+        this.entityData.define(DATA_IS_FLYING, false);
+    }
+
+    public TitanFlightModule getFlightModule() {
+        int id = this.entityData.get(DATA_FLIGHT_MODULE);
+        return id < 0 ? TitanFlightModule.NONE : TitanFlightModule.byOrdinal(id);
+    }
+
+    public void setFlightModule(TitanFlightModule module) {
+        this.entityData.set(DATA_FLIGHT_MODULE, module == null || module == TitanFlightModule.NONE ? -1 : module.ordinal());
+    }
+
+    public boolean hasFlightModule() {
+        return getFlightModule() != TitanFlightModule.NONE;
+    }
+
+    public boolean isFlying() {
+        return this.entityData.get(DATA_IS_FLYING);
+    }
+
+    public void setFlightThrust(boolean thrusting) {
+        this.entityData.set(DATA_IS_FLYING, thrusting && hasFlightModule());
+    }
+
+    public int getSaluteTicks() {
+        return this.entityData.get(DATA_SALUTE_TICKS);
+    }
+
+    public boolean isSaluting() {
+        return getSaluteTicks() > 0;
+    }
+
+    public void triggerSalute(@Nullable Player pilot) {
+        if (this.level().isClientSide || isSaluting() || isKneeling() || this.entityData.get(DATA_IS_MELEEING)) return;
+        this.entityData.set(DATA_SALUTE_TICKS, 45);
+        this.level().playSound(null, this.blockPosition(), SoundEvents.ARMOR_EQUIP_NETHERITE, SoundSource.PLAYERS, 1.4F, 1.1F);
+        if (pilot != null) {
+            pilot.displayClientMessage(Component.translatable("message.titancombat.salute", this.getTitanClass().getDisplayName()), true);
+        }
     }
 
     public boolean isEmergencyEjecting() {
@@ -131,11 +245,35 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         this.entityData.set(DATA_IS_SITTING, sitting);
     }
 
+    private int lastKneelToggleTick = -100;
+
+    public static final byte EVENT_EJECT = 76;
+    private static final int EJECT_SELF_DESTRUCT_TICKS = 50;
+    private int ejectCountdown = 0;
+    @Nullable
+    private Player ejectedPilot;
+
+    public boolean isSelfDestructing() {
+        return this.ejectCountdown > 0;
+    }
+
     public void toggleKneel() {
+        // Ignore repeats until the kneel / stand-up motion has finished.
+        if (isBoarding() || this.tickCount - this.lastKneelToggleTick < 28) return;
+        doToggleKneel();
+    }
+
+    private void doToggleKneel() {
+        this.lastKneelToggleTick = this.tickCount;
         boolean nowSitting = !isSitting();
         setSitting(nowSitting);
         if (!this.level().isClientSide) {
-            this.level().playSound(null, this.blockPosition(), SoundEvents.IRON_DOOR_CLOSE, SoundSource.PLAYERS, 1.2F, nowSitting ? 0.7F : 1.1F);
+            if (!nowSitting) {
+                // Rise out of the kneel with the dedicated stand-up clip instead of snapping to idle.
+                this.triggerAnim("body", "standing");
+            }
+            this.level().playSound(null, this.blockPosition(), nowSitting ? ModSounds.TITAN_CABIN_EXIT.get() : ModSounds.TITAN_CABIN_ENTER.get(),
+                    SoundSource.PLAYERS, 1.4F, nowSitting ? 0.8F : 1.0F);
             if (this.getFirstPassenger() instanceof Player player) {
                 player.displayClientMessage(Component.translatable(nowSitting ?
                         "message.titancombat.kneel_engaged" : "message.titancombat.kneel_disengaged"), true);
@@ -194,16 +332,34 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         }
     }
 
+    /** Kneeling pose: parked by the pilot, or still crouched from an orbital drop. */
+    public boolean isKneeling() {
+        MechState state = getMechState();
+        return isSitting() || state == MechState.LANDED || state == MechState.DROPPING;
+    }
+
+    public boolean isBoarding() {
+        return this.boardingTicks > 0;
+    }
+
+    public Gait getGait() {
+        return this.gait;
+    }
+
     @Override
     protected void positionRider(Entity passenger, Entity.MoveFunction moveFunction) {
         if (this.hasPassenger(passenger)) {
-            // Position pilot securely inside upper chest cockpit visor directly behind the dashboard
-            double cockpitY = isSitting() ? (this.getY() + 3.0D) : (this.getY() + 4.85D);
-            float yawRad = this.yBodyRot * ((float) Math.PI / 180.0F);
-            double forwardOffset = isSitting() ? 0.60D : 0.20D;
+            // Seat the pilot so their eyes sit in this chassis' cockpit (measured per model, standing vs kneeling).
+            // Eased between the kneeling and standing cockpit positions as the chassis rises/crouches.
+            TitanClass c = getTitanClass();
+            float b = this.standBlend;
+            double eyeY = Mth.lerp(b, c.getCockpitEyeY(true), c.getCockpitEyeY(false));
+            double forwardOffset = Mth.lerp(b, c.getCockpitForward(true), c.getCockpitForward(false));
+            float yawRad = this.getYRot() * ((float) Math.PI / 180.0F);
             double offsetX = -Math.sin(yawRad) * forwardOffset;
             double offsetZ = Math.cos(yawRad) * forwardOffset;
-            moveFunction.accept(passenger, this.getX() + offsetX, cockpitY, this.getZ() + offsetZ);
+            double feetY = this.getY() + eyeY - passenger.getEyeHeight() + (this.level().isClientSide ? this.stepOffset + this.gaitLift : 0.0F);
+            moveFunction.accept(passenger, this.getX() + offsetX, feetY, this.getZ() + offsetZ);
         }
     }
 
@@ -231,24 +387,71 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
 
     @Override
     protected void playStepSound(BlockPos pos, BlockState state) {
-        this.playSound(ModSounds.TITAN_STEP.get(), 1.6F, 0.9F + this.random.nextFloat() * 0.2F);
+        // Footsteps come from sound keyframes in walk.leg / move.leg (see TitanRenderer) so they land with the feet.
     }
 
     @Override
     public void performDash(float forward, float strafe) {
-        if (this.isSitting()) return;
+        if (this.isSitting() || this.isBoarding()) return;
+        if (Math.abs(forward) < 0.1F && Math.abs(strafe) < 0.1F) {
+            performJump();
+            return;
+        }
+        float before = getDashCharge();
         super.performDash(forward, strafe);
-        this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_DASH.get(), SoundSource.PLAYERS, 2.5F, 1.0F);
+        if (getDashCharge() < before) {
+            this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_DASH.get(), SoundSource.PLAYERS, 2.5F, 1.0F);
+            this.level().broadcastEntityEvent(this, EVENT_DASH);
+        }
     }
 
     @Override
     public void ejectPilot() {
+        if (this.ejectCountdown > 0 || !(this.getFirstPassenger() instanceof Player pilot)) return;
+
+        // Hatch blows, the seat rockets the pilot skyward, and the abandoned chassis self-destructs.
         this.isEmergencyEjecting = true;
         try {
-            super.ejectPilot();
-            this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_CABIN_EXIT.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
+            pilot.stopRiding();
         } finally {
             this.isEmergencyEjecting = false;
+        }
+        float yawRad = this.getYRot() * ((float) Math.PI / 180.0F);
+        double fx = -Math.sin(yawRad), fz = Math.cos(yawRad);
+        double top = this.getY() + getTitanClass().getCockpitEyeY(isKneeling()) + 0.5D;
+        pilot.teleportTo(this.getX() + fx * 0.6D, top, this.getZ() + fz * 0.6D);
+        pilot.setDeltaMovement(fx * 0.6D, 2.4D, fz * 0.6D);
+        pilot.hurtMarked = true;
+        pilot.fallDistance = 0.0F;
+        pilot.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SLOW_FALLING, 200, 0, false, false, true));
+
+        this.ejectedPilot = pilot;
+        this.ejectCountdown = EJECT_SELF_DESTRUCT_TICKS;
+        this.setStandbyMode(true);
+        this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_CABIN_EXIT.get(), SoundSource.PLAYERS, 2.5F, 1.2F);
+        this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_DASH.get(), SoundSource.PLAYERS, 3.0F, 0.7F);
+        this.level().playSound(null, this.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.5F, 1.6F);
+        this.level().broadcastEntityEvent(this, EVENT_EJECT);
+    }
+
+    /** Server: rocket trail behind the ejected pilot, warning sparks on the chassis, then the blast. */
+    private void tickEjectSequence() {
+        if (this.ejectCountdown <= 0) return;
+        if (!(this.level() instanceof net.minecraft.server.level.ServerLevel server)) return;
+        int elapsed = EJECT_SELF_DESTRUCT_TICKS - this.ejectCountdown;
+        Player pilot = this.ejectedPilot;
+        if (pilot != null && pilot.isAlive() && elapsed < 22) {
+            server.sendParticles(ParticleTypes.FLAME, pilot.getX(), pilot.getY() - 0.4D, pilot.getZ(), 6, 0.15D, 0.2D, 0.15D, 0.02D);
+            server.sendParticles(ParticleTypes.LARGE_SMOKE, pilot.getX(), pilot.getY() - 0.8D, pilot.getZ(), 3, 0.2D, 0.3D, 0.2D, 0.01D);
+        }
+        if (elapsed % 5 == 0) {
+            server.sendParticles(ParticleTypes.LAVA, this.getX(), this.getY() + 3.5D, this.getZ(), 3, 1.0D, 1.0D, 1.0D, 0.0D);
+            this.level().playSound(null, this.blockPosition(), SoundEvents.NOTE_BLOCK_BIT.get(), SoundSource.HOSTILE, 1.5F, 0.5F + elapsed / 50.0F);
+        }
+        server.sendParticles(ParticleTypes.SMOKE, this.getX(), this.getY() + 4.0D, this.getZ(), 2, 0.8D, 0.8D, 0.8D, 0.02D);
+        if (--this.ejectCountdown == 0) {
+            this.ejectedPilot = null;
+            explodeAndDestroy();
         }
     }
 
@@ -335,11 +538,549 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         super.travel(travelVector);
     }
 
+    public double getGroundYBelow(int maxProbeDistance) {
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        int startY = Mth.floor(this.getY());
+        int minProbe = Math.max(this.level().getMinBuildHeight(), startY - maxProbeDistance);
+        int x = Mth.floor(this.getX());
+        int z = Mth.floor(this.getZ());
+        for (int y = startY; y >= minProbe; y--) {
+            pos.set(x, y, z);
+            net.minecraft.world.level.block.state.BlockState bs = this.level().getBlockState(pos);
+            if (!bs.isAir() && bs.isSolidRender(this.level(), pos)) {
+                return y + 1.0D;
+            }
+        }
+        return minProbe;
+    }
+
+    /**
+     * Heavy-chassis driving: input is smoothed so the titan winds up and brakes with weight, and
+     * ground speed is fixed to the gait so the walk/run animations never slide. Sprint (vanilla
+     * sprint key) switches to the run gait. Modular flight equipment provides vertical lift,
+     * cruising speed boost, and hovering scaled by chassis weight class.
+     */
+    @Override
+    protected void travelPiloted(LivingEntity rider, Vec3 travelVector) {
+        float forward = this.isBoarding() ? 0.0F : rider.zza;
+        float strafe = this.isBoarding() ? 0.0F : rider.xxa;
+
+        boolean grounded = this.onGround();
+        float response = grounded ? 0.12F : 0.03F;
+        this.smoothedForward += (forward - this.smoothedForward) * response;
+        this.smoothedStrafe += (strafe - this.smoothedStrafe) * response;
+
+        TitanClass c = getTitanClass();
+        TitanFlightModule flight = getFlightModule();
+        boolean hasFlight = flight != TitanFlightModule.NONE;
+
+        boolean sprinting = clientSprintHeld && forward > 0.5F;
+        double topSpeed = sprinting ? c.getRunSpeed() : c.getWalkSpeed();
+        if (hasFlight && !grounded) {
+            topSpeed *= flight.getForwardMultiplier();
+        }
+        // Reverse and side-stepping are slower, like a real heavy frame.
+        double fwdSpeed = this.smoothedForward * topSpeed * (this.smoothedForward < 0 ? 0.55D : 1.0D);
+        double sideSpeed = this.smoothedStrafe * c.getWalkSpeed() * 0.7D;
+
+        float yawRad = this.getYRot() * ((float) Math.PI / 180.0F);
+        double sin = Math.sin(yawRad), cos = Math.cos(yawRad);
+        double wantX = -sin * fwdSpeed + cos * sideSpeed;
+        double wantZ = cos * fwdSpeed + sin * sideSpeed;
+
+        Vec3 vel = this.getDeltaMovement();
+        // Pull velocity toward the wanted ground velocity; dash impulses bleed off naturally this way.
+        // While a dash is bleeding off, hold most of the thrust so it carries ~10 blocks.
+        double blend = !grounded ? (hasFlight ? 0.08D : 0.02D) : (this.dashAnimTicks > 0 ? 0.12D : 0.25D);
+        double vx = vel.x + (wantX - vel.x) * blend;
+        double vz = vel.z + (wantZ - vel.z) * blend;
+        double vy = vel.y;
+        if (!this.isNoGravity()) vy -= 0.08D;
+
+        if (hasFlight) {
+            double groundY = getGroundYBelow((int) flight.getMaxFlightCeiling() + 5);
+            double alt = this.getY() - groundY;
+            boolean hasFuel = getDashCharge() > 0.5F;
+
+            if (hasFuel) {
+                if (flight == TitanFlightModule.DRONE_LIFTER) {
+                    // Quad-rotor auto-hover: dampens falling speed
+                    if (!grounded && vy < -0.04D) {
+                        vy = vy * 0.55D;
+                    }
+                    if (clientJumpHeld && alt < flight.getMaxFlightCeiling()) {
+                        double lift = 0.14D * (flight.getVerticalLift() / c.getWeightMultiplier());
+                        vy = Math.min(vy + lift, 0.42D);
+                    }
+                } else if (flight == TitanFlightModule.ROCKET_JETPACK) {
+                    if (clientJumpHeld && alt < flight.getMaxFlightCeiling()) {
+                        double lift = 0.22D * (flight.getVerticalLift() / c.getWeightMultiplier());
+                        vy = Math.min(vy + lift, 0.75D);
+                    } else if (!grounded && vy < -0.6D) {
+                        vy = -0.6D;
+                    }
+                } else if (flight == TitanFlightModule.VTOL_GLIDE) {
+                    if (!grounded && (Math.abs(forward) > 0.1F || Math.abs(strafe) > 0.1F)) {
+                        vy = Math.max(vy, -0.06D);
+                    }
+                    if (clientJumpHeld && alt < flight.getMaxFlightCeiling()) {
+                        double lift = 0.12D * (flight.getVerticalLift() / c.getWeightMultiplier());
+                        vy = Math.min(vy + lift, 0.50D);
+                    }
+                }
+            }
+
+            // Ceiling governor
+            if (alt >= flight.getMaxFlightCeiling()) {
+                if (vy > 0.0D) vy *= 0.15D;
+                if (clientJumpHeld && this.tickCount % 40 == 0 && rider instanceof Player pilot) {
+                    pilot.displayClientMessage(Component.translatable("message.titancombat.flight_ceiling_reached"), true);
+                }
+            }
+        }
+
+        this.setDeltaMovement(vx, vy, vz);
+        this.move(net.minecraft.world.entity.MoverType.SELF, this.getDeltaMovement());
+        Vec3 after = this.getDeltaMovement();
+        this.setDeltaMovement(after.x, after.y * 0.98D, after.z);
+        this.calculateEntityAnimation(false);
+    }
+
+    /** Client: measure real ground speed and pick the gait the legs should play. */
+    private int lastRicochetTick = -100;
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        if (!this.level().isClientSide) {
+            amount = applyArmorPlating(source, amount);
+            if (amount <= 0.0F) {
+                playRicochet(source);
+                return false;
+            }
+        }
+        return super.hurt(source, amount);
+    }
+
+    /**
+     * Titan hull plating. Infantry weapons (vanilla arrows/melee and gun mods such as TACZ or
+     * Superb Warfare, whose bullets arrive as ordinary projectile/mob damage) mostly glance off;
+     * heavy calibers still chip it, explosives and other titans' weapons do real damage.
+     */
+    protected float applyArmorPlating(DamageSource source, float amount) {
+        if (source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)) return amount;
+
+        Entity direct = source.getDirectEntity();
+        Entity attacker = source.getEntity();
+        boolean titanWeapon = direct instanceof TitanEnergyBlastEntity || direct instanceof BaseMechEntity
+                || (attacker != null && attacker.getVehicle() instanceof BaseMechEntity && direct == attacker.getVehicle());
+        if (titanWeapon) return amount;
+
+        if (source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)) return amount * 0.6F;
+        if (source.is(net.minecraft.tags.DamageTypeTags.IS_FIRE)) return amount * 0.2F;
+        if (source.is(net.minecraft.tags.DamageTypeTags.IS_FALL)) return 0.0F;
+
+        // Small arms: rifle/pistol rounds glance; anti-materiel and cannon rounds still bite.
+        if (amount < 6.0F) return amount * 0.05F;
+        if (amount < 30.0F) return amount * 0.2F;
+        return amount * 0.5F;
+    }
+
+    private void playRicochet(DamageSource source) {
+        if (this.tickCount - this.lastRicochetTick < 3) return;
+        this.lastRicochetTick = this.tickCount;
+        Vec3 at = source.getSourcePosition() != null ? source.getSourcePosition() : this.position().add(0, 3.0D, 0);
+        Vec3 hit = this.position().add(0, 3.0D, 0).add(at.subtract(this.position().add(0, 3.0D, 0)).normalize().scale(1.5D));
+        this.level().playSound(null, hit.x, hit.y, hit.z, SoundEvents.SHIELD_BLOCK, SoundSource.HOSTILE, 0.6F, 1.6F + this.random.nextFloat() * 0.3F);
+        if (this.level() instanceof net.minecraft.server.level.ServerLevel server) {
+            server.sendParticles(ParticleTypes.ELECTRIC_SPARK, hit.x, hit.y, hit.z, 6, 0.2D, 0.2D, 0.2D, 0.15D);
+        }
+    }
+
+    /** Jump jets: a short vertical burst (Space with no direction held). */
+    public void performJump() {
+        if (!this.onGround() || getDashCharge() < JUMP_COST) return;
+        setDashCharge(getDashCharge() - JUMP_COST);
+        Vec3 v = this.getDeltaMovement();
+        this.setDeltaMovement(v.x * 1.2D, 1.25D, v.z * 1.2D);
+        this.hasImpulse = true;
+        this.hurtMarked = true;
+        this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_DASH.get(), SoundSource.PLAYERS, 2.2F, 0.8F);
+        this.level().broadcastEntityEvent(this, EVENT_JUMP);
+    }
+
+    /** Client-only: jetpack nozzle exits relative to the titan's position, as last drawn by TitanFlightModuleLayer. */
+    private Vec3[] renderedJetNozzles;
+    private int renderedJetNozzlesTick;
+
+    public void setRenderedJetNozzles(Vec3 left, Vec3 right) {
+        this.renderedJetNozzles = new Vec3[]{left, right};
+        this.renderedJetNozzlesTick = this.tickCount;
+    }
+
+    private void spawnFlightParticles() {
+        TitanFlightModule flight = getFlightModule();
+        if (flight == TitanFlightModule.NONE) return;
+
+        float yawRad = this.getYRot() * ((float) Math.PI / 180.0F);
+        double fx = -Math.sin(yawRad);  // Forward vector X
+        double fz = Math.cos(yawRad);   // Forward vector Z
+        double rx = -Math.cos(yawRad);  // Right vector X
+        double rz = -Math.sin(yawRad);  // Right vector Z
+        double bx = -fx;                // Backward vector X
+        double bz = -fz;                // Backward vector Z
+
+        // The flight module is mounted on the upper dorsal reactor/spine (body3).
+        // Its vertical height directly tracks the chassis cockpit eye line.
+        double eyeY = this.getTitanClass().getCockpitEyeY(false);
+        double mountCenterY = this.getY() + eyeY + 0.95D;
+
+        if (flight == TitanFlightModule.DRONE_LIFTER) {
+            // 4 Ducted Rotor Nacelles (Front-Left, Front-Right, Rear-Left, Rear-Right)
+            // Rotors are elevated high on the dorsal frame, blowing strong downwash downwards.
+            double[][] rotors = {
+                    {-1.73D, 1.55D, 0.45D},  // Front-Left Rotor
+                    { 1.73D, 1.55D, 0.45D},  // Front-Right Rotor
+                    {-1.85D, 2.00D, 0.10D},  // Rear-Left Rotor
+                    { 1.85D, 2.00D, 0.10D}   // Rear-Right Rotor
+            };
+            for (double[] r : rotors) {
+                double px = this.getX() + rx * r[0] + bx * r[1];
+                double py = mountCenterY + r[2];
+                double pz = this.getZ() + rz * r[0] + bz * r[1];
+                this.level().addParticle(ParticleTypes.CLOUD,
+                        px + (this.random.nextDouble() - 0.5D) * 0.25D,
+                        py,
+                        pz + (this.random.nextDouble() - 0.5D) * 0.25D,
+                        (this.random.nextDouble() - 0.5D) * 0.08D,
+                        -0.55D,
+                        (this.random.nextDouble() - 0.5D) * 0.08D);
+            }
+        } else if (flight == TitanFlightModule.ROCKET_JETPACK) {
+            // Twin Rocket Bell Nozzles (Left and Right), at this chassis' modelled nozzle exits.
+            double[] nozzle = this.getTitanClass().getJetpackNozzle();
+            double nozzleY = this.getY() + nozzle[1];
+            double[][] nozzles = {
+                    {-nozzle[0], nozzle[2]}, // Left Nozzle Bell
+                    { nozzle[0], nozzle[2]}  // Right Nozzle Bell
+            };
+            // Prefer where the renderer last drew the nozzles: torso aim/lean swings a rear-mounted pack a long way.
+            boolean rendered = this.renderedJetNozzles != null && this.tickCount - this.renderedJetNozzlesTick < 5;
+            for (int i = 0; i < nozzles.length; i++) {
+                double[] n = nozzles[i];
+                double px = this.getX() + rx * n[0] + bx * n[1];
+                double py = nozzleY;
+                double pz = this.getZ() + rz * n[0] + bz * n[1];
+                if (rendered) {
+                    px = this.getX() + this.renderedJetNozzles[i].x;
+                    py = this.getY() + this.renderedJetNozzles[i].y;
+                    pz = this.getZ() + this.renderedJetNozzles[i].z;
+                }
+
+                // Blazing rocket exhaust flame bursting directly out of the bell opening
+                this.level().addParticle(ParticleTypes.FLAME,
+                        px + (this.random.nextDouble() - 0.5D) * 0.18D,
+                        py,
+                        pz + (this.random.nextDouble() - 0.5D) * 0.18D,
+                        (this.random.nextDouble() - 0.5D) * 0.04D,
+                        -0.65D,
+                        (this.random.nextDouble() - 0.5D) * 0.04D);
+
+                // High-velocity rocket smoke column blasting downward
+                this.level().addParticle(ParticleTypes.SMOKE,
+                        px + (this.random.nextDouble() - 0.5D) * 0.15D,
+                        py - 0.15D,
+                        pz + (this.random.nextDouble() - 0.5D) * 0.15D,
+                        (this.random.nextDouble() - 0.5D) * 0.04D,
+                        -0.50D,
+                        (this.random.nextDouble() - 0.5D) * 0.04D);
+            }
+        } else if (flight == TitanFlightModule.VTOL_GLIDE) {
+            // Twin Underwing Vector Turbines (Left and Right Wing)
+            // Positioned directly under the wings at the rear turbine exhaust cowls.
+            double turbineY = mountCenterY - 0.20D;
+            double[][] turbines = {
+                    {-1.45D, 1.35D}, // Left Underwing Turbine
+                    { 1.45D, 1.35D}  // Right Underwing Turbine
+            };
+            for (double[] tb : turbines) {
+                double px = this.getX() + rx * tb[0] + bx * tb[1];
+                double py = turbineY;
+                double pz = this.getZ() + rz * tb[0] + bz * tb[1];
+
+                // Cyan soul-fire plasma vector jet streaming backwards and down from turbine cowl
+                this.level().addParticle(ParticleTypes.SOUL_FIRE_FLAME,
+                        px + (this.random.nextDouble() - 0.5D) * 0.15D,
+                        py,
+                        pz + (this.random.nextDouble() - 0.5D) * 0.15D,
+                        bx * 0.25D + (this.random.nextDouble() - 0.5D) * 0.05D,
+                        -0.25D,
+                        bz * 0.25D + (this.random.nextDouble() - 0.5D) * 0.05D);
+
+                // High speed vector jet stream smoke
+                this.level().addParticle(ParticleTypes.SMOKE,
+                        px,
+                        py - 0.05D,
+                        pz,
+                        bx * 0.20D,
+                        -0.20D,
+                        bz * 0.20D);
+            }
+        }
+    }
+
+    @Override
+    public boolean causeFallDamage(float distance, float multiplier, DamageSource source) {
+        return false; // landing jets cushion the chassis
+    }
+
+    @Override
+    protected float tickHeadTurn(float yRot, float amount) {
+        if (this.getControllingPassenger() != null && !isKneeling()) {
+            float target = this.getYRot();
+            if (!this.legYawValid) {
+                this.legYaw = target;
+                this.legYawValid = true;
+            }
+            float diff = Mth.wrapDegrees(target - this.legYaw);
+            // The waist can only twist so far before the legs must step around.
+            if (Math.abs(diff) > 55.0F) {
+                this.legYaw = target - Math.signum(diff) * 55.0F;
+                diff = Math.signum(diff) * 55.0F;
+            }
+            float turnRate = this.gait == Gait.IDLE ? 4.5F : 9.0F;
+            this.legYaw += Mth.clamp(diff, -turnRate, turnRate);
+            this.yBodyRot = this.legYaw;
+            this.yHeadRot = target;
+            return amount;
+        }
+        this.legYawValid = false;
+        return super.tickHeadTurn(yRot, amount);
+    }
+
+    public float getProceduralWeight(float partial) {
+        return Mth.lerp(partial, this.proceduralWeightO, this.proceduralWeight);
+    }
+
+    /** Degrees; negative pitches the hull forward (GeckoLib rotX convention). */
+    public float getLeanForward(float partial) {
+        return Mth.lerp(partial, this.leanForwardO, this.leanForward);
+    }
+
+    public float getLeanSide(float partial) {
+        return Mth.lerp(partial, this.leanSideO, this.leanSide);
+    }
+
+    /** 0..1, how far the weapon arm is lowered (holster key), eased. */
+    public float getLowerBlend(float partial) {
+        return Mth.lerp(partial, this.lowerBlendO, this.lowerBlend);
+    }
+
+    public float getStepOffset(float partial) {
+        return Mth.lerp(partial, this.stepOffsetO, this.stepOffset) + Mth.lerp(partial, this.gaitLiftO, this.gaitLift);
+    }
+
+    /** Blocks the pelvis is lowered so the foot over lower ground reaches it (<= 0). */
+    public float getPelvisDrop(float partial) {
+        return Mth.lerp(partial, this.pelvisDropO, this.pelvisDrop) * Mth.lerp(partial, this.ikWeightO, this.ikWeight);
+    }
+
+    /** Blocks the given foot must be raised (by bending that leg) after the pelvis drop (>= 0). */
+    public float getLegLift(boolean left, float partial) {
+        float w = Mth.lerp(partial, this.ikWeightO, this.ikWeight);
+        return (left ? Mth.lerp(partial, this.legLiftLeftO, this.legLiftLeft) : Mth.lerp(partial, this.legLiftRightO, this.legLiftRight)) * w;
+    }
+
+    /** Height of walkable ground under (x, z) relative to the titan's feet, searched within +-2.5 blocks. */
+    private float groundHeightAt(double x, double z) {
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        int top = Mth.floor(this.getY() + 2.5D), bottom = Mth.floor(this.getY() - 2.5D);
+        for (int y = top; y >= bottom; y--) {
+            pos.set(Mth.floor(x), y, Mth.floor(z));
+            net.minecraft.world.phys.shapes.VoxelShape shape = this.level().getBlockState(pos).getCollisionShape(this.level(), pos);
+            if (!shape.isEmpty()) {
+                return (float) (y + shape.max(net.minecraft.core.Direction.Axis.Y) - this.getY());
+            }
+        }
+        return -2.5F;
+    }
+
+    /** Client: ease vertical steps and work out foot placement on uneven ground. */
+    private void updateClientTerrain() {
+        this.stepOffsetO = this.stepOffset;
+        double dy = this.getY() - this.yo;
+        // A step up/down while walking is a 1-2 block teleport in vanilla; show it as a short climb instead.
+        if (this.onGround() && this.wasOnGround && Math.abs(dy) > 0.3D && Math.abs(dy) < 2.6D) {
+            this.stepOffset -= (float) dy;
+        }
+        this.stepOffset *= 0.6F;
+        if (Math.abs(this.stepOffset) < 0.01F) this.stepOffset = 0.0F;
+
+        this.gaitLiftO = this.gaitLift;
+        float liftTarget = !this.onGround() || isKneeling() ? 0.0F : switch (this.gait) {
+            case WALK -> getTitanClass().getFootSink(false);
+            case RUN -> getTitanClass().getFootSink(true);
+            default -> 0.0F;
+        };
+        this.gaitLift += (liftTarget - this.gaitLift) * 0.2F;
+
+        this.lowerBlendO = this.lowerBlend;
+        // Only armed titans lower their weapon; unarmed titans use their natural bind rest pose.
+        boolean lowered = isWeaponLowered() && hasWeapon() && !isFiringWeapon() && !isKneeling();
+        this.lowerBlend = Mth.approach(this.lowerBlend, lowered ? 1.0F : 0.0F, 0.12F);
+
+        this.ikWeightO = this.ikWeight;
+        this.pelvisDropO = this.pelvisDrop;
+        this.legLiftLeftO = this.legLiftLeft;
+        this.legLiftRightO = this.legLiftRight;
+
+        boolean planted = this.onGround() && !isKneeling() && this.gait == Gait.IDLE && getMechState() != MechState.DROPPING;
+        // Leaving the ground cancels foot placement at once; otherwise the body would be pulled down to
+        // the ground under a jumping titan.
+        if (!this.onGround()) this.ikHoldTicks = 10; // let the landing settle before placing feet
+        else if (this.ikHoldTicks > 0) this.ikHoldTicks--;
+        this.ikWeight = this.onGround() && this.ikHoldTicks == 0 ? Mth.approach(this.ikWeight, planted ? 1.0F : 0.0F, 0.15F) : 0.0F;
+        if (this.tickCount % 2 == 0 || this.ikWeight > 0.0F) {
+            float yawRad = this.yBodyRot * ((float) Math.PI / 180.0F);
+            double rx = -Math.cos(yawRad), rz = -Math.sin(yawRad); // titan's right
+            float right = groundHeightAt(this.getX() + rx * 1.1D, this.getZ() + rz * 1.1D);
+            float left = groundHeightAt(this.getX() - rx * 1.1D, this.getZ() - rz * 1.1D);
+            right = Mth.clamp(right, -1.25F, 0.6F);
+            left = Mth.clamp(left, -1.25F, 0.6F);
+            float drop = Math.min(0.0F, Math.min(left, right));
+            this.pelvisDrop += (drop - this.pelvisDrop) * 0.3F;
+            this.legLiftLeft += ((left - drop) - this.legLiftLeft) * 0.3F;
+            this.legLiftRight += ((right - drop) - this.legLiftRight) * 0.3F;
+        }
+    }
+
+    /** Client: procedural weights, lean, thruster/landing effects. */
+    private void updateClientMotionFx() {
+        this.proceduralWeightO = this.proceduralWeight;
+        boolean live = !isKneeling() && !isBoarding() && getMechState() != MechState.DROPPING;
+        this.proceduralWeight = Mth.approach(this.proceduralWeight, live ? 1.0F : 0.0F, 0.08F);
+
+        double accel = this.observedSpeed - this.lastSpeed;
+        this.lastSpeed = this.observedSpeed;
+        float turn = Mth.wrapDegrees(this.yBodyRot - this.yBodyRotO);
+        this.leanForwardO = this.leanForward;
+        this.leanSideO = this.leanSide;
+        float fwdTarget = (float) Mth.clamp(-(this.observedSpeed * 0.6D + accel * 5.0D), -10.0D, 6.0D);
+        float sideTarget = Mth.clamp(turn * 0.9F, -8.0F, 8.0F);
+        this.leanForward += (fwdTarget - this.leanForward) * 0.15F;
+        this.leanSide += (sideTarget - this.leanSide) * 0.15F;
+
+        boolean grounded = this.onGround();
+        if (!grounded) this.airTicks++;
+        if (grounded && !this.wasOnGround && this.airTicks > 8) {
+            com.titancombat.client.TitanClientEffects.onLanding(this, Math.min(1.0F, this.airTicks / 25.0F));
+        }
+        if (grounded) this.airTicks = 0;
+        this.wasOnGround = grounded;
+
+        if (this.isVehicle() || this.dashAnimTicks > 0) {
+            com.titancombat.client.TitanClientEffects.thrusterTick(this, this.dashAnimTicks > 0, !grounded && this.airTicks > 1, this.gait == Gait.RUN);
+        }
+    }
+
+    private void updateClientGait() {
+        double dx = this.getX() - this.xo;
+        double dz = this.getZ() - this.zo;
+        double speed = Math.sqrt(dx * dx + dz * dz) * 20.0D;
+        this.observedSpeed += (speed - this.observedSpeed) * 0.35D;
+
+        if (this.dashAnimTicks > 0) {
+            this.dashAnimTicks--;
+            this.gait = Gait.DASH;
+            return;
+        }
+
+        if (!this.onGround() && this.airTicks > 4 && this.isVehicle()) {
+            this.gait = Gait.DASH; // jump jets / falling: legs tucked in the thruster pose
+            return;
+        }
+
+        TitanClass c = getTitanClass();
+        double walk = c.getWalkSpeed() * 20.0D;
+        double run = c.getRunSpeed() * 20.0D;
+        double runThreshold = (walk + run) * 0.5D;
+        double moveThreshold = this.gait == Gait.IDLE ? 0.9D : 0.5D; // hysteresis
+
+        if (this.observedSpeed < moveThreshold || !this.onGround() && this.observedSpeed < walk * 0.5D) {
+            this.gait = Gait.IDLE;
+        } else if (this.observedSpeed > (this.gait == Gait.RUN ? runThreshold - 0.6D : runThreshold + 0.3D)) {
+            this.gait = Gait.RUN;
+        } else {
+            this.gait = Gait.WALK;
+        }
+    }
+
+    /** Playback rate for locomotion clips; fixed per gait so a step always matches one stride. */
+    public double getLocomotionPlayback() {
+        return switch (this.gait) {
+            case WALK -> getTitanClass().getWalkPlayback();
+            case RUN -> getTitanClass().getRunPlayback();
+            default -> 1.0D;
+        };
+    }
+
+    @Override
+    public void handleEntityEvent(byte id) {
+        if (id == EVENT_DASH) {
+            this.dashAnimTicks = 14;
+        } else if (id == EVENT_EMBARK) {
+            this.boardingTicks = isKneeling() ? 46 : BOARDING_TICKS;
+        }
+        if (id >= EVENT_MELEE_IMPACT && id <= EVENT_EJECT) {
+            net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT,
+                    () -> () -> com.titancombat.client.TitanClientEffects.onEntityEvent(this, id));
+            return;
+        }
+        super.handleEntityEvent(id);
+    }
+
+    /** Where shots leave the weapon: the right hand, forward of the chest. */
+    public Vec3 getMuzzlePosition() {
+        float yawRad = this.getYRot() * ((float) Math.PI / 180.0F);
+        double fx = -Math.sin(yawRad), fz = Math.cos(yawRad);
+        double rx = -Math.cos(yawRad), rz = -Math.sin(yawRad);
+        double up = isKneeling() ? 2.6D : 4.1D;
+        return new Vec3(this.getX() + fx * 2.6D + rx * 1.5D, this.getY() + up, this.getZ() + fz * 2.6D + rz * 1.5D);
+    }
+
     @Override
     public void tick() {
         super.tick();
         if (firingCooldown > 0) firingCooldown--;
         if (meleeCooldown > 0) meleeCooldown--;
+        if (boardingTicks > 0) boardingTicks--;
+        int salute = this.entityData.get(DATA_SALUTE_TICKS);
+        if (salute > 0) this.entityData.set(DATA_SALUTE_TICKS, salute - 1);
+
+        this.standBlend = Mth.approach(this.standBlend, isKneeling() ? 0.0F : 1.0F, 1.0F / 26.0F);
+
+        if (this.level().isClientSide) {
+            updateClientGait();
+            updateClientTerrain();
+            updateClientMotionFx();
+            if (hasFlightModule() && (isFlying() || (!this.onGround() && this.isVehicle()))) {
+                spawnFlightParticles();
+            }
+        } else {
+            if (pendingMeleeTicks >= 0 && --pendingMeleeTicks < 0) {
+                resolveMeleeHit();
+            }
+            tickWeaponSystems();
+            tickEjectSequence();
+            // Pilot boarded a parked titan: the hatch seals, then the chassis rises on its own.
+            if (this.boardingTicks == this.standUpAtTick) {
+                this.standUpAtTick = -1;
+                if (isSitting() && this.isVehicle()) doToggleKneel();
+            }
+            // A freshly dropped titan settles into its parked "waiting for pilot" pose.
+            if (getMechState() == MechState.LANDED && !this.isVehicle() && !isSitting()) {
+                setSitting(true);
+            }
+        }
 
         if (fireAnimTimer > 0) {
             if (--fireAnimTimer == 0) {
@@ -352,14 +1093,42 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
             }
         }
 
-        // Heavy footstep audio cadence while moving under pilot control
-        if (this.isVehicle() && this.onGround() && this.getDeltaMovement().horizontalDistanceSqr() > 0.01D) {
-            if (this.tickCount % 12 == 0) {
-                this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_STEP.get(), SoundSource.PLAYERS, 1.5F, 0.9F + this.random.nextFloat() * 0.2F);
-            }
-        }
-
         if (!this.level().isClientSide) {
+            // Flight module fuel & thrust handling (server-side)
+            TitanFlightModule flight = getFlightModule();
+            if (flight != TitanFlightModule.NONE) {
+                boolean activeThrust = isFlying() || (!this.onGround() && this.isVehicle());
+                if (activeThrust) {
+                    float drain = (isFlying() ? flight.getEnergyDrain() : flight.getEnergyDrain() * 0.4F)
+                            * getTitanClass().getWeightMultiplier();
+                    float currentCharge = getDashCharge();
+                    if (currentCharge >= drain) {
+                        setDashCharge(currentCharge - drain);
+                    } else {
+                        // Fuel empty! Try auto-swapping battery from cockpit bay slot 0
+                        ItemStack batteryStack = this.titanInventory.getItem(TitanMenu.BATTERY_SLOT);
+                        if (!batteryStack.isEmpty() && batteryStack.getItem() instanceof com.titancombat.item.TitanBatteryItem
+                                && !batteryStack.is(com.titancombat.item.ModItems.EMPTY_BATTERY.get())) {
+                            this.titanInventory.setItem(TitanMenu.BATTERY_SLOT,
+                                    new ItemStack(com.titancombat.item.ModItems.EMPTY_BATTERY.get(), batteryStack.getCount()));
+                            setDashCharge(100.0F);
+                            this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_GET_BATTERY.get(), SoundSource.PLAYERS, 1.5F, 1.0F);
+                            if (this.getFirstPassenger() instanceof Player p) {
+                                p.sendSystemMessage(Component.translatable("message.titancombat.flight_battery_swapped"));
+                            }
+                        } else {
+                            // Depleted: cut thrust!
+                            setDashCharge(0.0F);
+                            if (isFlying()) setFlightThrust(false);
+                            if (this.tickCount % 40 == 0 && this.getFirstPassenger() instanceof Player p) {
+                                p.displayClientMessage(Component.translatable("message.titancombat.flight_battery_depleted"), true);
+                                this.level().playSound(null, this.blockPosition(), SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 1.0F, 0.7F);
+                            }
+                        }
+                    }
+                }
+            }
+
             // 1. Core Battery Bay Auto-Charge: checks Slot 0 for swappable titan battery
             if (this.tickCount % 20 == 0) {
                 ItemStack batteryStack = this.titanInventory.getItem(TitanMenu.BATTERY_SLOT);
@@ -468,195 +1237,301 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     }
 
     public boolean performMeleeAttack(Player pilot) {
-        if (this.isSitting()) return false;
+        if (this.isSitting() || this.isBoarding()) return false;
         if (meleeCooldown > 0) return false;
-        meleeCooldown = (getTitanClass() == TitanClass.RONIN) ? 12 : 16;
+        boolean ronin = getTitanClass() == TitanClass.RONIN;
+        meleeCooldown = ronin ? 16 : 22; // the full swing has to finish before the next one
 
         if (!this.level().isClientSide) {
             this.entityData.set(DATA_IS_MELEEING, true);
-            this.meleeAnimTimer = 12;
+            this.meleeAnimTimer = ronin ? 20 : 16;
 
-            if (getTitanClass() == TitanClass.RONIN) {
+            // Ronin chains its core sword combo while Overdrive is running.
+            String clip = ronin && isOverdriveActive() ? "melee_core_" + (1 + this.random.nextInt(3)) : "melee";
+            this.triggerAnim("arms", clip);
+            this.level().broadcastEntityEvent(this, EVENT_MELEE_SWING);
+
+            if (ronin) {
                 this.level().playSound(null, this.blockPosition(), ModSounds.RONIN_SWORD.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
             } else {
                 this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_MELEE.get(), SoundSource.PLAYERS, 2.0F, 0.9F);
             }
 
-            Vec3 look = pilot.getLookAngle();
-            Vec3 strikePos = this.position().add(0, 2.0D, 0).add(look.scale(3.0D));
-            AABB strikeBox = new AABB(strikePos.x - 2.8D, strikePos.y - 2.0D, strikePos.z - 2.8D,
-                    strikePos.x + 2.8D, strikePos.y + 2.0D, strikePos.z + 2.8D);
-
-            List<LivingEntity> targets = this.level().getEntitiesOfClass(LivingEntity.class, strikeBox,
-                    e -> e != this && e != pilot && !this.isAlliedTo(e) && e.isAlive());
-
-            boolean hit = false;
-            float dmg = (float) (getTitanClass() == TitanClass.RONIN ? (isOverdriveActive() ? 90.0F : 60.0F) :
-                    (getTitanClass() == TitanClass.SCORCH ? 45.0F : 38.0F));
-
-            for (LivingEntity target : targets) {
-                target.hurt(this.damageSources().mobAttack(this), dmg);
-                target.knockback(1.5D, -look.x, -look.z);
-                if (getTitanClass() == TitanClass.SCORCH) {
-                    target.setSecondsOnFire(6);
-                }
-                hit = true;
-            }
-
-            if (hit) {
-                if (getTitanClass() == TitanClass.RONIN) {
-                    this.level().playSound(null, this.blockPosition(), ModSounds.RONIN_SWORD_IMPACT.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
-                } else {
-                    this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_MELEE_IMPACT.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
-                }
-                addCoreCharge(4.0F);
-            }
+            // Wind-up first: damage lands when the fist/blade reaches the target in the clip, not on key press.
+            this.pendingMeleeTicks = ronin ? 6 : 7;
         }
         return true;
+    }
+
+    private void resolveMeleeHit() {
+        Entity pilotEntity = this.getControllingPassenger();
+        boolean ronin = getTitanClass() == TitanClass.RONIN;
+
+        float yawRad = this.getYRot() * ((float) Math.PI / 180.0F);
+        Vec3 forward = new Vec3(-Math.sin(yawRad), 0, Math.cos(yawRad));
+        // Short lunge into the strike gives the swing its weight.
+        if (this.onGround()) {
+            this.setDeltaMovement(this.getDeltaMovement().add(forward.scale(0.35D)));
+            this.hasImpulse = true;
+        }
+
+        double reach = ronin ? 4.0D : 3.2D;
+        Vec3 strikePos = this.position().add(0, 2.5D, 0).add(forward.scale(reach));
+        double half = ronin ? 3.0D : 2.4D;
+        AABB strikeBox = new AABB(strikePos.x - half, strikePos.y - 2.5D, strikePos.z - half,
+                strikePos.x + half, strikePos.y + 2.5D, strikePos.z + half);
+
+        List<LivingEntity> targets = this.level().getEntitiesOfClass(LivingEntity.class, strikeBox,
+                e -> e != this && e != pilotEntity && !this.isAlliedTo(e) && e.isAlive());
+
+        float dmg = ronin ? (isOverdriveActive() ? 90.0F : 60.0F) : (getTitanClass() == TitanClass.SCORCH ? 45.0F : 38.0F);
+        boolean hit = false;
+        for (LivingEntity target : targets) {
+            target.hurt(this.damageSources().mobAttack(this), dmg);
+            target.knockback(ronin ? 1.2D : 1.8D, -forward.x, -forward.z);
+            if (getTitanClass() == TitanClass.SCORCH) {
+                target.setSecondsOnFire(6);
+            }
+            hit = true;
+        }
+
+        if (hit) {
+            this.level().playSound(null, this.blockPosition(), ronin ? ModSounds.RONIN_SWORD_IMPACT.get() : ModSounds.TITAN_MELEE_IMPACT.get(),
+                    SoundSource.PLAYERS, 2.2F, 1.0F);
+            this.level().broadcastEntityEvent(this, EVENT_MELEE_IMPACT);
+            addCoreCharge(4.0F);
+        }
+    }
+
+    /** Point the pilot is aiming at: first block or hostile along the view ray, else far away. */
+    @Nullable
+    private Vec3 pilotAim;
+    private int pilotAimTick = -100;
+
+    /** Crosshair target reported by the pilot's client this tick (see TitanFireC2SPacket). */
+    public void setPilotAim(Vec3 aim) {
+        // Ignore nonsense (or tampered) points far from the titan; fall back to the server's own ray.
+        if (aim.distanceToSqr(this.position()) < 256.0D * 256.0D) {
+            this.pilotAim = aim;
+            this.pilotAimTick = this.tickCount;
+        }
+    }
+
+    protected Vec3 computeAimPoint(Player pilot) {
+        if (this.pilotAim != null && this.tickCount - this.pilotAimTick <= 6) {
+            return this.pilotAim;
+        }
+        double range = 96.0D;
+        Vec3 eye = pilot.getEyePosition();
+        Vec3 end = eye.add(pilot.getLookAngle().scale(range));
+        net.minecraft.world.phys.BlockHitResult blockHit = this.level().clip(new net.minecraft.world.level.ClipContext(
+                eye, end, net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, pilot));
+        if (blockHit.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
+            end = blockHit.getLocation();
+        }
+        net.minecraft.world.phys.EntityHitResult entityHit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
+                this.level(), pilot, eye, end, new AABB(eye, end).inflate(1.0D),
+                e -> e != this && e != pilot && e.isPickable() && !e.isSpectator());
+        return entityHit != null ? entityHit.getLocation() : end;
+    }
+
+    public boolean isFiringWeapon() {
+        return this.entityData.get(DATA_IS_FIRING);
+    }
+
+    // ==========================================
+    // Weapon handling: raise -> fire -> magazine -> reload, holster
+    // ==========================================
+    private int lastTriggerTick = -100;
+    private int raiseProgress = 0;
+
+    /** The installed weapon, or null while the titan is unarmed (empty weapon slot). */
+    @Nullable
+    public TitanWeapon getActiveWeapon() {
+        int id = this.entityData.get(DATA_WEAPON);
+        return id < 0 ? null : TitanWeapon.byOrdinal(id);
+    }
+
+    public boolean hasWeapon() {
+        return this.entityData.get(DATA_WEAPON) >= 0;
+    }
+
+    public int getMagazine() {
+        return this.entityData.get(DATA_MAGAZINE);
+    }
+
+    public int getReloadTicks() {
+        return this.entityData.get(DATA_RELOAD_TICKS);
+    }
+
+    public boolean isReloading() {
+        return getReloadTicks() > 0;
+    }
+
+    public boolean isWeaponLowered() {
+        return this.entityData.get(DATA_WEAPON_LOWERED);
+    }
+
+    /** Weapon module in the bay's weapon slot, or null when the slot is empty. */
+    @Nullable
+    private TitanWeapon installedWeapon() {
+        ItemStack module = this.titanInventory.getItem(TitanMenu.WEAPON_SLOT);
+        return module.getItem() instanceof com.titancombat.item.TitanWeaponItem w ? w.getWeapon() : null;
+    }
+
+    /** Server tick: weapon swaps, reload completion, lowering the gun when the trigger is released. */
+    private void tickWeaponSystems() {
+        TitanWeapon installed = installedWeapon();
+        if (installed != getActiveWeapon()) {
+            // New weapon module: it arrives unloaded and has to be readied.
+            this.entityData.set(DATA_WEAPON, installed == null ? -1 : installed.ordinal());
+            this.entityData.set(DATA_MAGAZINE, 0);
+            this.entityData.set(DATA_RELOAD_TICKS, 0);
+            this.raiseProgress = 0;
+        }
+
+        int reload = getReloadTicks();
+        if (reload > 0 && installed != null) {
+            this.entityData.set(DATA_RELOAD_TICKS, reload - 1);
+            if (reload - 1 == 0) {
+                this.entityData.set(DATA_MAGAZINE, getActiveWeapon().getMagazineSize());
+                this.level().playSound(null, this.blockPosition(), SoundEvents.IRON_TRAPDOOR_CLOSE, SoundSource.PLAYERS, 1.6F, 0.6F);
+            }
+        }
+
+        // Trigger released for a while: the arm relaxes out of the firing position.
+        if (this.tickCount - this.lastTriggerTick > 25 && this.raiseProgress > 0) {
+            this.raiseProgress = Math.max(0, this.raiseProgress - 2);
+        }
+    }
+
+    /** Holster / draw toggle. A lowered gun rides on the back and the arms relax. */
+    public void toggleWeaponLowered(Player pilot) {
+        boolean lower = !isWeaponLowered();
+        this.entityData.set(DATA_WEAPON_LOWERED, lower);
+        this.raiseProgress = 0;
+        this.entityData.set(DATA_IS_FIRING, false);
+        this.fireAnimTimer = 0;
+        this.level().playSound(null, this.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 1.6F, lower ? 0.6F : 0.8F);
+        pilot.displayClientMessage(Component.translatable(lower ? "message.titancombat.weapon_lowered" : "message.titancombat.weapon_raised"), true);
+    }
+
+    /** Swap in a fresh magazine of this weapon's ammunition (titan bay first, then the pilot). */
+    public boolean startReload(Player pilot) {
+        if (this.level().isClientSide || isReloading() || this.isSitting() || this.isBoarding()) return false;
+        TitanWeapon weapon = getActiveWeapon();
+        if (weapon == null) {
+            pilot.displayClientMessage(Component.translatable("message.titancombat.no_weapon"), true);
+            return false;
+        }
+        if (getMagazine() >= weapon.getMagazineSize()) return false;
+
+        if (!pilot.getAbilities().instabuild && !consumeMagazine(pilot, weapon)) {
+            pilot.displayClientMessage(Component.translatable("message.titancombat.no_magazine",
+                    Component.translatable("item.titancombat.ammo_" + weapon.getId())), true);
+            this.level().playSound(null, this.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 1.4F);
+            return false;
+        }
+        this.entityData.set(DATA_RELOAD_TICKS, weapon.getReloadTicks());
+        this.entityData.set(DATA_IS_FIRING, false);
+        this.fireAnimTimer = 0;
+        this.triggerAnim("arms", "reload");
+        this.level().playSound(null, this.blockPosition(), ModSounds.ION_RELOAD.get(), SoundSource.PLAYERS, 1.8F, 1.0F);
+        return true;
+    }
+
+    private boolean consumeMagazine(Player pilot, TitanWeapon weapon) {
+        Container[] sources = {this.titanInventory, pilot.getInventory()};
+        // Dedicated magazines first; generic Titan Ammo crates are accepted as a fallback.
+        for (boolean generic : new boolean[]{false, true}) {
+            for (Container c : sources) {
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    ItemStack s = c.getItem(i);
+                    boolean match = generic ? s.getItem() instanceof com.titancombat.item.TitanAmmoItem
+                            : s.getItem() instanceof com.titancombat.item.TitanMagazineItem m && m.getWeapon() == weapon;
+                    if (match) {
+                        s.shrink(1);
+                        c.setChanged();
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public boolean firePrimaryWeapon(Player pilot) {
-        if (this.isSitting()) return false;
+        if (this.isSitting() || this.isBoarding()) return false;
+        TitanWeapon weapon = getActiveWeapon();
+        if (weapon == null) {
+            // Unarmed chassis: remind the pilot (throttled) to fit a weapon module in the bay.
+            if (this.tickCount - this.lastTriggerTick > 20) {
+                pilot.displayClientMessage(Component.translatable("message.titancombat.no_weapon"), true);
+                this.level().playSound(null, this.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.8F, 1.2F);
+            }
+            this.lastTriggerTick = this.tickCount;
+            return false;
+        }
+        this.lastTriggerTick = this.tickCount;
+
+        // Pulling the trigger with the gun holstered draws it first (takes longer than a raise).
+        if (isWeaponLowered()) {
+            this.entityData.set(DATA_WEAPON_LOWERED, false);
+            this.raiseProgress = -10;
+        }
+
+        // Bring the weapon up (aiming pose; Legion spins up its barrels) before any round is fired.
+        this.entityData.set(DATA_IS_FIRING, true);
+        this.fireAnimTimer = Math.max(this.fireAnimTimer, 14);
+        if (isReloading()) return false;
+        if (this.raiseProgress < weapon.getRaiseTicks()) {
+            this.raiseProgress++;
+            return false;
+        }
         if (firingCooldown > 0) return false;
 
         boolean isOverdrive = isOverdriveActive();
-
-        // 1. Check Titan's internal Munitions Bay first!
-        boolean hasAmmo = pilot.getAbilities().instabuild || isOverdrive;
-        ItemStack ammoStack = ItemStack.EMPTY;
-
-        if (!hasAmmo) {
-            for (int i = 0; i < this.titanInventory.getContainerSize(); i++) {
-                ItemStack s = this.titanInventory.getItem(i);
-                if (s.getItem() instanceof com.titancombat.item.TitanAmmoItem) {
-                    hasAmmo = true;
-                    ammoStack = s;
-                    break;
-                }
+        boolean freeAmmo = isOverdrive;
+        if (!freeAmmo) {
+            if (getMagazine() <= 0) {
+                // Dry: click, then reload automatically if there is a magazine.
+                this.level().playSound(null, this.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.8F, 1.8F);
+                firingCooldown = 10;
+                startReload(pilot);
+                return false;
             }
+            this.entityData.set(DATA_MAGAZINE, getMagazine() - 1);
         }
 
-        // 2. Fallback to Pilot's personal inventory
-        if (!hasAmmo) {
-            for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
-                ItemStack s = pilot.getInventory().getItem(i);
-                if (s.getItem() instanceof com.titancombat.item.TitanAmmoItem) {
-                    hasAmmo = true;
-                    ammoStack = s;
-                    break;
-                }
-            }
-        }
+        executeWeaponShot(pilot, weapon);
+        firingCooldown = isOverdrive ? Math.max(1, Math.round(weapon.getCooldownTicks() * 0.4F)) : weapon.getCooldownTicks();
+        if (!isOverdrive) addCoreCharge(2.5F);
 
-        if (!hasAmmo) {
-            if (!this.level().isClientSide) {
-                pilot.sendSystemMessage(Component.translatable("message.titancombat.no_ammo"));
-                this.level().playSound(null, this.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 1.6F);
-            }
-            return false;
-        }
-
-        TitanClass c = getTitanClass();
-        executeWeaponShot(pilot, c);
-
-        if (isOverdrive) {
-            firingCooldown = Math.max(1, (int) (firingCooldown * 0.4F));
-        } else {
-            if (!this.level().isClientSide) {
-                addCoreCharge(2.5F);
-            }
-        }
-
-        if (!pilot.getAbilities().instabuild && !isOverdrive && !ammoStack.isEmpty()) {
-            ammoStack.shrink(1);
-        }
-
-        if (!this.level().isClientSide) {
-            this.entityData.set(DATA_IS_FIRING, true);
-            this.fireAnimTimer = 8;
-        }
+        // Hold the aiming pose through the whole fire cycle so automatic fire doesn't flicker back to idle.
+        this.fireAnimTimer = Math.max(14, firingCooldown + 8);
+        this.level().broadcastEntityEvent(this, EVENT_WEAPON_FIRE);
         return true;
     }
 
-    protected void executeWeaponShot(Player pilot, TitanClass c) {
-        Vec3 look = pilot.getLookAngle();
-        Vec3 spawnPos = this.position().add(0, 2.5D, 0).add(look.scale(1.5D));
+    protected void executeWeaponShot(Player pilot, TitanWeapon weapon) {
+        // Converge on whatever is under the pilot's crosshair, fired from the weapon itself.
+        Vec3 spawnPos = getMuzzlePosition();
+        Vec3 target = computeAimPoint(pilot);
+        if (!System.getProperty("titancombat.autotest", "").isEmpty()) {
+            com.titancombat.TitanCombatMod.LOGGER.info("[autotest] fired at {} (client aim {}), muzzle {}", target, this.tickCount - this.pilotAimTick <= 2, spawnPos);
+        }
+        Vec3 aim = target.subtract(spawnPos).normalize();
 
-        switch (c) {
-            case SCORCH -> {
-                firingCooldown = 18;
-                if (!this.level().isClientSide) {
-                    TitanEnergyBlastEntity blast = new TitanEnergyBlastEntity(ModEntities.ENERGY_BLAST.get(), pilot, this.level());
-                    blast.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
-                    blast.shoot(look.x, look.y, look.z, 2.0F, 0.5F);
-                    blast.setSecondsOnFire(10);
-                    this.level().addFreshEntity(blast);
-                    this.level().playSound(null, this.blockPosition(), ModSounds.SCORCH_FIRE.get(), SoundSource.PLAYERS, 2.2F, 1.0F);
-                }
-            }
-            case RONIN -> {
-                firingCooldown = 10;
-                if (!this.level().isClientSide) {
-                    for (int i = 0; i < 4; i++) {
-                        TitanEnergyBlastEntity pellet = new TitanEnergyBlastEntity(ModEntities.ENERGY_BLAST.get(), pilot, this.level());
-                        pellet.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
-                        pellet.shoot(look.x, look.y, look.z, 2.5F, 5.0F);
-                        this.level().addFreshEntity(pellet);
-                    }
-                    this.level().playSound(null, this.blockPosition(), ModSounds.RONIN_FIRE.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
-                }
-            }
-            case LEGION -> {
-                firingCooldown = 3;
-                if (!this.level().isClientSide) {
-                    TitanEnergyBlastEntity bullet = new TitanEnergyBlastEntity(ModEntities.ENERGY_BLAST.get(), pilot, this.level());
-                    bullet.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
-                    bullet.shoot(look.x, look.y, look.z, 3.2F, 1.5F);
-                    this.level().addFreshEntity(bullet);
-                    this.level().playSound(null, this.blockPosition(), ModSounds.LEGION_FIRE.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
-                }
-            }
-            case NORTHSTAR -> {
-                firingCooldown = 25;
-                if (!this.level().isClientSide) {
-                    TitanEnergyBlastEntity sniper = new TitanEnergyBlastEntity(ModEntities.ENERGY_BLAST.get(), pilot, this.level());
-                    sniper.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
-                    sniper.shoot(look.x, look.y, look.z, 4.5F, 0.0F);
-                    this.level().addFreshEntity(sniper);
-                    this.level().playSound(null, this.blockPosition(), ModSounds.NORTHSTAR_FIRE.get(), SoundSource.PLAYERS, 2.5F, 1.0F);
-                }
-            }
-            case MONARCH -> {
-                firingCooldown = 5;
-                if (!this.level().isClientSide) {
-                    TitanEnergyBlastEntity blast = new TitanEnergyBlastEntity(ModEntities.ENERGY_BLAST.get(), pilot, this.level());
-                    blast.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
-                    blast.shoot(look.x, look.y, look.z, 2.8F, 0.8F);
-                    this.level().addFreshEntity(blast);
-                    this.setShield(this.getShield() + 2.0F);
-                    this.level().playSound(null, this.blockPosition(), ModSounds.MONARCH_FIRE.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
-                }
-            }
-            case TONE -> {
-                firingCooldown = 7;
-                if (!this.level().isClientSide) {
-                    TitanEnergyBlastEntity cannon = new TitanEnergyBlastEntity(ModEntities.ENERGY_BLAST.get(), pilot, this.level());
-                    cannon.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
-                    cannon.shoot(look.x, look.y, look.z, 3.0F, 0.2F);
-                    this.level().addFreshEntity(cannon);
-                    this.level().playSound(null, this.blockPosition(), ModSounds.TONE_FIRE.get(), SoundSource.PLAYERS, 2.2F, 1.0F);
-                }
-            }
-            default -> { // ION
-                firingCooldown = 8;
-                if (!this.level().isClientSide) {
-                    TitanEnergyBlastEntity blast = new TitanEnergyBlastEntity(ModEntities.ENERGY_BLAST.get(), pilot, this.level());
-                    blast.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
-                    blast.shoot(look.x, look.y, look.z, 2.8F, 0.4F);
-                    this.level().addFreshEntity(blast);
-                    this.level().playSound(null, this.blockPosition(), ModSounds.ION_FIRE.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
-                }
-            }
+        for (int i = 0; i < weapon.getPellets(); i++) {
+            TitanEnergyBlastEntity round = new TitanEnergyBlastEntity(ModEntities.ENERGY_BLAST.get(), pilot, this.level()).withWeapon(weapon);
+            round.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
+            round.shoot(aim.x, aim.y, aim.z, weapon.getProjectileSpeed(), weapon.getSpread());
+            this.level().addFreshEntity(round);
+        }
+        this.level().playSound(null, this.blockPosition(), weapon.getFireSound(), SoundSource.PLAYERS, 2.2F, 1.0F);
+
+        if (weapon == TitanWeapon.XO16_CHAINGUN && getTitanClass() == TitanClass.MONARCH) {
+            this.setShield(this.getShield() + 2.0F); // Monarch's energy siphon
         }
     }
 
@@ -723,6 +1598,22 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
 
+        // Uninstall Flight Module with Maintenance Blowtorch when sneaking
+        if (held.getItem() instanceof com.titancombat.item.MaintenanceBlowtorchItem && player.isShiftKeyDown() && hasFlightModule()) {
+            if (!this.level().isClientSide) {
+                TitanFlightModule old = getFlightModule();
+                ItemStack oldStack = new ItemStack(com.titancombat.item.ModItems.FLIGHT_MODULES.get(old).get());
+                if (!player.getInventory().add(oldStack)) {
+                    this.spawnAtLocation(oldStack);
+                }
+                setFlightModule(TitanFlightModule.NONE);
+                held.hurtAndBreak(1, player, (p) -> p.broadcastBreakEvent(hand));
+                this.level().playSound(null, this.blockPosition(), SoundEvents.IRON_TRAPDOOR_CLOSE, SoundSource.PLAYERS, 1.0F, 0.8F);
+                player.sendSystemMessage(Component.translatable("message.titancombat.flight_module_uninstalled"));
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
         // 4. Open Maintenance Cargo Bay Screen (Shift-Click with Empty Hand from outside)
         if (held.isEmpty() && player.isShiftKeyDown() && !this.isVehicle()) {
             if (!this.level().isClientSide) {
@@ -751,6 +1642,18 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
                 player.startRiding(this);
                 setMechState(MechState.PILOTED);
 
+                // A standing titan reaches down, lifts the pilot and seals the hatch before it can move.
+                if (!isKneeling()) {
+                    this.triggerAnim("body", "entry_front");
+                    this.boardingTicks = BOARDING_TICKS;
+                    this.level().broadcastEntityEvent(this, EVENT_EMBARK);
+                } else if (isSitting()) {
+                    // Parked: close the hatch, then stand up automatically.
+                    this.boardingTicks = 46;
+                    this.standUpAtTick = 30;
+                    this.level().broadcastEntityEvent(this, EVENT_EMBARK);
+                }
+
                 // Authentic Titanfall pneumatic cabin seal sound!
                 this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_CABIN_ENTER.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
                 player.sendSystemMessage(Component.translatable("message.titancombat.os_welcome", getTitanClass().getDisplayName()));
@@ -764,58 +1667,131 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     // ==========================================
     // GeckoLib 4 Animation Controllers
     // ==========================================
+    // Mirrors the original addon's controller layout:
+    //  - "legs": idle / walk / run (sprint) / spurt (dash), played at the gait's stride-matched rate,
+    //    carrying the footstep sound keyframes.
+    //  - "arms": idle / run sway / firing pose, plus triggered melee swings.
+    //  - "body": full-body poses (orbital drop, kneel, stand-up, boarding). Registered last so it wins,
+    //    and legs/arms stop while it holds a pose so the two never fight over the arm bones.
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "legs", 4, this::legsPredicate));
-        controllers.add(new AnimationController<>(this, "arms", 4, this::armsPredicate));
-    }
+        String p = animPrefix();
 
-    protected PlayState legsPredicate(AnimationState<? extends BaseTitanEntity> event) {
-        MechState state = getMechState();
-        String prefix = "animation." + getTitanClass().getId() + "_titan.";
+        AnimationController<BaseTitanEntity> legs = new AnimationController<>(this, "legs", 6, this::legsPredicate);
+        legs.setAnimationSpeedHandler(BaseTitanEntity::getLocomotionPlayback);
+        legs.setSoundKeyframeHandler(event -> com.titancombat.client.TitanClientEffects.onSoundKeyframe(
+                event.getAnimatable(), event.getKeyframeData().getSound()));
+        controllers.add(legs);
 
-        if (state == MechState.DROPPING) {
-            return event.setAndContinue(RawAnimation.begin().thenLoop(prefix + "loading"));
-        }
-
-        if (state == MechState.LANDED || isSitting()) {
-            return event.setAndContinue(RawAnimation.begin().thenLoop(prefix + "loaded"));
-        }
-
-        if (event.isMoving()) {
-            if (this.hasImpulse || getDeltaMovement().horizontalDistance() > 0.4D) {
-                return event.setAndContinue(RawAnimation.begin().thenLoop(prefix + "spurt.leg"));
+        AnimationController<BaseTitanEntity> arms = new AnimationController<>(this, "arms", 5, this::armsPredicate);
+        arms.setAnimationSpeedHandler(t -> t.getGait() == Gait.RUN && !t.isFiringWeapon() ? t.getLocomotionPlayback() : 1.0D);
+        arms.triggerableAnim("melee", RawAnimation.begin().then(p + "melee", Animation.LoopType.PLAY_ONCE));
+        arms.triggerableAnim("reload", RawAnimation.begin().then(p + "reload", Animation.LoopType.PLAY_ONCE));
+        if (getTitanClass() == TitanClass.RONIN) {
+            for (int i = 1; i <= 3; i++) {
+                arms.triggerableAnim("melee_core_" + i, RawAnimation.begin().then(p + "melee_core_" + i, Animation.LoopType.PLAY_ONCE));
             }
-            return event.setAndContinue(RawAnimation.begin().thenLoop(prefix + "walk.leg"));
         }
+        controllers.add(arms);
 
-        return event.setAndContinue(RawAnimation.begin().thenLoop(prefix + "idle.leg"));
+        AnimationController<BaseTitanEntity> body = new AnimationController<>(this, "body", 8, this::bodyPredicate);
+        body.triggerableAnim("standing", RawAnimation.begin().then(p + "standing", Animation.LoopType.PLAY_ONCE));
+        body.triggerableAnim("entry_front", RawAnimation.begin().then(p + "entry_stand_front", Animation.LoopType.PLAY_ONCE));
+        controllers.add(body);
+
+        // Cockpit hatch swings open while a parked titan waits for its pilot.
+        controllers.add(new AnimationController<>(this, "hatch", 10, this::hatchPredicate));
     }
 
-    protected PlayState armsPredicate(AnimationState<? extends BaseTitanEntity> event) {
-        String prefix = "animation." + getTitanClass().getId() + "_titan.";
+    private String animPrefix() {
+        return "animation." + getTitanClass().getId() + "_titan.";
+    }
 
-        if (isSitting()) {
-            return event.setAndContinue(RawAnimation.begin().thenLoop(prefix + "loaded"));
+    // GeckoLib won't restart a controller that was stopped if it is handed an identical clip again,
+    // which froze titans after their first park/stand cycle. Every predicate goes through these two
+    // helpers so a change of clip (including from "stopped") always forces a fresh start.
+    private final java.util.Map<String, String> currentClips = new java.util.HashMap<>();
+
+    private PlayState play(AnimationState<BaseTitanEntity> event, String key, RawAnimation animation) {
+        String controller = event.getController().getName();
+        if (!key.equals(this.currentClips.put(controller, key))) {
+            event.getController().forceAnimationReset();
+        }
+        return event.setAndContinue(animation);
+    }
+
+    private PlayState stop(AnimationState<BaseTitanEntity> event) {
+        this.currentClips.remove(event.getController().getName());
+        return PlayState.STOP;
+    }
+
+    protected PlayState bodyPredicate(AnimationState<BaseTitanEntity> event) {
+        MechState state = getMechState();
+        if (state == MechState.DROPPING) {
+            return play(event, "loading", RawAnimation.begin().thenPlayAndHold(animPrefix() + "loading"));
+        }
+        if (isKneeling()) {
+            return play(event, "loaded", RawAnimation.begin().thenLoop(animPrefix() + "loaded"));
+        }
+        return stop(event);
+    }
+
+    protected PlayState hatchPredicate(AnimationState<BaseTitanEntity> event) {
+        if (isKneeling() && !this.isVehicle() && getMechState() != MechState.DROPPING) {
+            return play(event, "open", RawAnimation.begin().thenPlayAndHold(animPrefix() + "entry_loaded_open_door"));
+        }
+        return stop(event);
+    }
+
+    protected PlayState legsPredicate(AnimationState<BaseTitanEntity> event) {
+        if (isKneeling()) return stop(event); // full-body pose owns the legs; play()/stop() restart cleanly
+        String p = animPrefix();
+        if (isFlying() || (!this.onGround() && hasFlightModule())) {
+            return play(event, "flight", RawAnimation.begin().thenPlayAndHold(p + "spurt.leg"));
+        }
+        return switch (this.gait) {
+            case DASH -> play(event, "dash", RawAnimation.begin().thenPlayAndHold(p + "spurt.leg"));
+            case RUN -> play(event, "run", RawAnimation.begin().thenLoop(p + "move.leg"));
+            case WALK -> play(event, "walk", RawAnimation.begin().thenLoop(p + "walk.leg"));
+            default -> play(event, "idle", RawAnimation.begin().thenLoop(p + "idle.leg"));
+        };
+    }
+
+    protected PlayState armsPredicate(AnimationState<BaseTitanEntity> event) {
+        if (isKneeling() || isSaluting()) return stop(event);
+        String p = animPrefix();
+
+        if (isFiringWeapon() && !isKneeling() && !isWeaponLowered() && !isReloading()) {
+            if (getTitanClass() == TitanClass.LEGION) {
+                // Predator cannon spins up before the barrage.
+                return play(event, "fire", RawAnimation.begin().thenPlay(p + "fire_pre").thenLoop(p + "fire"));
+            }
+            return play(event, "fire", RawAnimation.begin().thenLoop(p + "fire"));
         }
 
-        if (this.entityData.get(DATA_IS_MELEEING)) {
-            return event.setAndContinue(RawAnimation.begin().thenPlay(prefix + "melee"));
+        // Unarmed titans: stop rifle holding animation to let arms hang and swing naturally.
+        if (!hasWeapon()) {
+            return stop(event);
         }
 
-        if (this.entityData.get(DATA_IS_FIRING)) {
-            return event.setAndContinue(RawAnimation.begin().thenPlay(prefix + "fire"));
-        }
-
-        if (event.isMoving()) {
-            return event.setAndContinue(RawAnimation.begin().thenLoop(prefix + "move.arm"));
+        if (this.gait == Gait.RUN && !isKneeling()) {
+            return play(event, "run", RawAnimation.begin().thenLoop(p + "move.arm"));
         }
 
         if (getTitanClass() == TitanClass.RONIN) {
-            return event.setAndContinue(RawAnimation.begin().thenLoop(prefix + "idle_sword.arm"));
+            return play(event, "idle", RawAnimation.begin().thenLoop(p + "idle_sword.arm"));
         }
 
-        return event.setAndContinue(RawAnimation.begin().thenLoop(prefix + "idle.arm"));
+        return play(event, "idle", RawAnimation.begin().thenLoop(p + "idle.arm"));
+    }
+
+    /**
+     * Which copy of the weapon is visible. Every model carries the gun twice (in hand and stowed on the
+     * back) and Ronin carries its sword twice; the addon hides one of each depending on state. The gun
+     * is stowed while parked (so the lowered hand is free for the pilot) and during melee or salute.
+     */
+    public boolean isWeaponStowed() {
+        return (isKneeling() && !isBoarding()) || this.entityData.get(DATA_IS_MELEEING) || isSaluting();
     }
 
     @Override
@@ -842,6 +1818,9 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         tag.putBoolean("IsSitting", isSitting());
         tag.putString("OwnerUUID", getOwnerUUID());
         tag.putString("OwnerName", getOwnerName());
+        tag.putInt("Magazine", getMagazine());
+        tag.putBoolean("WeaponLowered", isWeaponLowered());
+        tag.putString("FlightModule", getFlightModule().getId());
 
         ListTag listtag = new ListTag();
         for (int i = 0; i < this.titanInventory.getContainerSize(); ++i) {
@@ -864,6 +1843,8 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         if (tag.contains("IsSitting")) setSitting(tag.getBoolean("IsSitting"));
         if (tag.contains("OwnerUUID")) this.entityData.set(DATA_OWNER_UUID, tag.getString("OwnerUUID"));
         if (tag.contains("OwnerName")) this.entityData.set(DATA_OWNER_NAME, tag.getString("OwnerName"));
+        if (tag.contains("WeaponLowered")) this.entityData.set(DATA_WEAPON_LOWERED, tag.getBoolean("WeaponLowered"));
+        if (tag.contains("FlightModule")) setFlightModule(TitanFlightModule.byId(tag.getString("FlightModule")));
 
         if (tag.contains("TitanInventory", 9)) {
             ListTag listtag = tag.getList("TitanInventory", 10);
@@ -875,5 +1856,8 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
                 }
             }
         }
+        TitanWeapon weapon = installedWeapon();
+        this.entityData.set(DATA_WEAPON, weapon == null ? -1 : weapon.ordinal());
+        this.entityData.set(DATA_MAGAZINE, weapon == null ? 0 : Math.min(tag.getInt("Magazine"), weapon.getMagazineSize()));
     }
 }

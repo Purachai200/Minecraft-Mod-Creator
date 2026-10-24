@@ -426,16 +426,19 @@ public abstract class BaseMechEntity extends PathfinderMob {
         return damaged;
     }
 
+    /** Thruster fuel per dash: three dashes from a full tank. */
+    public static final float DASH_COST = 100.0F / 3.0F;
+
     public void performDash(float forward, float strafe) {
-        if (getDashCharge() < 40.0F) return; // Need at least 40% fuel
-        setDashCharge(getDashCharge() - 40.0F);
+        if (getDashCharge() < DASH_COST - 0.01F) return;
+        setDashCharge(Math.max(0.0F, getDashCharge() - DASH_COST));
 
         float yaw = this.getYRot() * (float) (Math.PI / 180.0);
         Vec3 direction = new Vec3(
                 -Mth.sin(yaw) * forward + Mth.cos(yaw) * strafe,
                 0,
                 Mth.cos(yaw) * forward + Mth.sin(yaw) * strafe
-        ).normalize().scale(1.6D);
+        ).normalize().scale(1.5D);
 
         this.setDeltaMovement(this.getDeltaMovement().add(direction.x, 0.15D, direction.z));
         this.hasImpulse = true;
@@ -518,16 +521,8 @@ public abstract class BaseMechEntity extends PathfinderMob {
                 this.yBodyRot = this.getYRot();
                 this.yHeadRot = this.yBodyRot;
 
-                float forward = rider.zza;
-                float strafe = rider.xxa * 0.7F;
-
-                if (forward <= 0.0F) {
-                    forward *= 0.5F; // Slower reverse
-                }
-
                 if (this.isControlledByLocalInstance()) {
-                    this.setSpeed((float) this.getAttributeValue(Attributes.MOVEMENT_SPEED));
-                    super.travel(new Vec3(strafe, travelVector.y, forward));
+                    travelPiloted(rider, travelVector);
                 } else if (rider instanceof Player) {
                     this.setDeltaMovement(Vec3.ZERO);
                 }
@@ -535,6 +530,19 @@ public abstract class BaseMechEntity extends PathfinderMob {
             }
         }
         super.travel(travelVector);
+    }
+
+    /** Movement while a pilot drives this mech on the controlling client. */
+    protected void travelPiloted(LivingEntity rider, Vec3 travelVector) {
+        float forward = rider.zza;
+        float strafe = rider.xxa * 0.7F;
+
+        if (forward <= 0.0F) {
+            forward *= 0.5F; // Slower reverse
+        }
+
+        this.setSpeed((float) this.getAttributeValue(Attributes.MOVEMENT_SPEED));
+        super.travel(new Vec3(strafe, travelVector.y, forward));
     }
 
     @Override

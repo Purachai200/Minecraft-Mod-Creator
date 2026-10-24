@@ -31,6 +31,13 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.BATTERY_CHARGER.get());
                         output.accept(ModItems.BLOWTORCH.get());
                         output.accept(ModItems.TITAN_AMMO.get());
+                        for (com.titancombat.entity.TitanWeapon w : com.titancombat.entity.TitanWeapon.values()) {
+                            output.accept(ModItems.WEAPON_MODULES.get(w).get());
+                            output.accept(ModItems.WEAPON_MAGAZINES.get(w).get());
+                        }
+                        for (RegistryObject<net.minecraft.world.item.Item> f : ModItems.FLIGHT_MODULES.values()) {
+                            output.accept(f.get());
+                        }
                         output.accept(ModItems.PAINT_SPRAY_CAN.get());
 
                         // Modular Assembly Components

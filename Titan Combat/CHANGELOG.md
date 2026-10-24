@@ -4,6 +4,73 @@ All notable changes to the **Titan Combat** mod will be documented in this file.
 
 ---
 
+## [1.6.1] - 2026-10-23 (Pilot Immersion Overhaul)
+
+### Cockpit & HUD
+- **Real first-person cockpit**: the canopy frame, instrument base and the titan's own arms + weapon are now rendered around the camera (per-chassis first-person models and animations: firing, melee punches/sword combos, walk/run sway). Replaces the old full-screen image, which was actually a model texture sheet.
+- **New Titanfall-style HUD**: boot sequence on embark, compass tape, radar, angled hull/shield bars, dash cells, core meter, per-weapon reticles with target lock, critical/doomed alerts, fading control hints. Reduced HUD in third person.
+- **Cockpit Bay screen redesigned**: live titan preview, status bars, framed reactor / munitions / 3x3 cargo slots with ghost icons.
+
+### Movement, animation & sound
+- Footsteps are now sound keyframes in each walk/run animation, timed to the measured moment each foot lands, with ground dust and cockpit shake. Removed the fixed-timer and vanilla step sounds.
+- Ground speed is matched to each chassis' stride, so feet no longer slide. Heavy inertia when starting/stopping; **sprint** (vanilla sprint key) switches to the run gait.
+- Animation controllers rebuilt (legs / arms / full-body) so kneel, drop and boarding poses no longer fight the idle arm pose (fixes crossed/backwards arms while kneeling).
+- New stand-up and boarding sequences (titan lifts the pilot in before it can move).
+- Melee winds up and lands mid-swing with a short lunge, impact FX and screen shake; Ronin chains core sword combos in Overdrive.
+- Guns fire from the weapon muzzle and converge on the crosshair; hold the trigger for automatic fire; muzzle flash and per-weapon recoil.
+
+### Feel & combat (playtest round 2)
+- Fixed titans freezing with no animation after the first park/stand cycle (GeckoLib does not restart a stopped controller given the same clip; all controllers now force a reset on clip changes).
+- Weapons now switch between hand and back like the addon (models carry two copies of each gun/sword and both were showing). Parked titans stow the gun so the lowered hand is free for the pilot; Ronin draws its sword for melee.
+- Summoned titans land and settle into the parked "waiting for pilot" pose with the cockpit hatch open; boarding closes the hatch and the titan stands up automatically.
+- Torso follows the pilot's aim (pitch + waist twist) while the legs turn after it; body leans into acceleration and turns.
+- Shots no longer drop with gravity, so they land on the reticle at range.
+- Dash: 3 charges per tank and dashes carry further; Space with no direction fires jump jets. Thruster exhaust on dash/jump/sprint, landing impact, no fall damage.
+- Armor plating against gun mods (TACZ, Superb Warfare, vanilla): small arms mostly ricochet, heavy calibers and explosives still hurt, titan weapons do full damage. Hits on the seated pilot are redirected to the hull.
+- Defense Matrix shows a pulsing blue energy barrier around the titan.
+
+### Weapons (playtest round 3)
+- **Swappable weapons**: 7 titan weapon modules (Splitter Rifle, T-203 Thermite Launcher, Leadwall, 40mm Tracker Cannon, Predator Cannon, XO-16 Chaingun, Plasma Railgun) fit any chassis via the new weapon slot in the cockpit bay. The gun model and first-person rig follow the mounted weapon.
+- **Magazines & dedicated ammo**: each weapon has its own magazine size, reload time and ammo item; [R] reloads (titan bay first, then pilot inventory), auto-reload when dry. Old Titan Ammo still works as a generic magazine.
+- **Raise before firing**: the arm must bring the gun to firing position (Predator Cannon spins up) before the first round leaves the barrel.
+- **Holster**: [H] stows the gun on the titan's back and relaxes the arms; pulling the trigger draws it again.
+- Per-weapon damage, spread, pellets, ignition and explosive rounds.
+
+### Fixes (playtest round 4)
+- Titans now arrive **unarmed**; they can't fire until a weapon module is installed in the bay's weapon slot (HUD and bay show "NO WEAPON").
+- Lowering the weapon [H] keeps the gun in hand at a low-ready hip carry instead of making it vanish; the first-person rig dips out of the sight line.
+- Fixed titans looking squashed flat / "spinning" when jumping: foot placement no longer pulls the body to the ground while airborne.
+- Kneel [Z] is debounced (client and server), so holding Z no longer toggles repeatedly.
+- Cockpit bay LIVE preview now shows the titan even when opened from inside the cockpit.
+- Dev tooling: scripted in-game playtest with screenshots (`TITAN_AUTOTEST=... ./gradlew runClient`, see `client/debug/ClientAutoTest`).
+
+### Fixes (playtest round 5)
+- Sprinting no longer spins the first-person arm/weapon rig (the addon's sprint sway rotated it up to 180°; replaced with the walking bob). This also caused the "titan not holding its gun" look while sprinting.
+- Shots land exactly on the crosshair in first and third person: the client sends the point under the reticle from the real camera (verified in-game: hits within ~2 cm).
+- Unarmed titans relax both arms instead of gripping an invisible gun.
+
+### Eject
+- [X] twice (or once when critically damaged): the hatch blows, the ejection seat rockets the pilot ~30 blocks up on a flame trail with slow-fall, and the abandoned titan self-destructs 2.5 s later.
+- Fixed the client blocking server-approved dismounts (pilot stuck "inside" after eject / stray "Titan is standing" messages).
+- Foot placement waits for the titan to settle after landing; jump jets a little higher.
+
+### Terrain
+- Walking/running no longer sinks the titan: the model is lifted by each chassis' measured foot dip in its walk/run clips.
+- Steps up/down are eased instead of snapping (chassis and cockpit camera).
+- Standing on uneven ground: the pelvis lowers and the higher leg bends so both feet rest on the ground.
+- Legs tuck into the thruster pose while airborne.
+
+### Pilot position
+- Pilot eye position is measured per chassis for standing and kneeling, and the pilot is hidden inside the sealed hull. Third-person camera pulled back to frame the titan.
+
+### Items
+- All 13 item textures redrawn as 32x32 pixel art; tools use handheld models.
+
+### Flight modules
+- Fixed titans occasionally spinning/rolling wildly: procedural aim, lean, salute and foot-placement offsets were stacking up every frame on bones the current clip didn't animate.
+- Rocket jump-jet pack remodelled and retextured (shaded tanks, intake grille, flared glowing nozzles) and mounted flush on every chassis' back instead of floating off it or being buried in Scorch/Legion's backpacks.
+- Jetpack exhaust now leaves the actual nozzle exits, following torso aim and lean.
+
 ## [1.5.0] - 2026-10-22 (Combat Overhaul & Cockpit Immersion Update)
 
 ### 🚀 Highlights & Features

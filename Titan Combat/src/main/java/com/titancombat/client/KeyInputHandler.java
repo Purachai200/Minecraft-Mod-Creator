@@ -7,6 +7,9 @@ import com.titancombat.entity.BaseTitanEntity;
 import com.titancombat.network.MechControlC2SPacket;
 import com.titancombat.network.MechEjectC2SPacket;
 import com.titancombat.network.ModNetworking;
+import com.titancombat.network.TitanWeaponActionC2SPacket;
+import com.titancombat.network.TitanFireC2SPacket;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -16,6 +19,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
@@ -66,6 +70,31 @@ public class KeyInputHandler {
             KEY_CATEGORY_TITAN
     );
 
+    public static final KeyMapping KEY_RELOAD = new KeyMapping(
+            "key.titancombat.reload",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_R,
+            KEY_CATEGORY_TITAN
+    );
+
+    public static final KeyMapping KEY_HOLSTER = new KeyMapping(
+            "key.titancombat.holster",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_H,
+            KEY_CATEGORY_TITAN
+    );
+
+    public static final KeyMapping KEY_SALUTE = new KeyMapping(
+            "key.titancombat.salute",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_J,
+            KEY_CATEGORY_TITAN
+    );
+
+    private static final long KNEEL_DEBOUNCE_MS = 1500L; // stand-up / kneel clip length
+    private static long lastKneelPressMs = 0L;
+    private static long lastEjectPressMs = 0L;
+
     @SubscribeEvent
     public static void onKeyInput(InputEvent.Key event) {
         Minecraft mc = Minecraft.getInstance();
@@ -73,19 +102,25 @@ public class KeyInputHandler {
             return;
         }
 
-        // 1. Instant Rocket Dash on Spacebar tap
+        // 1. Instant Rocket Dash on Spacebar tap (when not using continuous flight equipment)
         if (mc.options.keyJump.consumeClick()) {
-            float forward = mc.player.zza;
-            float strafe = mc.player.xxa;
-            if (Math.abs(forward) < 0.1F && Math.abs(strafe) < 0.1F) {
-                forward = 1.0F; // Default forward dash
+            boolean hasFlight = mc.player.getVehicle() instanceof BaseTitanEntity titan && titan.hasFlightModule();
+            if (!hasFlight) {
+                float forward = mc.player.zza;
+                float strafe = mc.player.xxa;
+                // Space alone fires the jump jets; Space + a direction dashes that way.
+                ModNetworking.sendToServer(new MechControlC2SPacket(forward, strafe, true, false, false, false, false, false));
             }
-            ModNetworking.sendToServer(new MechControlC2SPacket(forward, strafe, true, false, false, false, false, false));
         }
 
-        // 2. Toggle Kneel / Park Mode
+        // 2. Toggle Kneel / Park Mode (debounced: holding Z must not toggle repeatedly)
         if (KEY_KNEEL.consumeClick()) {
-            ModNetworking.sendToServer(new MechControlC2SPacket(0, 0, false, false, false, false, false, true));
+            while (KEY_KNEEL.consumeClick()) { /* drop key-repeat clicks */ }
+            long now = System.currentTimeMillis();
+            if (now - lastKneelPressMs >= KNEEL_DEBOUNCE_MS && event.getAction() != GLFW.GLFW_REPEAT) {
+                lastKneelPressMs = now;
+                ModNetworking.sendToServer(new MechControlC2SPacket(0, 0, false, false, false, false, false, true));
+            }
         }
 
         // 3. Dismount Lock Alert: If player taps Shift while Titan is standing
@@ -96,8 +131,28 @@ public class KeyInputHandler {
             }
         }
 
+        if (KEY_RELOAD.consumeClick()) {
+            ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.RELOAD));
+        }
+
+        if (KEY_HOLSTER.consumeClick()) {
+            ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.TOGGLE_LOWERED));
+        }
+
         if (KEY_EJECT.consumeClick()) {
-            ModNetworking.sendToServer(new MechEjectC2SPacket());
+            // Eject destroys the titan: outside a critical state it needs a second press to confirm.
+            boolean critical = mc.player.getVehicle() instanceof BaseMechEntity mech
+                    && (mech.getMechState() == com.titancombat.entity.MechState.DOOMED || mech.getHealth() <= mech.getMaxHealth() * 0.2F);
+            long now = System.currentTimeMillis();
+            if (critical || now - lastEjectPressMs < 1500L) {
+                lastEjectPressMs = 0L;
+                ModNetworking.sendToServer(new MechEjectC2SPacket());
+            } else {
+                lastEjectPressMs = now;
+                mc.player.displayClientMessage(Component.translatable("message.titancombat.eject_confirm",
+                        KEY_EJECT.getKey().getDisplayName()), true);
+                mc.player.playSound(SoundEvents.NOTE_BLOCK_PLING.get(), 1.0F, 0.5F);
+            }
         }
 
         if (KEY_DEFENSE.consumeClick()) {
@@ -112,9 +167,61 @@ public class KeyInputHandler {
             ModNetworking.sendToServer(new MechControlC2SPacket(0, 0, false, false, false, false, true, false));
         }
 
-        if (KEY_FIRE.isDown()) {
-            ModNetworking.sendToServer(new MechControlC2SPacket(0, 0, false, true, false, false, false, false));
+        if (KEY_SALUTE.consumeClick()) {
+            ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.SALUTE));
         }
+
+    }
+
+    private static boolean lastFlightThrust = false;
+
+    /** Held triggers fire continuously (the server gates the actual rate of fire per weapon). */
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Minecraft mc = Minecraft.getInstance();
+        boolean piloting = mc.player != null && mc.player.getVehicle() instanceof BaseMechEntity;
+        BaseTitanEntity.clientSprintHeld = piloting && mc.options.keySprint.isDown();
+        BaseTitanEntity.clientJumpHeld = piloting && mc.options.keyJump.isDown();
+
+        boolean flightThrust = piloting && mc.player.getVehicle() instanceof BaseTitanEntity titan
+                && titan.hasFlightModule() && mc.options.keyJump.isDown();
+        if (flightThrust != lastFlightThrust) {
+            lastFlightThrust = flightThrust;
+            ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(
+                    flightThrust ? TitanWeaponActionC2SPacket.FLIGHT_START : TitanWeaponActionC2SPacket.FLIGHT_STOP));
+        }
+
+        if (!piloting || mc.screen != null) return;
+
+        if (mc.options.keyAttack.isDown() || KEY_FIRE.isDown()) {
+            ModNetworking.sendToServer(new TitanFireC2SPacket(crosshairTarget(mc)));
+        }
+    }
+
+    /**
+     * World point under the crosshair, ray-cast from the actual camera look vector (so third person
+     * and recoiling/shaking cameras aim exactly where the reticle is, not where the pilot's entity eyes point).
+     */
+    private static net.minecraft.world.phys.Vec3 crosshairTarget(Minecraft mc) {
+        double range = 160.0D;
+        org.joml.Vector3f look = mc.gameRenderer.getMainCamera().getLookVector();
+        net.minecraft.world.phys.Vec3 dir = new net.minecraft.world.phys.Vec3(look.x(), look.y(), look.z());
+        net.minecraft.world.phys.Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
+        net.minecraft.world.entity.Entity titan = mc.player.getVehicle();
+        net.minecraft.world.phys.Vec3 from = cam;
+        if (mc.options.getCameraType() != CameraType.FIRST_PERSON && titan != null) {
+            double distToTitan = titan.position().subtract(cam).dot(dir);
+            from = cam.add(dir.scale(Math.max(0.0D, distToTitan + 3.0D)));
+        }
+        net.minecraft.world.phys.Vec3 to = from.add(dir.scale(range));
+        net.minecraft.world.phys.BlockHitResult block = mc.level.clip(new net.minecraft.world.level.ClipContext(from, to,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, mc.player));
+        if (block.getType() != net.minecraft.world.phys.HitResult.Type.MISS) to = block.getLocation();
+        net.minecraft.world.phys.EntityHitResult hit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
+                mc.player, from, to, new net.minecraft.world.phys.AABB(from, to).inflate(1.0D),
+                e -> e != titan && e != mc.player && e.isPickable() && !e.isSpectator(), from.distanceToSqr(to));
+        return hit != null ? hit.getLocation() : to;
     }
 
     @SubscribeEvent
@@ -123,9 +230,9 @@ public class KeyInputHandler {
         if (mc.player != null && mc.player.getVehicle() instanceof BaseMechEntity) {
             // Left click naturally fires the heavy titan weapon when in cockpit!
             if (event.isAttack()) {
+                // Firing is handled every tick in onClientTick while the button is held.
                 event.setCanceled(true);
                 event.setSwingHand(false);
-                ModNetworking.sendToServer(new MechControlC2SPacket(0, 0, false, true, false, false, false, false));
             }
         }
     }
@@ -152,5 +259,8 @@ public class KeyInputHandler {
         event.register(KEY_DEFENSE);
         event.register(KEY_CORE);
         event.register(KEY_KNEEL);
+        event.register(KEY_RELOAD);
+        event.register(KEY_HOLSTER);
+        event.register(KEY_SALUTE);
     }
 }

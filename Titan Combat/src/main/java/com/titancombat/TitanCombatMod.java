@@ -60,6 +60,8 @@ public class TitanCombatMod {
 
     @SubscribeEvent
     public void onEntityDismount(net.minecraftforge.event.entity.EntityMountEvent event) {
+        // Server decides; the client must follow its passenger updates or the two desync (e.g. on eject).
+        if (event.getLevel().isClientSide()) return;
         if (event.isDismounting() && event.getEntityBeingMounted() instanceof BaseTitanEntity titan) {
             if (titan.isAlive() && !titan.isSitting() && !titan.isEmergencyEjecting()) {
                 event.setCanceled(true);
