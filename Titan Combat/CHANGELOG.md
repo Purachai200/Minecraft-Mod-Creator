@@ -4,6 +4,13 @@ All notable changes to the **Titan Combat** mod will be documented in this file.
 
 ---
 
+## [1.6.2] - 2026-10-24 (Flight Module Fixes)
+
+### Flight modules
+- Fixed titans occasionally spinning/rolling wildly: procedural aim, lean, salute and foot-placement offsets were stacking up every frame on bones the current clip didn't animate.
+- Rocket jump-jet pack remodelled and retextured (shaded tanks, intake grille, flared glowing nozzles) and mounted flush on every chassis' back instead of floating off it or being buried in Scorch/Legion's backpacks.
+- Jetpack exhaust now leaves the actual nozzle exits, following torso aim and lean.
+
 ## [1.6.1] - 2026-10-23 (Pilot Immersion Overhaul)
 
 ### Cockpit & HUD
@@ -65,11 +72,6 @@ All notable changes to the **Titan Combat** mod will be documented in this file.
 
 ### Items
 - All 13 item textures redrawn as 32x32 pixel art; tools use handheld models.
-
-### Flight modules
-- Fixed titans occasionally spinning/rolling wildly: procedural aim, lean, salute and foot-placement offsets were stacking up every frame on bones the current clip didn't animate.
-- Rocket jump-jet pack remodelled and retextured (shaded tanks, intake grille, flared glowing nozzles) and mounted flush on every chassis' back instead of floating off it or being buried in Scorch/Legion's backpacks.
-- Jetpack exhaust now leaves the actual nozzle exits, following torso aim and lean.
 
 ## [1.5.0] - 2026-10-22 (Combat Overhaul & Cockpit Immersion Update)
 
