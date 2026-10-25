@@ -36,19 +36,43 @@ def mirror(cubes):
 def mpiv(p):
     return [-p[0], p[1], p[2]]
 
-def drill(cx, cz, top):
-    """Spiral drill bit hanging down from the wrist: stacked rings, each turned a bit more."""
-    out = [C([cx - 7, top - 6, cz - 7], [14, 6, 14], "metal"),
-           C([cx - 8, top - 8, cz - 8], [16, 2, 16], "rust"),
-           C([cx - 6, top - 10, cz - 6], [12, 2, 12], "dark")]
-    y, size = top - 10, 13
+SGN = 1  # tools run along +x from the grip in the weapon bone's raw frame (Ion's barrel axis)
+
+def ycube(cx, cz, y0, length, w, d, m, rot=None):
+    """Cube spanning `length` along x from x0=y0 in the SGN direction, centred on the grip axis.
+    (cx is the grip x, cz the grip z; w is the height, d the depth of the cross-section.)"""
+    x = y0 if SGN > 0 else y0 - length
+    c = C([x, GRIP_Y - w / 2, cz - d / 2], [length, w, d], m)
+    if rot is not None:
+        c["rot"], c["piv"] = [rot, 0, 0], [x + length / 2, GRIP_Y, cz]
+    return c
+
+GRIP_Y = 39.8
+
+def drill(cx, cz, y0):
+    """Spiral drill bit: motor collar at the grip, then stacked rings, each turned a bit more."""
+    out = [ycube(cx, cz, y0 + 3 * -SGN, 6, 14, 14, "metal"),
+           ycube(cx, cz, y0 + 3 * SGN, 2, 16, 16, "rust"),
+           ycube(cx, cz, y0 + 5 * SGN, 2, 12, 12, "dark")]
+    y, size = y0 + 7 * SGN, 13
     for i in range(11):
-        h = 3
-        y -= h
-        out.append(C([cx - size / 2, y, cz - size / 2], [size, h, size], "steel",
-                     rot=[0, (i * 22.5) % 90, 0], piv=[cx, y, cz]))
+        out.append(ycube(cx, cz, y, 3, size, size, "steel", rot=(i * 22.5) % 90))
+        y += 3 * SGN
         size = max(2, size - 1)
-    out.append(C([cx - 1, y - 4, cz - 1], [2, 4, 2], "steel", rot=[0, 45, 0], piv=[cx, y, cz]))
+    out.append(ycube(cx, cz, y, 4, 2, 2, "steel", rot=45))
+    return out
+
+def chainsaw(cx, cz, y0):
+    """Chainsaw: motor block at the grip, upright guide bar with a toothed chain on both edges."""
+    out = [ycube(cx, cz, y0 - 4, 10, 14, 12, "paint"),
+           ycube(cx, cz - 6.5, y0 - 2, 6, 6, 1, "vent"),
+           ycube(cx, cz, y0 + 6, 2, 12, 6, "hazard"),
+           ycube(cx, cz, y0 + 8, 28, 10, 2, "steel"),
+           ycube(cx, cz, y0 + 8, 30, 12, 1, "dark")]
+    for k in range(7):
+        x = y0 + 10 + k * 4
+        for dy in (-7, 5):
+            out.append(C([x, GRIP_Y + dy, cz - 1], [2, 2, 2], "rust"))
     return out
 
 def claw(cx, cz, top):
@@ -175,14 +199,16 @@ BONES = [
         C([-9, 83, -15], [6, 6, 1], "vent"),
         C([3, 83, -15], [6, 6, 1], "vent"),
     ]),
-    ("weaponBack", "body3", [-24.0, 78.0, 26.0], drill(-24, 24, 92)[:3] + [
-        C([-27, 78, 21], [6, 8, 6], "steel", rot=[0, 45, 0], piv=[-24, 78, 24]),
-        C([-26, 74, 23], [4, 4, 4], "steel", rot=[0, 45, 0], piv=[-24, 74, 25]),
+    ("weaponBack", "body3", [-24.0, 78.0, 26.0], [
+        C([-28, 72, 22], [8, 16, 8], "metal"),                                  # stowed tool clamp
+        C([-29, 80, 21], [10, 2, 10], "hazard"),
     ]),
     ("rightArm1", "body3", [-24.4, 94.8, 10.7], RIGHT_ARM1),
     ("rightArm2", "rightArm1", [-23.4, 72.5, 10.7], RIGHT_ARM2),
     ("rightHand", "rightArm2", [-23.3, 46.8, 11.5], RIGHT_HAND),
-    ("weapon", "rightHand", [-19.8, 39.8, 10.3], drill(-23, 11.5, 43)),
+    ("weapon", "rightHand", [-19.8, 39.8, 10.3], []),
+    ("drill", "weapon", [-19.8, 39.8, 10.3], drill(None, 10.3, -19.8)),
+    ("chainsaw", "weapon", [-19.8, 39.8, 10.3], chainsaw(None, 10.3, -19.8)),
     ("leftArm1", "body3", [24.4, 94.8, 10.7], mirror(RIGHT_ARM1)),
     ("leftArm2", "leftArm1", [23.4, 72.5, 10.7], mirror(RIGHT_ARM2)),
     ("leftHand", "leftArm2", [23.3, 46.8, 11.5], mirror(RIGHT_HAND) + claw(23, 11.5, 43)),
@@ -222,76 +248,30 @@ def faces(c):
             "west": (u + d + w, v + d, d, h), "south": (u + 2 * d + w, v + d, w, h)}
 
 # Rest rotations of the Ion rig. trooper_titan.animation.json was cloned from Ion and its keyframes
-# are offsets on top of these, so the Trooper bones carry them too. Each bone's cubes then sit in a
-# "<bone>_c" child that undoes the accumulated rest transform, so the model still looks as authored.
+# are offsets on top of these. Like Ion, cubes are authored "raw" (limbs hanging straight down
+# through the joint pivots); the rest rotation is never seen because an animation always plays.
 REST = {"doorUp": [25, 0, 0], "eye": [15, 0, 0], "rightArm1": [0, -180, 30], "rightHand": [0, -180, 0],
         "weapon": [90, 0, 90], "leftArm1": [0, 180, -30], "leftHand": [0, 180, 0],
         "rightLeg3": [-15, 0, 0], "rightLeg2": [37.5, 0, 0], "rightLeg1": [-15, 0, 0], "rightFoot": [-7.5, 0, 0],
         "leftLeg3": [-15, 0, 0], "leftLeg2": [37.5, 0, 0], "leftLeg1": [-15, 0, 0], "leftFoot": [-7.5, 0, 0]}
 
-def mat_mul(a, b):
-    return [[sum(a[i][k] * b[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
-
-def mat_vec(m, v):
-    return [sum(m[i][k] * v[k] for k in range(3)) for i in range(3)]
-
-def bone_rot(r):
-    """Bedrock euler (deg) -> matrix in mirrored-x space, as GeckoLib/Blockbench apply it: Rz * Ry * Rx with x/y negated."""
-    import math
-    x, y, z = (math.radians(v) for v in (-r[0], -r[1], r[2]))
-    cx, sx, cy, sy, cz, sz = math.cos(x), math.sin(x), math.cos(y), math.sin(y), math.cos(z), math.sin(z)
-    rx = [[1, 0, 0], [0, cx, -sx], [0, sx, cx]]
-    ry = [[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]]
-    rz = [[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]]
-    return mat_mul(rz, mat_mul(ry, rx))
-
-def euler_of(m):
-    import math
-    b = math.asin(-max(-1, min(1, m[2][0])))
-    if abs(m[2][0]) < 0.9999999:
-        g, a = math.atan2(m[2][1], m[2][2]), math.atan2(m[1][0], m[0][0])
-    else:
-        g, a = 0.0, math.atan2(-m[0][1], m[1][1])
-    return [-math.degrees(g), -math.degrees(b), math.degrees(a)]
-
 def geo_json():
-    bones, acc = [], {}
-    ident = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    bones = []
     for name, parent, piv, cubes in BONES:
-        P = [-piv[0], piv[1], piv[2]]
-        R = bone_rot(REST.get(name, [0, 0, 0]))
-        Mp, tp = acc.get(parent, (ident, [0, 0, 0]))
-        M = mat_mul(Mp, R)
-        RP = mat_vec(R, P)
-        t = [a + b for a, b in zip(mat_vec(Mp, [P[i] - RP[i] for i in range(3)]), tp)]
-        acc[name] = (M, t)
         b = {"name": name, "pivot": piv}
         if parent:
             b["parent"] = parent
         if name in REST:
             b["rotation"] = REST[name]
+        if cubes:
+            out = []
+            for c in cubes:
+                e = {"origin": [round(v, 3) for v in c["o"]], "size": [round(v, 3) for v in c["s"]], "uv": c["uv"]}
+                if "rot" in c:
+                    e["pivot"], e["rotation"] = [round(v, 3) for v in c["piv"]], c["rot"]
+                out.append(e)
+            b["cubes"] = out
         bones.append(b)
-        if not cubes:
-            continue
-        shift, holder = [0, 0, 0], b
-        if any(abs(M[i][j] - ident[i][j]) > 1e-6 for i in range(3) for j in range(3)):
-            Rf = [[M[j][i] for j in range(3)] for i in range(3)]
-            fix = euler_of(Rf)
-            assert all(abs(x - y) < 1e-6 for r1, r2 in zip(bone_rot(fix), Rf) for x, y in zip(r1, r2))
-            MP = mat_vec(M, P)
-            c = [MP[i] + t[i] - P[i] for i in range(3)]
-            shift = [c[0], -c[1], -c[2]]  # back to bedrock (un-mirrored x)
-            holder = {"name": name + "_c", "parent": name, "pivot": piv, "rotation": [round(v, 4) for v in fix]}
-            bones.append(holder)
-        out = []
-        for c in cubes:
-            o = [c["o"][i] + shift[i] for i in range(3)]
-            e = {"origin": [round(v, 3) for v in o], "size": [round(v, 3) for v in c["s"]], "uv": c["uv"]}
-            if "rot" in c:
-                e["pivot"] = [round(c["piv"][i] + shift[i], 3) for i in range(3)]
-                e["rotation"] = c["rot"]
-            out.append(e)
-        holder["cubes"] = out
     return {"format_version": "1.12.0", "minecraft:geometry": [{
         "description": {"identifier": "geometry.trooper_titan", "texture_width": TEX, "texture_height": TEX,
                         "visible_bounds_width": 6, "visible_bounds_height": 9, "visible_bounds_offset": [0, 4, 0]},

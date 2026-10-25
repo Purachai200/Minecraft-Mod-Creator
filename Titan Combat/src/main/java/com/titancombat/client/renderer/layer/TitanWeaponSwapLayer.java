@@ -59,6 +59,12 @@ public class TitanWeaponSwapLayer<T extends BaseTitanEntity> extends GeoRenderLa
         boolean wasHidden = gun.isHidden();
         boolean wasHidingChildren = gun.isHidingChildren();
 
+        // The Trooper's weapon bone holds both tools; draw only the mounted one.
+        Optional<GeoBone> drill = donorModel.getBone("drill"), saw = donorModel.getBone("chainsaw");
+        boolean isSaw = weapon == TitanWeapon.CHAINSAW;
+        drill.ifPresent(b -> b.setHidden(isSaw));
+        saw.ifPresent(b -> b.setHidden(!isSaw));
+
         this.drawing = true;
         poseStack.pushPose();
         try {
