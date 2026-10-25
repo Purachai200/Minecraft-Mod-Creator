@@ -40,7 +40,8 @@ public class PilotLicenseItem extends Item {
         if (target instanceof BaseTitanEntity titan) {
             Level level = player.level();
             if (!level.isClientSide) {
-                CompoundTag tag = stack.getOrCreateTag();
+                // Creative mode hands us a copy of the stack; write to the one actually held so the link sticks.
+                CompoundTag tag = player.getItemInHand(hand).getOrCreateTag();
                 if (titan.getOwnerUUID() == null || titan.getOwnerUUID().isEmpty()) {
                     // Claim unowned Titan
                     titan.setOwner(player);
@@ -67,6 +68,30 @@ public class PilotLicenseItem extends Item {
             return InteractionResult.sidedSuccess(player.level().isClientSide);
         }
         return super.interactLivingEntity(stack, player, target, hand);
+    }
+
+    /** Write the titan's link (id, name, last known position) into a License or Transponder stack. */
+    public static void writeLink(ItemStack stack, BaseTitanEntity titan) {
+        CompoundTag tag = stack.getOrCreateTag();
+        tag.putUUID("TitanUUID", titan.getUUID());
+        tag.putString("TitanName", titan.getTitanClass().getDisplayName());
+        tag.putString("Dimension", titan.level().dimension().location().toString());
+        tag.putLong("LastPos", titan.blockPosition().asLong());
+    }
+
+    /** Owner boards: link every License / Transponder in the inventory that isn't linked to a titan yet. */
+    public static void autoLinkInventory(Player player, BaseTitanEntity titan) {
+        int linked = 0;
+        for (ItemStack stack : player.getInventory().items) {
+            boolean card = stack.getItem() instanceof PilotLicenseItem || stack.getItem() instanceof HangarTransponderItem;
+            if (card && (stack.getTag() == null || !stack.getTag().contains("TitanUUID"))) {
+                writeLink(stack, titan);
+                linked++;
+            }
+        }
+        if (linked > 0) {
+            player.sendSystemMessage(Component.literal("§a[AUTO-LINK] " + linked + " pilot device(s) paired with your " + titan.getTitanClass().getDisplayName() + "."));
+        }
     }
 
     @Override

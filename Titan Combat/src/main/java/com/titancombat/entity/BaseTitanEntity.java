@@ -1735,6 +1735,12 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack held = player.getItemInHand(hand);
 
+        // License / transponder bind in their own interactLivingEntity, which only runs if the titan passes.
+        if (held.getItem() instanceof com.titancombat.item.PilotLicenseItem
+                || held.getItem() instanceof com.titancombat.item.HangarTransponderItem) {
+            return InteractionResult.PASS;
+        }
+
         // 1. Repair with Iron Ingot (Heals 25 HP)
         if (held.is(Items.IRON_INGOT)) {
             if (this.getHealth() < this.getMaxHealth()) {
@@ -1880,8 +1886,8 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
 
-        // 5. Board Cockpit with BIOMETRIC PILOT LICENSE LOCK
-        if (held.isEmpty() && !this.isVehicle() && !player.isPassenger()) {
+        // 5. Board Cockpit with BIOMETRIC PILOT LICENSE LOCK (any held item: the mech fallback below skips the lock)
+        if (!this.isVehicle() && !player.isPassenger()) {
             if (!this.level().isClientSide) {
                 String owner = getOwnerUUID();
                 if (!owner.isEmpty() && !player.getUUID().toString().equals(owner)) {
@@ -1894,6 +1900,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
                     setOwner(player);
                     player.sendSystemMessage(Component.translatable("message.titancombat.neural_link_claimed", player.getName().getString(), getTitanClass().getDisplayName()));
                 }
+                com.titancombat.item.PilotLicenseItem.autoLinkInventory(player, this);
 
                 setStandbyMode(false);
                 player.startRiding(this);

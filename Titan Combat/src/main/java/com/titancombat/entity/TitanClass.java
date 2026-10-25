@@ -139,7 +139,9 @@ public enum TitanClass {
             case RONIN -> new double[]{0.55D, 5.61D, 2.02D};
             case NORTHSTAR -> new double[]{0.55D, 5.74D, 2.00D};
             case TONE -> new double[]{0.60D, 5.23D, 2.41D};
-            case TROOPER, SCOUT, SHADE -> new double[]{0.60D, 5.10D, 2.35D};
+            case TROOPER -> new double[]{0.60D, 4.71D, 1.69D};
+            case SCOUT -> new double[]{0.60D, 4.45D, 1.41D};
+            case SHADE -> new double[]{0.60D, 4.58D, 1.30D};
         };
     }
 

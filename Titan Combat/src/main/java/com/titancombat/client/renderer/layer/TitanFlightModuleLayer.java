@@ -48,7 +48,10 @@ public class TitanFlightModuleLayer<T extends BaseTitanEntity> extends GeoRender
             case RONIN -> new MountConfig(1.38D, 1.20D, 1.70F, 0.0F);
             case NORTHSTAR -> new MountConfig(0.48D, 1.45D, 1.70F, 0.0F);
             case TONE -> new MountConfig(1.38D, 1.70D, 1.85F, 0.0F);
-            case TROOPER, SCOUT, SHADE -> new MountConfig(1.10D, 1.15D, 1.80F, 0.0F);
+            // Light frames: Z puts the module's front face flush with each hull's back armour.
+            case TROOPER -> new MountConfig(1.10D, 0.39D, 1.80F, 0.0F);
+            case SCOUT -> new MountConfig(1.10D, 0.11D, 1.80F, 0.0F);
+            case SHADE -> new MountConfig(1.10D, 0.00D, 1.80F, 0.0F);
         };
     }
 
@@ -63,7 +66,9 @@ public class TitanFlightModuleLayer<T extends BaseTitanEntity> extends GeoRender
             case RONIN -> new MountConfig(1.09D, 1.02D, 1.36F, 0.0F);
             case NORTHSTAR -> new MountConfig(0.37D, 1.46D, 1.36F, 0.0F);
             case TONE -> new MountConfig(0.73D, 1.54D, 1.48F, 0.0F);
-            case TROOPER, SCOUT, SHADE -> new MountConfig(0.85D, 1.05D, 1.45F, 0.0F);
+            case TROOPER -> new MountConfig(0.46D, 0.39D, 1.45F, 0.0F);   // behind the exhaust stacks
+            case SCOUT -> new MountConfig(0.20D, 0.11D, 1.45F, 0.0F);
+            case SHADE -> new MountConfig(0.33D, 0.00D, 1.45F, 0.0F);    // over the cape
         };
     }
 

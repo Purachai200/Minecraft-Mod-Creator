@@ -393,6 +393,32 @@ public final class ClientAutoTest {
 
     private static final Step[] FLIGHT = buildFlight();
 
+    // bind: right-click a titan with License and Transponder (vanilla interactOn order), then warp it.
+    private static final Step[] BIND = {
+            new Step(60, mc -> spawnDisplay(mc)),
+            new Step(140, mc -> placeDisplay(mc)),
+            new Step(180, mc -> display(mc, (p, t) -> {
+                p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ModItems.PILOT_LICENSE.get()));
+                var r = p.interactOn(t, net.minecraft.world.InteractionHand.MAIN_HAND);
+                var tag = p.getMainHandItem().getTag();
+                TitanCombatMod.LOGGER.info("[autotest] license result={} riding={} linked={} owner={}", r, p.isPassenger(),
+                        tag != null && tag.contains("TitanUUID"), t.getOwnerName());
+            })),
+            new Step(190, mc -> display(mc, (p, t) -> {
+                p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ModItems.HANGAR_TRANSPONDER.get()));
+                var r = p.interactOn(t, net.minecraft.world.InteractionHand.MAIN_HAND);
+                var tag = p.getMainHandItem().getTag();
+                TitanCombatMod.LOGGER.info("[autotest] transponder result={} riding={} linked={}", r, p.isPassenger(), tag != null && tag.contains("TitanUUID"));
+            })),
+            new Step(200, mc -> display(mc, (p, t) -> {
+                var before = t.position();
+                p.setYRot(p.getYRot() + 90.0F);
+                p.getMainHandItem().use(p.level(), p, net.minecraft.world.InteractionHand.MAIN_HAND);
+                TitanCombatMod.LOGGER.info("[autotest] warp moved={} blocks", String.format("%.1f", before.distanceTo(t.position())));
+            })),
+            new Step(260, mc -> { TitanCombatMod.LOGGER.info("[autotest] done"); mc.stop(); }),
+    };
+
     // cloak: board a Shade, engage the cloak (Defense key), screenshot it, fire to break it.
     private static final Step[] CLOAK = {
             new Step(60, mc -> spawnAndBoard(mc)),
@@ -411,6 +437,9 @@ public final class ClientAutoTest {
             new Step(120, mc -> server(mc, (p, t) -> t.getTitanInventory().setItem(TitanMenu.FLIGHT_SLOT, new ItemStack(ModItems.FLIGHT_MODULES.get(
                     com.titancombat.entity.TitanFlightModule.byId(NAME.substring(NAME.indexOf('_') + 1))).get())))),
             new Step(140, mc -> server(mc, (p, t) -> TitanCombatMod.LOGGER.info("[autotest] fly start module={} y={}", t.getFlightModule(), t.getY()))),
+            new Step(125, mc -> { mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); mc.player.setYRot(mc.player.getYRot() + 110.0F); }),
+            new Step(138, mc -> shot(mc, "mounted")),
+            new Step(139, mc -> mc.player.setYRot(mc.player.getYRot() - 110.0F)),
             new Step(141, mc -> mc.options.keyJump.setDown(true)),
             new Step(200, mc -> TitanCombatMod.LOGGER.info("[autotest] fly 3s y={} vy={}", mc.player.getVehicle().getY(), mc.player.getVehicle().getDeltaMovement().y)),
             new Step(201, mc -> mc.options.keyJump.setDown(false)),
@@ -522,7 +551,7 @@ public final class ClientAutoTest {
             mc.options.pauseOnLostFocus = false; // keep running when the window isn't focused
             if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen) mc.setScreen(null);
         }
-        Step[] script = NAME.startsWith("cloak") ? CLOAK : NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
+        Step[] script = NAME.startsWith("bind") ? BIND : NAME.startsWith("cloak") ? CLOAK : NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
         for (Step step : script) {
             if (step.at() == tick) step.action().accept(mc);
         }

@@ -41,7 +41,8 @@ public class HangarTransponderItem extends Item {
             Level level = player.level();
             if (!level.isClientSide) {
                 // Link Remote Key Fob to this Titan
-                CompoundTag tag = stack.getOrCreateTag();
+                // Creative mode hands us a copy of the stack; write to the one actually held so the link sticks.
+                CompoundTag tag = player.getItemInHand(hand).getOrCreateTag();
                 tag.putUUID("TitanUUID", titan.getUUID());
                 tag.putString("TitanName", titan.getTitanClass().getDisplayName());
                 tag.putString("Dimension", level.dimension().location().toString());

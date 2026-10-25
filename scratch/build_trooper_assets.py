@@ -186,7 +186,7 @@ BONES = [
         C([-14, 94, -11], [5, 3, 2], "glow"),                                   # running lights
         C([9, 94, -11], [5, 3, 2], "glow"),
     ] + cage() + exhausts()),
-    ("doorUp", "body3", [0, 115.5, 3.8], [
+    ("doorUp", "body3", [0, 107, -8], [
         C([-13, 95, -15], [26, 11, 6], "paint", decal={"north": "visor_frame"}),
         C([-14, 104, -16], [28, 3, 8], "paint2"),                               # brow
         C([-15, 96, -14], [2, 9, 5], "metal"),                                  # cheeks
@@ -249,9 +249,9 @@ def faces(c):
             "west": (u + d + w, v + d, d, h), "south": (u + 2 * d + w, v + d, w, h)}
 
 # Rest rotations of the Ion rig. trooper_titan.animation.json was cloned from Ion and its keyframes
-# are offsets on top of these. Like Ion, cubes are authored "raw" (limbs hanging straight down
+# are offsets on top of these. (Not the hatch: it is modelled closed and hinged at its own top-back edge.) Like Ion, cubes are authored "raw" (limbs hanging straight down
 # through the joint pivots); the rest rotation is never seen because an animation always plays.
-REST = {"doorUp": [25, 0, 0], "eye": [15, 0, 0], "rightArm1": [0, -180, 30], "rightHand": [0, -180, 0],
+REST = {"rightArm1": [0, -180, 30], "rightHand": [0, -180, 0],
         "weapon": [90, 0, 90], "leftArm1": [0, 180, -30], "leftHand": [0, 180, 0],
         "rightLeg3": [-15, 0, 0], "rightLeg2": [37.5, 0, 0], "rightLeg1": [-15, 0, 0], "rightFoot": [-7.5, 0, 0],
         "leftLeg3": [-15, 0, 0], "leftLeg2": [37.5, 0, 0], "leftLeg1": [-15, 0, 0], "leftFoot": [-7.5, 0, 0]}

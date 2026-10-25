@@ -97,7 +97,7 @@ T.BONES = [
     ]),
     ("cape", "body3", [0, 104, 15], cape()),
     ("robe", "body3", [0, 98, -13], front_robe()),
-    ("doorUp", "body3", [0, 115.5, 3.8], [
+    ("doorUp", "body3", [0, 113, 8], [
         C([-8, 97, -11], [16, 10, 10], "dark"),                                   # head in shadow
         C([-12, 95, -14], [2, 15, 20], "cloth"),                                  # hood sides
         C([10, 95, -14], [2, 15, 20], "cloth"),

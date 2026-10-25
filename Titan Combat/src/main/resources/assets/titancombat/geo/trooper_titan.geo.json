@@ -694,15 +694,10 @@
      "name": "doorUp",
      "pivot": [
       0,
-      115.5,
-      3.8
+      107,
+      -8
      ],
      "parent": "body3",
-     "rotation": [
-      25,
-      0,
-      0
-     ],
      "cubes": [
       {
        "origin": [
@@ -778,11 +773,6 @@
       -17.0
      ],
      "parent": "doorUp",
-     "rotation": [
-      15,
-      0,
-      0
-     ],
      "cubes": [
       {
        "origin": [
