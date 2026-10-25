@@ -975,7 +975,7 @@ def ammo_plasma_railgun():
 
 
 WEAPON_IDS = ('splitter_rifle', 'thermite_launcher', 'leadwall', 'tracker_cannon',
-              'predator_cannon', 'xo16_chaingun', 'plasma_railgun', 'mining_drill', 'chainsaw')
+              'predator_cannon', 'xo16_chaingun', 'plasma_railgun', 'mining_drill', 'chainsaw', 'light_smg')
 
 
 def flight_module_rocket_jetpack():
@@ -1117,6 +1117,30 @@ def ammo_mining_drill():
         cv.set(23, y, C[4]); cv.set(24, y, C[4])
     for x in range(5, 27):
         cv.set(x, 21, A[3] if x % 2 == 0 else G[0])
+    cv.outline()
+    return cv
+
+
+def weapon_light_smg():
+    cv = Canvas()
+    stock_and_grip(cv, -22, -13, CC - 2, CC + 4, -10, CC + 4, CC + 11)
+    dcyl_box(cv, -13, 6, CC - 5, CC + 5, G[1:7])
+    dfill(cv, -10, 4, CC - 2, CC - 2, A[3])          # amber recon stripe
+    dfill(cv, -6, -2, CC + 5, CC + 12, G[1])          # straight box magazine
+    dfill(cv, -6, -2, CC + 11, CC + 12, A[2])
+    dcyl_box(cv, 6, 20, CC - 2, CC + 2, G[2:7])       # short barrel
+    dcyl_box(cv, 18, 22, CC - 3, CC + 3, G[0:5])      # suppressor tip
+    cv.outline()
+    return cv
+
+
+def ammo_light_smg():
+    cv = Canvas()
+    body = cv.rect_m(11, 5, 20, 28) - {(11, 5), (20, 5), (11, 28), (20, 28)}
+    cv.mat(body, G[1], G[3], G[5])
+    for y in range(7, 26, 3):
+        cv.vcyl(cv.rect_m(13, y, 18, y + 1), A)
+    cv.fill(cv.rect_m(12, 26, 19, 26), A[2])
     cv.outline()
     return cv
 

@@ -47,6 +47,9 @@ public class ModEntities {
     public static final RegistryObject<EntityType<TrooperTitanEntity>> TROOPER_TITAN =
             ENTITY_TYPES.register("trooper_titan", () -> EntityType.Builder.of(TrooperTitanEntity::new, MobCategory.MISC)
                     .sized(TitanClass.TROOPER.getWidth(), TitanClass.TROOPER.getHeight()).clientTrackingRange(16).updateInterval(2).build("trooper_titan"));
+    public static final RegistryObject<EntityType<ScoutTitanEntity>> SCOUT_TITAN =
+            ENTITY_TYPES.register("scout_titan", () -> EntityType.Builder.of(ScoutTitanEntity::new, MobCategory.MISC)
+                    .sized(TitanClass.SCOUT.getWidth(), TitanClass.SCOUT.getHeight()).clientTrackingRange(16).updateInterval(2).build("scout_titan"));
 
     public static final RegistryObject<EntityType<TitanEnergyBlastEntity>> ENERGY_BLAST =
             ENTITY_TYPES.register("energy_blast", () -> EntityType.Builder.<TitanEnergyBlastEntity>of(TitanEnergyBlastEntity::new, MobCategory.MISC)

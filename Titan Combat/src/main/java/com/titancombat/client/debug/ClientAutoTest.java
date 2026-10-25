@@ -385,6 +385,7 @@ public final class ClientAutoTest {
             case "scorch" -> ModEntities.SCORCH_TITAN.get();
             case "tone" -> ModEntities.TONE_TITAN.get();
             case "trooper" -> ModEntities.TROOPER_TITAN.get();
+            case "scout" -> ModEntities.SCOUT_TITAN.get();
             default -> ModEntities.MONARCH_TITAN.get();
         };
     }
@@ -546,6 +547,7 @@ public final class ClientAutoTest {
                 case "scorch" -> ModEntities.SCORCH_TITAN.get();
                 case "tone" -> ModEntities.TONE_TITAN.get();
                 case "trooper" -> ModEntities.TROOPER_TITAN.get();
+                case "scout" -> ModEntities.SCOUT_TITAN.get();
                 default -> ModEntities.MONARCH_TITAN.get();
             };
             if (!(type.create(level) instanceof BaseTitanEntity titan)) return;

@@ -57,6 +57,7 @@ public class TitanCombatMod {
         event.put(ModEntities.MONARCH_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.MONARCH).build());
         event.put(ModEntities.NORTHSTAR_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.NORTHSTAR).build());
         event.put(ModEntities.TROOPER_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.TROOPER).build());
+        event.put(ModEntities.SCOUT_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.SCOUT).build());
     }
 
     @SubscribeEvent

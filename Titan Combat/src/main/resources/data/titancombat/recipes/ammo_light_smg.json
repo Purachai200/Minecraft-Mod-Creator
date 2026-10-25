@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    { "item": "minecraft:iron_ingot" },
+    { "item": "minecraft:gunpowder" }
+  ],
+  "result": { "item": "titancombat:ammo_light_smg", "count": 4 }
+}

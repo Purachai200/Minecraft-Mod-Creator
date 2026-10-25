@@ -8,6 +8,7 @@ import json, os, random, struct, zlib
 
 ROOT = "Titan Combat/src/main/resources/assets/titancombat"
 TEX = 1024
+ID = "trooper"  # build_scout_assets.py reuses this module with its own ID, BONES and SCHEMES
 
 # ---------------------------------------------------------------- model
 
@@ -273,7 +274,7 @@ def geo_json():
             b["cubes"] = out
         bones.append(b)
     return {"format_version": "1.12.0", "minecraft:geometry": [{
-        "description": {"identifier": "geometry.trooper_titan", "texture_width": TEX, "texture_height": TEX,
+        "description": {"identifier": f"geometry.{ID}_titan", "texture_width": TEX, "texture_height": TEX,
                         "visible_bounds_width": 6, "visible_bounds_height": 9, "visible_bounds_offset": [0, 4, 0]},
         "bones": bones}]}
 
@@ -424,6 +425,12 @@ def draw_decal(put, kind, fx, fy, fw, fh, rng):
             for dx in (0, 1):
                 put(fx + min(fw - 2, k + dx), fy + k, (34, 34, 34))
                 put(fx + max(1, fw - 1 - k - dx), fy + k, (34, 34, 34))
+    if kind == "stripe":  # recon racing stripes: two bold bands
+        for i in range(fw):
+            for j in range(fh):
+                band = (i + j) % 12
+                if band in (2, 3, 4) or band == 7:
+                    put(fx + i, fy + j, WHITE if band != 7 else (40, 40, 40))
     if kind == "visor_frame":
         for i in range(2, fw - 2):  # dark visor recess band
             for j in range(3, 6):
@@ -442,11 +449,12 @@ def write_png(path, raw):
 
 def main():
     cubes = pack()
-    with open(f"{ROOT}/geo/trooper_titan.geo.json", "w") as f:
+    with open(f"{ROOT}/geo/{ID}_titan.geo.json", "w") as f:
         json.dump(geo_json(), f, indent=1)
-    tex_dir = f"{ROOT}/textures/entity/titan/trooper"
+    tex_dir = f"{ROOT}/textures/entity/titan/{ID}"
+    os.makedirs(tex_dir, exist_ok=True)
     for idx, scheme in enumerate(SCHEMES):
-        name = "trooper_titan.png" if idx == 0 else f"trooper_titan_{idx}.png"
+        name = f"{ID}_titan.png" if idx == 0 else f"{ID}_titan_{idx}.png"
         write_png(os.path.join(tex_dir, name), render(cubes, scheme))
         print("wrote", name, scheme[0])
     print(len(cubes), "cubes")

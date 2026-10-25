@@ -19,6 +19,9 @@ public enum TitanClass {
     NORTHSTAR("northstar", "Northstar", "Precision Sniper", 240.0D, 80.0F, 0.36D, 60.0D, 2.4F, 4.6F,
             4.3F, 8.4F, 6.30F, 0.45F, 4.37F, 0.95F),
     TROOPER("trooper", "Trooper", "Mass-Production Combat Frame", 240.0D, 60.0F, 0.29D, 20.0D, 2.5F, 4.6F,
+            4.8F, 6.2F, 5.70F, 0.50F, 4.10F, 1.40F),
+    // Shares the Trooper skeleton (same joints, gait and cockpit), on a lighter, faster frame.
+    SCOUT("scout", "Scout", "Fast Recon Frame", 180.0D, 50.0F, 0.40D, 16.0D, 2.3F, 4.6F,
             4.8F, 6.2F, 5.70F, 0.50F, 4.10F, 1.40F);
 
     private final String id;
@@ -64,6 +67,7 @@ public enum TitanClass {
         return switch (this) {
             case RONIN, NORTHSTAR -> 0.75F;
             case ION, TONE, MONARCH, TROOPER -> 1.0F;
+            case SCOUT -> 0.7F;
             case SCORCH, LEGION -> 1.45F;
         };
     }
@@ -131,7 +135,7 @@ public enum TitanClass {
             case RONIN -> new double[]{0.55D, 5.61D, 2.02D};
             case NORTHSTAR -> new double[]{0.55D, 5.74D, 2.00D};
             case TONE -> new double[]{0.60D, 5.23D, 2.41D};
-            case TROOPER -> new double[]{0.60D, 5.10D, 2.35D};
+            case TROOPER, SCOUT -> new double[]{0.60D, 5.10D, 2.35D};
         };
     }
 
@@ -179,7 +183,7 @@ public enum TitanClass {
             case LEGION -> running ? 0.53F : 0.62F;
             case MONARCH -> running ? 0.13F : 0.25F;
             case NORTHSTAR -> running ? 0.26F : 0.10F;
-            case TROOPER -> running ? 0.25F : 0.30F;
+            case TROOPER, SCOUT -> running ? 0.25F : 0.30F;
         };
     }
 

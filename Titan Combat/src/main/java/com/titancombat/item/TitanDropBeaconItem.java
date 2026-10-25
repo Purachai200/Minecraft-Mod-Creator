@@ -59,7 +59,7 @@ public class TitanDropBeaconItem extends Item {
                 int nextIndex = (current.ordinal() + 1) % values.length;
                 TitanClass next = values[nextIndex];
                 // The Trooper has its own cheap beacon
-                if (next == TitanClass.TROOPER) next = values[(nextIndex + 1) % values.length];
+                while (next == TitanClass.TROOPER || next == TitanClass.SCOUT) next = values[(next.ordinal() + 1) % values.length];
                 setSelectedTitan(stack, next);
 
                 player.sendSystemMessage(Component.translatable("message.titancombat.beacon_switched", next.getDisplayName(), next.getRole()));
@@ -87,6 +87,7 @@ public class TitanDropBeaconItem extends Item {
                 case MONARCH -> ModEntities.MONARCH_TITAN.get();
                 case NORTHSTAR -> ModEntities.NORTHSTAR_TITAN.get();
                 case TROOPER -> ModEntities.TROOPER_TITAN.get();
+                case SCOUT -> ModEntities.SCOUT_TITAN.get();
                 default -> ModEntities.ION_TITAN.get();
             };
 
