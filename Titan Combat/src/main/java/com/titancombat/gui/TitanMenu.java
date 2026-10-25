@@ -16,7 +16,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 public class TitanMenu extends AbstractContainerMenu {
-    public static final int CONTAINER_SIZE = 13;
+    public static final int CONTAINER_SIZE = 14;
     public static final int BATTERY_SLOT = 0;
     public static final int AMMO_SLOT_1 = 1;
     public static final int AMMO_SLOT_2 = 2;
@@ -24,10 +24,14 @@ public class TitanMenu extends AbstractContainerMenu {
     public static final int CARGO_END = 11;
     /** Weapon module slot: any titan weapon item; empty = the chassis' factory weapon. */
     public static final int WEAPON_SLOT = 12;
+    /** Flight equipment / jetpack module slot. */
+    public static final int FLIGHT_SLOT = 13;
 
     // Slot layout (GUI-local pixels, item area top-left) - must match TitanScreen's 300x222 panel
     public static final int BATTERY_X = 140;
     public static final int BATTERY_Y = 59;
+    public static final int FLIGHT_X = 138;
+    public static final int FLIGHT_Y = 100;
     public static final int AMMO_X = 88;
     public static final int AMMO_Y = 100;
     public static final int CARGO_X = 168;
@@ -104,6 +108,19 @@ public class TitanMenu extends AbstractContainerMenu {
             }
         });
 
+        // Slot 13: Flight equipment / jetpack module slot
+        this.addSlot(new Slot(this.container, FLIGHT_SLOT, FLIGHT_X, FLIGHT_Y) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return stack.getItem() instanceof com.titancombat.item.TitanFlightModuleItem;
+            }
+
+            @Override
+            public int getMaxStackSize() {
+                return 1;
+            }
+        });
+
         // Player Main Inventory (3 rows of 9)
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
@@ -160,6 +177,12 @@ public class TitanMenu extends AbstractContainerMenu {
                     }
                 } else if (slotStack.getItem() instanceof TitanWeaponItem) {
                     if (!this.moveItemStackTo(slotStack, WEAPON_SLOT, WEAPON_SLOT + 1, false)) {
+                        if (!this.moveItemStackTo(slotStack, CARGO_START, CARGO_END + 1, false)) {
+                            return ItemStack.EMPTY;
+                        }
+                    }
+                } else if (slotStack.getItem() instanceof com.titancombat.item.TitanFlightModuleItem) {
+                    if (!this.moveItemStackTo(slotStack, FLIGHT_SLOT, FLIGHT_SLOT + 1, false)) {
                         if (!this.moveItemStackTo(slotStack, CARGO_START, CARGO_END + 1, false)) {
                             return ItemStack.EMPTY;
                         }

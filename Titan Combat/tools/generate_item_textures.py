@@ -54,6 +54,8 @@ E = [hx(c) for c in ('#111716', '#18211f', '#1f2b28', '#283834', '#355049')]
 # flame blue
 F = [hx(c) for c in ('#13307a', '#1f55d6', '#3d8bff')]
 WHITE = hx('#f4fbff')
+# trooper olive drab
+O = [hx(c) for c in ('#1c2114', '#2b331e', '#3c4629', '#4f5c35', '#677646', '#86965c', '#aab97e')]
 SLATE = [hx(c) for c in ('#232a33', '#323b47', '#46525f', '#5f6d7c', '#8494a5')]
 
 
@@ -488,7 +490,7 @@ def weapon_mount():
     return cv
 
 
-def titan_drop_beacon():
+def titan_drop_beacon(head=G, lamp=R):
     cv = Canvas()
     cc = 31
     # ground spike
@@ -510,9 +512,9 @@ def titan_drop_beacon():
         if c == cc - 5:
             cv.set(x, y, A[4])
     # head
-    cv.dcyl(cv.diag_m(2, 10, cc, 5), cc, 5, G[1:7])
-    # red dome lamp
-    cv.dcyl(cv.diag_m(10, 15, cc, 0, lambda a: {10: 4, 11: 4, 12: 3, 13: 3, 14: 2, 15: 1}[a]), cc, 4, R)
+    cv.dcyl(cv.diag_m(2, 10, cc, 5), cc, 5, head[1:7])
+    # dome lamp
+    cv.dcyl(cv.diag_m(10, 15, cc, 0, lambda a: {10: 4, 11: 4, 12: 3, 13: 3, 14: 2, 15: 1}[a]), cc, 4, lamp)
     # antenna
     for x, y in cv.diag_m(6, 24, cc - 9, 1):
         a, c = ac(x, y)
@@ -973,10 +975,193 @@ def ammo_plasma_railgun():
 
 
 WEAPON_IDS = ('splitter_rifle', 'thermite_launcher', 'leadwall', 'tracker_cannon',
-              'predator_cannon', 'xo16_chaingun', 'plasma_railgun')
+              'predator_cannon', 'xo16_chaingun', 'plasma_railgun', 'mining_drill', 'chainsaw')
+
+
+def flight_module_rocket_jetpack():
+    cv = Canvas()
+    cv.mat(cv.rect_m(11, 7, 20, 22), G[1], G[3], G[5])
+    cv.fill(cv.rect_m(14, 9, 17, 15), C[3])
+    cv.fill(cv.rect_m(15, 10, 16, 14), WHITE)
+    for x in range(12, 20):
+        cv.set(x, 18, A[3] if (x % 2 == 0) else G[0])
+        cv.set(x, 19, A[3] if ((x + 1) % 2 == 0) else G[0])
+    left_tank = cv.rect_m(4, 5, 10, 21)
+    cv.fill({(6, 3), (7, 3), (8, 3), (5, 4), (6, 4), (7, 4), (8, 4), (9, 4)}, R[2])
+    cv.vcyl(left_tank, G[1:7])
+    cv.fill(cv.rect_m(4, 8, 10, 9), R[3])
+    cv.fill(cv.rect_m(4, 15, 10, 16), R[2])
+    right_tank = cv.rect_m(21, 5, 27, 21)
+    cv.fill({(23, 3), (24, 3), (25, 3), (22, 4), (23, 4), (24, 4), (25, 4), (26, 4)}, R[2])
+    cv.vcyl(right_tank, G[1:7])
+    cv.fill(cv.rect_m(21, 8, 27, 9), R[3])
+    cv.fill(cv.rect_m(21, 15, 27, 16), R[2])
+    cv.fill(cv.rect_m(9, 11, 12, 12), G[5])
+    cv.fill(cv.rect_m(19, 11, 22, 12), G[5])
+    nozzle_l = cv.rows_m({22: (5, 9), 23: (4, 10), 24: (3, 11), 25: (3, 11)})
+    cv.vcyl(nozzle_l, G[0:5])
+    nozzle_r = cv.rows_m({22: (22, 26), 23: (21, 27), 24: (20, 28), 25: (20, 28)})
+    cv.vcyl(nozzle_r, G[0:5])
+    plume_l = cv.rows_m({26: (5, 9), 27: (6, 8), 28: (6, 8), 29: (7, 7)})
+    for x, y in plume_l:
+        cv.set(x, y, WHITE if x == 7 and y <= 27 else A[3] if y <= 27 else R[3])
+    plume_r = cv.rows_m({26: (22, 26), 27: (23, 25), 28: (23, 25), 29: (24, 24)})
+    for x, y in plume_r:
+        cv.set(x, y, WHITE if x == 24 and y <= 27 else A[3] if y <= 27 else R[3])
+    cv.outline()
+    return cv
+
+
+def flight_module_drone_lifter():
+    cv = Canvas()
+    hub = cv.disc_m(15.5, 15.5, 5.0)
+    cv.mat(hub, G[1], G[3], G[5])
+    core = cv.disc_m(15.5, 15.5, 2.5)
+    cv.fill(core, C[3])
+    cv.set(15, 15, WHITE); cv.set(16, 15, WHITE)
+    nacelles = [(6, 6), (25, 6), (6, 25), (25, 25)]
+    for x0, y0 in nacelles:
+        for t in range(5):
+            x = int(15.5 + (x0 - 15.5) * t / 5.0)
+            y = int(15.5 + (y0 - 15.5) * t / 5.0)
+            cv.set(x, y, G[2])
+            cv.set(x + 1, y, G[1])
+    for x0, y0 in nacelles:
+        ring = cv.disc_m(x0, y0, 4.4) - cv.disc_m(x0, y0, 2.2)
+        cv.mat(ring, G[1], G[4], G[6])
+        cv.set(int(x0 - 2), int(y0), A[3])
+        cv.set(int(x0 + 2), int(y0), A[3])
+        cv.fill(cv.disc_m(x0, y0, 1.2), G[0])
+        cv.set(int(x0), int(y0), C[4])
+        for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)):
+            cv.set(int(x0 + dx), int(y0 + dy), G[5])
+    cv.set(15, 8, R[3]); cv.set(16, 8, R[2])
+    cv.outline()
+    return cv
+
+
+def flight_module_vtol_glide():
+    cv = Canvas()
+    fuse = cv.rows_m({
+        3: (15, 16), 4: (15, 16), 5: (14, 17), 6: (14, 17),
+        7: (13, 18), 8: (13, 18), 9: (13, 18), 10: (13, 18),
+        11: (13, 18), 12: (13, 18), 13: (13, 18), 14: (14, 17),
+        15: (14, 17), 16: (14, 17), 17: (14, 17), 18: (14, 17),
+        19: (14, 17), 20: (15, 16), 21: (15, 16), 22: (15, 16),
+        23: (15, 16), 24: (15, 16)
+    })
+    cv.mat(fuse, G[1], G[3], G[5])
+    cv.fill(cv.rect_m(15, 6, 16, 9), C[3])
+    cv.set(15, 6, C[4])
+    for y in range(9, 23):
+        x_left = 13 - int((y - 9) * 0.85)
+        w = max(2, int((23 - y) * 0.7))
+        for x in range(max(2, x_left - w), max(3, x_left + 1)):
+            cv.set(x, y, G[3] if y % 2 == 0 else G[2])
+        x_right = 18 + int((y - 9) * 0.85)
+        for x in range(min(28, x_right), min(30, x_right + w + 1)):
+            cv.set(x, y, G[3] if y % 2 == 0 else G[2])
+    cv.fill(cv.rect_m(2, 17, 3, 23), G[4])
+    cv.set(2, 17, R[3]); cv.set(2, 18, R[2])
+    cv.fill(cv.rect_m(28, 17, 29, 23), G[4])
+    cv.set(29, 17, N[3]); cv.set(29, 18, N[2])
+    cv.vcyl(cv.rect_m(8, 14, 12, 24), G[1:6])
+    cv.fill(cv.rect_m(9, 25, 11, 26), C[3])
+    cv.set(10, 25, WHITE)
+    cv.vcyl(cv.rect_m(19, 14, 23, 24), G[1:6])
+    cv.fill(cv.rect_m(20, 25, 22, 26), C[3])
+    cv.set(21, 25, WHITE)
+    cv.outline()
+    return cv
+
+
+def weapon_mining_drill():
+    cv = Canvas()
+    stock_and_grip(cv, -26, -14, CC - 3, CC + 5, -12, CC + 5, CC + 12)
+    dcyl_box(cv, -15, -2, CC - 7, CC + 7, G[0:6])
+    for a in range(-14, -2, 2):
+        dfill(cv, a, a, CC - 4, CC + 4, A[3])
+    dcyl_box(cv, -2, 3, CC - 8, CC + 8, G[1:7])
+    dfill(cv, -1, 1, CC - 7, CC + 7, G[5])
+    for a in range(3, 24):
+        half = max(1, int(7.0 * (1.0 - (a - 3) / 22.0)))
+        for c in range(int(CC - half), int(CC + half + 1)):
+            dist = abs(c - CC)
+            is_flute = ((a + c) % 5 < 2)
+            if is_flute:
+                col = C[4] if dist <= 1 else G[1]
+            elif c < CC:
+                col = G[5]
+            else:
+                col = G[2]
+            x = (a + c) // 2
+            y = (c - a) // 2
+            cv.set(x, y, col)
+    dfill(cv, 23, 25, CC - 1, CC + 1, C[4])
+    dfill(cv, 25, 26, CC, CC, WHITE)
+    cv.outline()
+    return cv
+
+
+def ammo_mining_drill():
+    cv = Canvas()
+    cv.mat(cv.rect_m(4, 15, 27, 28), G[1], G[2], G[4])
+    cv.vcyl(cv.rect_m(6, 4, 12, 17), C)
+    cv.vcyl(cv.rect_m(14, 4, 20, 17), C)
+    cv.fill(cv.rect_m(8, 6, 10, 15), WHITE)
+    cv.fill(cv.rect_m(16, 6, 18, 15), WHITE)
+    cv.set(9, 2, G[5]); cv.set(9, 3, G[1])
+    cv.set(17, 2, G[5]); cv.set(17, 3, G[1])
+    cv.vcyl(cv.rect_m(22, 6, 26, 17), G[2:7])
+    for y in range(7, 16, 3):
+        cv.set(23, y, C[4]); cv.set(24, y, C[4])
+    for x in range(5, 27):
+        cv.set(x, 21, A[3] if x % 2 == 0 else G[0])
+    cv.outline()
+    return cv
+
+
+def weapon_chainsaw():
+    cv = Canvas()
+    stock_and_grip(cv, -26, -14, CC - 3, CC + 5, -12, CC + 5, CC + 12)
+    dmat(cv, -14, -2, CC - 6, CC + 6, G[1], G[3], G[5])
+    dmat(cv, -13, -11, CC - 10, CC - 7, G[2], G[4], G[6])
+    for a in (-10, -7, -4):
+        dfill(cv, a, a + 1, CC - 3, CC + 2, G[0])
+    dfill(cv, -9, -3, CC + 3, CC + 5, A[3])
+    bar_m = dm(-2, 22, CC - 4, CC + 4)
+    cv.dcyl(bar_m, CC, 4, G[2:6])
+    dfill(cv, 2, 18, CC - 1, CC + 1, G[0])
+    for a in range(-2, 23, 2):
+        cv.set((a + (CC - 5)) // 2, ((CC - 5) - a) // 2, C[4] if a % 4 == 0 else WHITE)
+        cv.set((a + (CC + 5)) // 2, ((CC + 5) - a) // 2, G[6] if a % 4 == 0 else G[1])
+    dfill(cv, 22, 24, CC - 3, CC + 3, G[1])
+    dfill(cv, 23, 24, CC - 1, CC + 1, C[4])
+    dfill(cv, 25, 25, CC - 2, CC + 2, G[5])
+    cv.outline()
+    return cv
+
+
+def ammo_chainsaw():
+    cv = Canvas()
+    cv.mat(cv.rect_m(5, 7, 18, 27), G[1], G[3], G[5])
+    cv.fill(cv.rect_m(7, 10, 16, 24), A[2])
+    cv.fill(cv.rect_m(8, 12, 10, 22), A[4])
+    cv.set(9, 3, G[4]); cv.fill(cv.rect_m(8, 4, 10, 6), G[2])
+    roll = cv.disc_m(23.5, 17.5, 6.0) - cv.disc_m(23.5, 17.5, 2.0)
+    cv.mat(roll, G[1], G[4], G[6])
+    for x, y in cv.disc_m(23.5, 17.5, 7.0) - cv.disc_m(23.5, 17.5, 5.0):
+        if (x + y) % 3 == 0:
+            cv.set(x, y, C[4])
+    cv.outline()
+    return cv
 
 
 ITEMS = {
+    'flight_module_rocket_jetpack': flight_module_rocket_jetpack,
+    'flight_module_drone_lifter': flight_module_drone_lifter,
+    'flight_module_vtol_glide': flight_module_vtol_glide,
+
     'titan_battery': lambda: battery(True),
     'empty_battery': lambda: battery(False),
     'titan_ammo': titan_ammo,
@@ -986,6 +1171,7 @@ ITEMS = {
     'hydraulic_actuator': hydraulic_actuator,
     'weapon_mount': weapon_mount,
     'titan_drop_beacon': titan_drop_beacon,
+    'trooper_beacon': lambda: titan_drop_beacon(O, N),
     'hangar_transponder': hangar_transponder,
     'pilot_license': pilot_license,
     'paint_spray_can': paint_spray_can,

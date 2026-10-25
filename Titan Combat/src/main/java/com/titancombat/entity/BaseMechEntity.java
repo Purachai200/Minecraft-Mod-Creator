@@ -53,6 +53,7 @@ public abstract class BaseMechEntity extends PathfinderMob {
     protected int shieldRegenCooldown = 0;
     protected int landingStandupTimer = 0;
     protected int doomedCountdown = 200; // 10 seconds before explosion if doomed
+    protected int warpDefenseTicks = 0;
 
     public BaseMechEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -167,6 +168,17 @@ public abstract class BaseMechEntity extends PathfinderMob {
         this.entityData.set(DATA_DEFENSE_ACTIVE, active);
     }
 
+    public int getWarpDefenseTicks() {
+        return warpDefenseTicks;
+    }
+
+    public void setWarpDefenseTicks(int ticks) {
+        this.warpDefenseTicks = Math.max(0, ticks);
+        if (this.warpDefenseTicks > 0) {
+            setDefenseActive(true);
+        }
+    }
+
     public boolean activateCoreOverdrive(@Nullable Player pilot) {
         if (getCoreCharge() < 100.0F || isOverdriveActive()) {
             return false;
@@ -262,7 +274,13 @@ public abstract class BaseMechEntity extends PathfinderMob {
         // Tactical Defense Matrix maintenance & shield drain
         if (isDefenseActive()) {
             if (!this.level().isClientSide) {
-                if (this.tickCount % 4 == 0) {
+                if (warpDefenseTicks > 0) {
+                    warpDefenseTicks--;
+                    // During warp arrival defense, keep shield fully topped up
+                    if (getShield() < getMaxShield()) {
+                        setShield(getMaxShield());
+                    }
+                } else if (this.tickCount % 4 == 0) {
                     float currentShield = getShield();
                     if (currentShield <= 1.0F) {
                         setShield(0.0F);
@@ -277,11 +295,18 @@ public abstract class BaseMechEntity extends PathfinderMob {
                     }
                 }
             } else {
-                if (this.random.nextFloat() < 0.3F) {
+                if (this.random.nextFloat() < (warpDefenseTicks > 0 ? 0.7F : 0.3F)) {
                     this.level().addParticle(ParticleTypes.ENCHANTED_HIT,
                             this.getX() + (this.random.nextDouble() - 0.5D) * 2.0D,
                             this.getY() + 1.2D + this.random.nextDouble() * 2.0D,
                             this.getZ() + (this.random.nextDouble() - 0.5D) * 2.0D,
+                            0, 0.05D, 0);
+                }
+                if (warpDefenseTicks > 0 && this.random.nextFloat() < 0.45F) {
+                    this.level().addParticle(ParticleTypes.ELECTRIC_SPARK,
+                            this.getX() + (this.random.nextDouble() - 0.5D) * 3.6D,
+                            this.getY() + 0.5D + this.random.nextDouble() * 3.6D,
+                            this.getZ() + (this.random.nextDouble() - 0.5D) * 3.6D,
                             0, 0.05D, 0);
                 }
             }
@@ -369,8 +394,11 @@ public abstract class BaseMechEntity extends PathfinderMob {
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        if (getMechState() == MechState.DROPPING) {
-            return false; // Invulnerable during atmospheric drop
+        if (getMechState() == MechState.DROPPING || warpDefenseTicks > 0) {
+            if (warpDefenseTicks > 0) {
+                this.level().playSound(null, this.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.5F, 1.2F);
+            }
+            return false; // Invulnerable during atmospheric drop or warp arrival
         }
 
         // 1. Tactical Defense Matrix: deflects 80% damage
@@ -572,6 +600,7 @@ public abstract class BaseMechEntity extends PathfinderMob {
         tag.putFloat("CoreCharge", getCoreCharge());
         tag.putInt("OverdriveTicks", getOverdriveTicks());
         tag.putBoolean("DefenseActive", isDefenseActive());
+        tag.putInt("WarpDefenseTicks", getWarpDefenseTicks());
     }
 
     @Override
@@ -586,5 +615,6 @@ public abstract class BaseMechEntity extends PathfinderMob {
         if (tag.contains("CoreCharge")) setCoreCharge(tag.getFloat("CoreCharge"));
         if (tag.contains("OverdriveTicks")) setOverdriveTicks(tag.getInt("OverdriveTicks"));
         if (tag.contains("DefenseActive")) setDefenseActive(tag.getBoolean("DefenseActive"));
+        if (tag.contains("WarpDefenseTicks")) setWarpDefenseTicks(tag.getInt("WarpDefenseTicks"));
     }
 }

@@ -21,6 +21,7 @@ public class ModCreativeTabs {
                     .displayItems((parameters, output) -> {
                         // Deployers & Transponders
                         output.accept(ModItems.TITAN_DROP_BEACON.get());
+                        output.accept(ModItems.TROOPER_BEACON.get());
                         output.accept(ModItems.HANGAR_TRANSPONDER.get());
                         output.accept(ModItems.PILOT_LICENSE.get());
                         output.accept(ModBlocks.HANGAR_DOCK.get());

@@ -52,7 +52,12 @@ import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
+import net.minecraft.world.level.block.Block;
+import java.util.ArrayDeque;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Queue;
+import java.util.Set;
 
 public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntity, HasCustomInventoryScreen {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
@@ -1070,6 +1075,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
                 resolveMeleeHit();
             }
             tickWeaponSystems();
+            tickFlightSystems();
             tickEjectSequence();
             // Pilot boarded a parked titan: the hatch seals, then the chassis rises on its own.
             if (this.boardingTicks == this.standUpAtTick) {
@@ -1405,6 +1411,31 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         }
     }
 
+    /** Flight module in the equipment bay slot, or NONE when the slot is empty. */
+    public TitanFlightModule installedFlightModule() {
+        if (this.titanInventory.getContainerSize() > com.titancombat.gui.TitanMenu.FLIGHT_SLOT) {
+            ItemStack stack = this.titanInventory.getItem(com.titancombat.gui.TitanMenu.FLIGHT_SLOT);
+            if (stack.getItem() instanceof com.titancombat.item.TitanFlightModuleItem f) {
+                return f.getModule();
+            }
+        }
+        return TitanFlightModule.NONE;
+    }
+
+    /** Server tick: flight equipment swaps (syncs the flight slot with entity flight state). */
+    private void tickFlightSystems() {
+        TitanFlightModule installed = installedFlightModule();
+        if (installed != getFlightModule()) {
+            setFlightModule(installed);
+        }
+    }
+
+    public boolean hasInstalledBattery() {
+        ItemStack batteryStack = this.titanInventory.getItem(TitanMenu.BATTERY_SLOT);
+        return !batteryStack.isEmpty() && batteryStack.getItem() instanceof com.titancombat.item.TitanBatteryItem
+                && !batteryStack.is(com.titancombat.item.ModItems.EMPTY_BATTERY.get());
+    }
+
     /** Holster / draw toggle. A lowered gun rides on the back and the arms relax. */
     public void toggleWeaponLowered(Player pilot) {
         boolean lower = !isWeaponLowered();
@@ -1491,16 +1522,23 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         if (firingCooldown > 0) return false;
 
         boolean isOverdrive = isOverdriveActive();
+        boolean isUtilityTool = (weapon == TitanWeapon.MINING_DRILL || weapon == TitanWeapon.CHAINSAW);
         boolean freeAmmo = isOverdrive;
         if (!freeAmmo) {
             if (getMagazine() <= 0) {
-                // Dry: click, then reload automatically if there is a magazine.
-                this.level().playSound(null, this.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.8F, 1.8F);
-                firingCooldown = 10;
-                startReload(pilot);
-                return false;
+                // If it's a utility tool, check if reactor/dash energy is available
+                if (isUtilityTool && (getDashCharge() > 0 || hasInstalledBattery())) {
+                    setDashCharge(Math.max(0.0F, getDashCharge() - 0.2F));
+                } else {
+                    // Dry: click, then reload automatically if there is a magazine.
+                    this.level().playSound(null, this.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.8F, 1.8F);
+                    firingCooldown = 10;
+                    startReload(pilot);
+                    return false;
+                }
+            } else {
+                this.entityData.set(DATA_MAGAZINE, getMagazine() - 1);
             }
-            this.entityData.set(DATA_MAGAZINE, getMagazine() - 1);
         }
 
         executeWeaponShot(pilot, weapon);
@@ -1520,6 +1558,17 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         if (!System.getProperty("titancombat.autotest", "").isEmpty()) {
             com.titancombat.TitanCombatMod.LOGGER.info("[autotest] fired at {} (client aim {}), muzzle {}", target, this.tickCount - this.pilotAimTick <= 2, spawnPos);
         }
+
+        // Specialized excavation and forestry attachments
+        if (weapon == TitanWeapon.MINING_DRILL) {
+            performDrillExcavation(pilot, target);
+            return;
+        }
+        if (weapon == TitanWeapon.CHAINSAW) {
+            performChainsawHarvest(pilot, target);
+            return;
+        }
+
         Vec3 aim = target.subtract(spawnPos).normalize();
 
         for (int i = 0; i < weapon.getPellets(); i++) {
@@ -1532,6 +1581,151 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
 
         if (weapon == TitanWeapon.XO16_CHAINGUN && getTitanClass() == TitanClass.MONARCH) {
             this.setShield(this.getShield() + 2.0F); // Monarch's energy siphon
+        }
+    }
+
+    /** Heavy mining drill excavation: mines blocks in front of the titan and gathers drops to cargo. */
+    protected void performDrillExcavation(Player pilot, Vec3 target) {
+        if (!(this.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
+        Vec3 start = getMuzzlePosition();
+        Vec3 dir = target.subtract(start).normalize();
+        double reach = 14.0D;
+        net.minecraft.world.phys.BlockHitResult hit = serverLevel.clip(new net.minecraft.world.level.ClipContext(
+                start, start.add(dir.scale(reach)),
+                net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.NONE,
+                this
+        ));
+
+        if (hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            BlockPos center = hit.getBlockPos();
+            boolean mined = false;
+            int radius = 1;
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dy = -radius; dy <= radius; dy++) {
+                    for (int dz = -radius; dz <= radius; dz++) {
+                        BlockPos p = center.offset(dx, dy, dz);
+                        if (p.distSqr(center) > 2.8D) continue;
+                        BlockState state = serverLevel.getBlockState(p);
+                        if (state.isAir()) continue;
+                        float hardness = state.getDestroySpeed(serverLevel, p);
+                        if (hardness >= 0.0F && hardness <= 55.0F && !state.is(Blocks.BEDROCK)) {
+                            breakAndCollectBlock(serverLevel, p, state, pilot);
+                            mined = true;
+                        }
+                    }
+                }
+            }
+            if (mined) {
+                serverLevel.playSound(null, center, SoundEvents.ANVIL_HIT, SoundSource.PLAYERS, 1.2F, 1.8F);
+                serverLevel.playSound(null, center, SoundEvents.GRINDSTONE_USE, SoundSource.PLAYERS, 1.4F, 1.4F);
+            }
+        } else {
+            damageMeleeEntitiesInAim(pilot, dir, 28.0F, 10.0D);
+        }
+    }
+
+    /** Heavy hydraulic chainsaw harvest: fells logs and foliage, gathering timber to cargo. */
+    protected void performChainsawHarvest(Player pilot, Vec3 target) {
+        if (!(this.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
+        Vec3 start = getMuzzlePosition();
+        Vec3 dir = target.subtract(start).normalize();
+        double reach = 14.0D;
+        net.minecraft.world.phys.BlockHitResult hit = serverLevel.clip(new net.minecraft.world.level.ClipContext(
+                start, start.add(dir.scale(reach)),
+                net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.NONE,
+                this
+        ));
+
+        if (hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            BlockPos center = hit.getBlockPos();
+            BlockState hitState = serverLevel.getBlockState(center);
+            if (hitState.is(net.minecraft.tags.BlockTags.LOGS) || hitState.is(net.minecraft.tags.BlockTags.LEAVES)) {
+                Set<BlockPos> tree = new HashSet<>();
+                Queue<BlockPos> queue = new ArrayDeque<>();
+                queue.add(center);
+                tree.add(center);
+                int maxBlocks = 48;
+                while (!queue.isEmpty() && tree.size() < maxBlocks) {
+                    BlockPos cur = queue.poll();
+                    for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                        BlockPos n = cur.relative(d);
+                        if (!tree.contains(n) && n.distSqr(center) <= 200.0D) {
+                            BlockState bs = serverLevel.getBlockState(n);
+                            if (bs.is(net.minecraft.tags.BlockTags.LOGS) || bs.is(net.minecraft.tags.BlockTags.LEAVES)) {
+                                tree.add(n);
+                                queue.add(n);
+                                if (tree.size() >= maxBlocks) break;
+                            }
+                        }
+                    }
+                }
+                for (BlockPos p : tree) {
+                    BlockState bs = serverLevel.getBlockState(p);
+                    breakAndCollectBlock(serverLevel, p, bs, pilot);
+                }
+                serverLevel.playSound(null, center, SoundEvents.WOOD_BREAK, SoundSource.PLAYERS, 1.8F, 0.8F);
+                serverLevel.playSound(null, center, SoundEvents.GRINDSTONE_USE, SoundSource.PLAYERS, 1.2F, 1.6F);
+            } else {
+                float hardness = hitState.getDestroySpeed(serverLevel, center);
+                if (hardness >= 0.0F && hardness <= 25.0F && !hitState.isAir()) {
+                    breakAndCollectBlock(serverLevel, center, hitState, pilot);
+                    serverLevel.playSound(null, center, SoundEvents.WOOD_BREAK, SoundSource.PLAYERS, 1.4F, 1.0F);
+                }
+            }
+        } else {
+            damageMeleeEntitiesInAim(pilot, dir, 36.0F, 10.0D);
+        }
+    }
+
+    private void breakAndCollectBlock(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state, Player pilot) {
+        ItemStack tool = new ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE);
+        List<ItemStack> drops = Block.getDrops(state, level, pos, null, pilot, tool);
+        level.destroyBlock(pos, false, this);
+        for (ItemStack drop : drops) {
+            ItemStack remain = insertIntoCargo(drop);
+            if (!remain.isEmpty()) {
+                Block.popResource(level, pos, remain);
+            }
+        }
+    }
+
+    /** Attempts to insert item into titan cargo slots (3..11), returns uninserted leftovers. */
+    public ItemStack insertIntoCargo(ItemStack stack) {
+        if (stack.isEmpty()) return ItemStack.EMPTY;
+        ItemStack toInsert = stack.copy();
+        for (int i = TitanMenu.CARGO_START; i <= TitanMenu.CARGO_END; i++) {
+            ItemStack existing = this.titanInventory.getItem(i);
+            if (!existing.isEmpty() && ItemStack.isSameItemSameTags(existing, toInsert)) {
+                int max = Math.min(existing.getMaxStackSize(), this.titanInventory.getMaxStackSize());
+                int space = max - existing.getCount();
+                if (space > 0) {
+                    int add = Math.min(space, toInsert.getCount());
+                    existing.grow(add);
+                    toInsert.shrink(add);
+                    if (toInsert.isEmpty()) return ItemStack.EMPTY;
+                }
+            }
+        }
+        for (int i = TitanMenu.CARGO_START; i <= TitanMenu.CARGO_END; i++) {
+            if (this.titanInventory.getItem(i).isEmpty()) {
+                this.titanInventory.setItem(i, toInsert.copy());
+                return ItemStack.EMPTY;
+            }
+        }
+        return toInsert;
+    }
+
+    private void damageMeleeEntitiesInAim(Player pilot, Vec3 aimDir, float damage, double range) {
+        Vec3 start = getMuzzlePosition();
+        Vec3 end = start.add(aimDir.scale(range));
+        AABB box = new AABB(start, end).inflate(2.0D);
+        List<LivingEntity> targets = this.level().getEntitiesOfClass(LivingEntity.class, box,
+                e -> e != this && e != pilot && e.isAlive() && !this.isAlliedTo(e));
+        for (LivingEntity target : targets) {
+            target.hurt(this.damageSources().mobAttack(this), damage);
+            target.knockback(0.4D, -aimDir.x, -aimDir.z);
         }
     }
 
@@ -1598,18 +1792,79 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
 
-        // Uninstall Flight Module with Maintenance Blowtorch when sneaking
-        if (held.getItem() instanceof com.titancombat.item.MaintenanceBlowtorchItem && player.isShiftKeyDown() && hasFlightModule()) {
+        // Install / Swap Weapon Module directly with Weapon Item
+        if (held.getItem() instanceof com.titancombat.item.TitanWeaponItem weaponItem) {
             if (!this.level().isClientSide) {
-                TitanFlightModule old = getFlightModule();
-                ItemStack oldStack = new ItemStack(com.titancombat.item.ModItems.FLIGHT_MODULES.get(old).get());
-                if (!player.getInventory().add(oldStack)) {
-                    this.spawnAtLocation(oldStack);
+                ItemStack oldInSlot = this.titanInventory.getItem(com.titancombat.gui.TitanMenu.WEAPON_SLOT);
+                this.titanInventory.setItem(com.titancombat.gui.TitanMenu.WEAPON_SLOT, held.split(1));
+                this.entityData.set(DATA_WEAPON, weaponItem.getWeapon().ordinal());
+                this.entityData.set(DATA_MAGAZINE, 0);
+                this.entityData.set(DATA_RELOAD_TICKS, 0);
+                this.raiseProgress = 0;
+                this.level().playSound(null, this.blockPosition(), SoundEvents.ARMOR_EQUIP_NETHERITE, SoundSource.PLAYERS, 1.6F, 1.0F);
+                if (!player.getAbilities().instabuild && !oldInSlot.isEmpty()) {
+                    if (!player.getInventory().add(oldInSlot)) {
+                        this.spawnAtLocation(oldInSlot);
+                    }
                 }
-                setFlightModule(TitanFlightModule.NONE);
-                held.hurtAndBreak(1, player, (p) -> p.broadcastBreakEvent(hand));
-                this.level().playSound(null, this.blockPosition(), SoundEvents.IRON_TRAPDOOR_CLOSE, SoundSource.PLAYERS, 1.0F, 0.8F);
-                player.sendSystemMessage(Component.translatable("message.titancombat.flight_module_uninstalled"));
+                player.sendSystemMessage(Component.translatable("message.titancombat.weapon_installed",
+                        Component.translatable(weaponItem.getWeapon().getTranslationKey()), getTitanClass().getDisplayName()));
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
+        // Install / Swap Flight Module directly with Flight Module Item
+        if (held.getItem() instanceof com.titancombat.item.TitanFlightModuleItem flightItem) {
+            if (!this.level().isClientSide) {
+                ItemStack oldInSlot = this.titanInventory.getItem(com.titancombat.gui.TitanMenu.FLIGHT_SLOT);
+                this.titanInventory.setItem(com.titancombat.gui.TitanMenu.FLIGHT_SLOT, held.split(1));
+                setFlightModule(flightItem.getModule());
+                this.level().playSound(null, this.blockPosition(), SoundEvents.ARMOR_EQUIP_NETHERITE, SoundSource.PLAYERS, 1.6F, 1.0F);
+                if (!player.getAbilities().instabuild && !oldInSlot.isEmpty()) {
+                    if (!player.getInventory().add(oldInSlot)) {
+                        this.spawnAtLocation(oldInSlot);
+                    }
+                }
+                player.sendSystemMessage(Component.translatable("message.titancombat.flight_module_installed",
+                        flightItem.getModule().getDisplayName(), getTitanClass().getDisplayName()));
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
+        // Uninstall Weapon or Flight Module with Maintenance Blowtorch when sneaking
+        if (held.getItem() instanceof com.titancombat.item.MaintenanceBlowtorchItem && player.isShiftKeyDown() && (hasWeapon() || hasFlightModule())) {
+            if (!this.level().isClientSide) {
+                if (hasWeapon()) {
+                    ItemStack oldStack = this.titanInventory.getItem(com.titancombat.gui.TitanMenu.WEAPON_SLOT);
+                    if (oldStack.isEmpty() && getActiveWeapon() != null) {
+                        oldStack = new ItemStack(com.titancombat.item.ModItems.WEAPON_MODULES.get(getActiveWeapon()).get());
+                    }
+                    this.titanInventory.setItem(com.titancombat.gui.TitanMenu.WEAPON_SLOT, ItemStack.EMPTY);
+                    this.entityData.set(DATA_WEAPON, -1);
+                    this.entityData.set(DATA_MAGAZINE, 0);
+                    this.entityData.set(DATA_RELOAD_TICKS, 0);
+                    this.raiseProgress = 0;
+                    if (!player.getInventory().add(oldStack)) {
+                        this.spawnAtLocation(oldStack);
+                    }
+                    held.hurtAndBreak(1, player, (p) -> p.broadcastBreakEvent(hand));
+                    this.level().playSound(null, this.blockPosition(), SoundEvents.IRON_TRAPDOOR_CLOSE, SoundSource.PLAYERS, 1.0F, 0.8F);
+                    player.sendSystemMessage(Component.translatable("message.titancombat.weapon_uninstalled"));
+                } else if (hasFlightModule()) {
+                    ItemStack oldStack = this.titanInventory.getItem(com.titancombat.gui.TitanMenu.FLIGHT_SLOT);
+                    if (oldStack.isEmpty()) {
+                        TitanFlightModule old = getFlightModule();
+                        oldStack = new ItemStack(com.titancombat.item.ModItems.FLIGHT_MODULES.get(old).get());
+                    }
+                    this.titanInventory.setItem(com.titancombat.gui.TitanMenu.FLIGHT_SLOT, ItemStack.EMPTY);
+                    setFlightModule(TitanFlightModule.NONE);
+                    if (!player.getInventory().add(oldStack)) {
+                        this.spawnAtLocation(oldStack);
+                    }
+                    held.hurtAndBreak(1, player, (p) -> p.broadcastBreakEvent(hand));
+                    this.level().playSound(null, this.blockPosition(), SoundEvents.IRON_TRAPDOOR_CLOSE, SoundSource.PLAYERS, 1.0F, 0.8F);
+                    player.sendSystemMessage(Component.translatable("message.titancombat.flight_module_uninstalled"));
+                }
             }
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
@@ -1844,7 +2099,13 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         if (tag.contains("OwnerUUID")) this.entityData.set(DATA_OWNER_UUID, tag.getString("OwnerUUID"));
         if (tag.contains("OwnerName")) this.entityData.set(DATA_OWNER_NAME, tag.getString("OwnerName"));
         if (tag.contains("WeaponLowered")) this.entityData.set(DATA_WEAPON_LOWERED, tag.getBoolean("WeaponLowered"));
-        if (tag.contains("FlightModule")) setFlightModule(TitanFlightModule.byId(tag.getString("FlightModule")));
+        if (tag.contains("FlightModule")) {
+            TitanFlightModule mod = TitanFlightModule.byId(tag.getString("FlightModule"));
+            setFlightModule(mod);
+            if (mod != TitanFlightModule.NONE && this.titanInventory.getItem(com.titancombat.gui.TitanMenu.FLIGHT_SLOT).isEmpty()) {
+                this.titanInventory.setItem(com.titancombat.gui.TitanMenu.FLIGHT_SLOT, new ItemStack(com.titancombat.item.ModItems.FLIGHT_MODULES.get(mod).get()));
+            }
+        }
 
         if (tag.contains("TitanInventory", 9)) {
             ListTag listtag = tag.getList("TitanInventory", 10);

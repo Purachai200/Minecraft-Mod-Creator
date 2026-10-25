@@ -384,6 +384,7 @@ public final class ClientAutoTest {
             case "legion" -> ModEntities.LEGION_TITAN.get();
             case "scorch" -> ModEntities.SCORCH_TITAN.get();
             case "tone" -> ModEntities.TONE_TITAN.get();
+            case "trooper" -> ModEntities.TROOPER_TITAN.get();
             default -> ModEntities.MONARCH_TITAN.get();
         };
     }
@@ -417,20 +418,23 @@ public final class ClientAutoTest {
         })));
         steps.add(new Step(315, mc -> shot(mc, "04_military_salute")));
 
-        // 5. Equip Drone Lifter (turn 125 degrees so back equipment is directly featured)
+        // 5. Equip Drone Lifter via Equipment Bay Slot (turn 125 degrees so back equipment is directly featured)
         steps.add(new Step(335, mc -> display(mc, (p, d) -> {
             d.setYRot(125.0F); d.setYBodyRot(125.0F); d.setYHeadRot(125.0F);
             p.teleportTo(p.serverLevel(), displayX, displayY, displayZ, 180.0F, -8.0F);
         })));
-        steps.add(new Step(340, mc -> display(mc, (p, d) -> d.setFlightModule(com.titancombat.entity.TitanFlightModule.DRONE_LIFTER))));
+        steps.add(new Step(340, mc -> display(mc, (p, d) -> d.getTitanInventory().setItem(TitanMenu.FLIGHT_SLOT,
+                new ItemStack(ModItems.FLIGHT_MODULES.get(com.titancombat.entity.TitanFlightModule.DRONE_LIFTER).get())))));
         steps.add(new Step(360, mc -> shot(mc, "05_drone_lifter_equipped")));
 
-        // 6. Equip Rocket Jetpack
-        steps.add(new Step(370, mc -> display(mc, (p, d) -> d.setFlightModule(com.titancombat.entity.TitanFlightModule.ROCKET_JETPACK))));
+        // 6. Equip Rocket Jetpack via Equipment Bay Slot
+        steps.add(new Step(370, mc -> display(mc, (p, d) -> d.getTitanInventory().setItem(TitanMenu.FLIGHT_SLOT,
+                new ItemStack(ModItems.FLIGHT_MODULES.get(com.titancombat.entity.TitanFlightModule.ROCKET_JETPACK).get())))));
         steps.add(new Step(390, mc -> shot(mc, "06_rocket_jetpack_equipped")));
 
-        // 7. Equip VTOL Glide Wings
-        steps.add(new Step(400, mc -> display(mc, (p, d) -> d.setFlightModule(com.titancombat.entity.TitanFlightModule.VTOL_GLIDE))));
+        // 7. Equip VTOL Glide Wings via Equipment Bay Slot
+        steps.add(new Step(400, mc -> display(mc, (p, d) -> d.getTitanInventory().setItem(TitanMenu.FLIGHT_SLOT,
+                new ItemStack(ModItems.FLIGHT_MODULES.get(com.titancombat.entity.TitanFlightModule.VTOL_GLIDE).get())))));
         steps.add(new Step(420, mc -> shot(mc, "07_vtol_glide_equipped")));
 
         // 8. Board and test actual flight, thrust, fuel and hovering
@@ -529,6 +533,7 @@ public final class ClientAutoTest {
                 case "legion" -> ModEntities.LEGION_TITAN.get();
                 case "scorch" -> ModEntities.SCORCH_TITAN.get();
                 case "tone" -> ModEntities.TONE_TITAN.get();
+                case "trooper" -> ModEntities.TROOPER_TITAN.get();
                 default -> ModEntities.MONARCH_TITAN.get();
             };
             if (!(type.create(level) instanceof BaseTitanEntity titan)) return;

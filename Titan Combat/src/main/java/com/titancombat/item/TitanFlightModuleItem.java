@@ -34,17 +34,14 @@ public class TitanFlightModuleItem extends Item {
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
         if (target instanceof BaseTitanEntity titan) {
             if (!player.level().isClientSide) {
-                TitanFlightModule oldModule = titan.getFlightModule();
+                ItemStack oldInSlot = titan.getTitanInventory().getItem(com.titancombat.gui.TitanMenu.FLIGHT_SLOT);
+                titan.getTitanInventory().setItem(com.titancombat.gui.TitanMenu.FLIGHT_SLOT, stack.split(1));
                 titan.setFlightModule(this.module);
                 player.level().playSound(null, titan.blockPosition(), SoundEvents.ARMOR_EQUIP_NETHERITE, SoundSource.PLAYERS, 1.6F, 1.0F);
 
-                if (!player.getAbilities().instabuild) {
-                    stack.shrink(1);
-                    if (oldModule != TitanFlightModule.NONE) {
-                        ItemStack oldStack = new ItemStack(ModItems.FLIGHT_MODULES.get(oldModule).get());
-                        if (!player.getInventory().add(oldStack)) {
-                            player.drop(oldStack, false);
-                        }
+                if (!player.getAbilities().instabuild && !oldInSlot.isEmpty()) {
+                    if (!player.getInventory().add(oldInSlot)) {
+                        player.drop(oldInSlot, false);
                     }
                 }
 

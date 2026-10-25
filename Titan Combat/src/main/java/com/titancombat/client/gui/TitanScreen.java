@@ -36,6 +36,8 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
             new ResourceLocation(TitanCombatMod.MODID, "textures/item/titan_ammo.png");
     private static final ResourceLocation GHOST_WEAPON =
             new ResourceLocation(TitanCombatMod.MODID, "textures/item/weapon_mount.png");
+    private static final ResourceLocation GHOST_FLIGHT =
+            new ResourceLocation(TitanCombatMod.MODID, "textures/item/flight_module_rocket_jetpack.png");
 
     private static final int W = 300;
     private static final int H = 222;
@@ -148,6 +150,7 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
             int accent;
             if (i == TitanMenu.BATTERY_SLOT) accent = AMBER;
             else if (i == TitanMenu.WEAPON_SLOT) accent = GOLD;
+            else if (i == TitanMenu.FLIGHT_SLOT) accent = CYAN;
             else if (i == TitanMenu.AMMO_SLOT_1 || i == TitanMenu.AMMO_SLOT_2) accent = CYAN;
             else if (i < TitanMenu.CONTAINER_SIZE) accent = DIM;
             else if (i >= TitanMenu.CONTAINER_SIZE + 27) accent = CYAN; // hotbar
@@ -170,6 +173,11 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
         Slot weaponSlot = this.menu.slots.get(TitanMenu.WEAPON_SLOT);
         if (!weaponSlot.hasItem()) {
             tex(g, GHOST_WEAPON, x + weaponSlot.x, y + weaponSlot.y, 16, 16, 0, 0, 16, 16, 16, 16, 0x9FB8C0, 0.28F);
+        }
+
+        Slot flightSlot = this.menu.slots.get(TitanMenu.FLIGHT_SLOT);
+        if (!flightSlot.hasItem()) {
+            tex(g, GHOST_FLIGHT, x + flightSlot.x, y + flightSlot.y, 16, 16, 0, 0, 16, 16, 16, 16, 0x9FB8C0, 0.28F);
         }
 
         // pilot hotbar marker
@@ -260,8 +268,9 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
                 mags += CockpitHudState.magazinesIn(this.menu.slots.get(i).getItem(), weapon);
             }
         }
-        rightText(g, "x" + mags, MUNI_X1 - 5, TitanMenu.AMMO_Y + 1, mags > 0 ? 0xFFFFFFFF : 0xFFFF2A44);
-        rightText(g, "MAGS", MUNI_X1 - 5, TitanMenu.AMMO_Y + 10, 0xFF7FB8C8);
+        g.drawString(this.font, "x" + mags, 88, 90, mags > 0 ? 0xFFFFFFFF : 0xFFFF2A44, false);
+        g.drawString(this.font, "MAGS", 103, 90, 0xFF7FB8C8, false);
+        g.drawString(this.font, "EQUIP", 133, 90, 0xFF00E5FF, false);
 
         // weapon group
         g.drawString(this.font, lblWeapon, WEAPON_X0 + 5, WEAPON_Y0 + 4, 0xFFFFD54F, false);

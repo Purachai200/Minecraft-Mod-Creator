@@ -17,6 +17,18 @@
 <body>
 <div id="ui">
   <b style="color:var(--accent)">TITAN MODEL VIEWER</b>
+  <label>Titan Model:
+    <select id="preset">
+      <option value="trooper" selected>Trooper (Mass-Production Grunt)</option>
+      <option value="ion">Ion</option>
+      <option value="scorch">Scorch</option>
+      <option value="northstar">Northstar</option>
+      <option value="ronin">Ronin</option>
+      <option value="tone">Tone</option>
+      <option value="legion">Legion</option>
+      <option value="vanguard">Vanguard</option>
+    </select>
+  </label>
   <label>Geo URL <input id="geo" type="text"></label>
   <label>Texture URL <input id="tex" type="text"></label>
   <label>Animation file URL <input id="animfile" type="text"></label>
@@ -238,11 +250,14 @@ requestAnimationFrame(loop);
 ['time', 'layers', 'rider', 'hide'].forEach(id => document.getElementById(id).addEventListener('input', apply));
 document.getElementById('load').onclick = load;
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+document.getElementById('preset').addEventListener('change', (e) => {
+  window.analyze(e.target.value);
+});
 const A = 'src/main/resources/assets/titancombat/';
-document.getElementById('geo').value = '../' + A + 'geo/ion_titan.geo.json';
-document.getElementById('tex').value = '../' + A + 'textures/entity/titan/ion/ion_titan.png';
-document.getElementById('animfile').value = '../' + A + 'animations/ion_titan.animation.json';
-document.getElementById('layers').value = 'animation.ion_titan.idle.leg, animation.ion_titan.idle.arm';
+document.getElementById('geo').value = '../' + A + 'geo/trooper_titan.geo.json';
+document.getElementById('tex').value = '../' + A + 'textures/entity/titan/trooper/trooper_titan.png';
+document.getElementById('animfile').value = '../' + A + 'animations/trooper_titan.animation.json';
+document.getElementById('layers').value = 'animation.trooper_titan.idle.leg, animation.trooper_titan.idle.arm';
 </script>
 </body>
 </html>

@@ -21,7 +21,9 @@ public enum TitanWeapon {
     TRACKER_CANNON("tracker_cannon", TitanClass.TONE,      12,  60,  9, 38.0F, 3.0F, 0.0F, 1,  8,  0, 1.0F, ModSounds.TONE_FIRE),
     PREDATOR_CANNON("predator_cannon", TitanClass.LEGION, 100,  90,  3, 13.0F, 3.2F, 0.45F, 1, 16,  0, 0.0F, ModSounds.LEGION_FIRE),
     XO16_CHAINGUN("xo16_chaingun", TitanClass.MONARCH,     50,  55,  5, 18.0F, 2.8F, 0.15F, 1,  8,  0, 0.0F, ModSounds.MONARCH_FIRE),
-    PLASMA_RAILGUN("plasma_railgun", TitanClass.NORTHSTAR,  6,  60, 25, 90.0F, 4.5F, 0.0F, 1, 12,  0, 0.0F, ModSounds.NORTHSTAR_FIRE);
+    PLASMA_RAILGUN("plasma_railgun", TitanClass.NORTHSTAR,  6,  60, 25, 90.0F, 4.5F, 0.0F, 1, 12,  0, 0.0F, ModSounds.NORTHSTAR_FIRE),
+    MINING_DRILL("mining_drill", TitanClass.TROOPER, 100, 30, 4, 25.0F, 2.0F, 0.0F, 1, 4, 0, 0.0F, () -> net.minecraft.sounds.SoundEvents.GRINDSTONE_USE),
+    CHAINSAW("chainsaw", TitanClass.TROOPER, 100, 30, 5, 35.0F, 2.0F, 0.0F, 1, 4, 0, 0.0F, () -> net.minecraft.sounds.SoundEvents.WOOD_BREAK);
 
     private final String id;
     private final TitanClass factoryChassis;

@@ -44,6 +44,11 @@ public class TitanDropBeaconItem extends Item {
         stack.getOrCreateTag().putString("SelectedTitan", titanClass.getId());
     }
 
+    /** The class this beacon deploys; the Trooper beacon pins it. */
+    protected TitanClass selectedTitan(ItemStack stack) {
+        return getSelectedTitan(stack);
+    }
+
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
@@ -53,6 +58,8 @@ public class TitanDropBeaconItem extends Item {
                 TitanClass[] values = TitanClass.values();
                 int nextIndex = (current.ordinal() + 1) % values.length;
                 TitanClass next = values[nextIndex];
+                // The Trooper has its own cheap beacon
+                if (next == TitanClass.TROOPER) next = values[(nextIndex + 1) % values.length];
                 setSelectedTitan(stack, next);
 
                 player.sendSystemMessage(Component.translatable("message.titancombat.beacon_switched", next.getDisplayName(), next.getRole()));
@@ -71,7 +78,7 @@ public class TitanDropBeaconItem extends Item {
         ItemStack stack = context.getItemInHand();
 
         if (!level.isClientSide) {
-            TitanClass selected = getSelectedTitan(stack);
+            TitanClass selected = selectedTitan(stack);
             EntityType<? extends BaseTitanEntity> type = switch (selected) {
                 case SCORCH -> ModEntities.SCORCH_TITAN.get();
                 case RONIN -> ModEntities.RONIN_TITAN.get();
@@ -79,6 +86,7 @@ public class TitanDropBeaconItem extends Item {
                 case LEGION -> ModEntities.LEGION_TITAN.get();
                 case MONARCH -> ModEntities.MONARCH_TITAN.get();
                 case NORTHSTAR -> ModEntities.NORTHSTAR_TITAN.get();
+                case TROOPER -> ModEntities.TROOPER_TITAN.get();
                 default -> ModEntities.ION_TITAN.get();
             };
 
