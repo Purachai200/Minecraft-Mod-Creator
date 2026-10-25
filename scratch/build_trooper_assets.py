@@ -362,17 +362,25 @@ def render(cubes, scheme):
                         col = base(mat)
                         if mat in ("paint", "paint2"):
                             col = mul(col, 0.9 + 0.2 * vnoise(gx, gy, 9, 2))  # faded mottling
+                        elif mat == "cloth":  # worn woven fabric (paint2): weave, fold streaks, stains, frayed hem
+                            if side and j >= fh - 3 and h2(gx, gy, 12) < 0.18 + 0.12 * (j - (fh - 3)):
+                                continue  # hole in the hem: left transparent (cutout)
+                            fold = 0.86 + 0.18 * vnoise(gx * 3, gy // 6, 1, 13)  # soft irregular folds
+                            stain = 0.8 + 0.3 * vnoise(gx, gy, 7, 8)
+                            col = mul(paint2, (0.9 + 0.1 * ((i + j) % 2)) * fold * stain)
                     col = mul(col, 1 + n)
                     # panel seams, top-edge highlight, rivets
-                    if edge == 0:
+                    if edge == 0 and mat != "cloth":
                         col = mul(col, 0.62)
-                    elif j == 1 and side:
+                    elif j == 1 and side and mat != "cloth":
                         col = mul(col, 1.15)
                     if mat in ("paint", "paint2", "metal") and fw >= 12 and i in (fw // 2,):
                         col = mul(col, 0.72)
                     if mat in ("paint", "paint2", "metal") and fh >= 14 and j == int(fh * 0.4):
                         col = mul(col, 0.72)
-                    if fw >= 12 and fh >= 12 and i in (2, fw - 3) and j in (2, fh - 3):
+                    if mat == "cloth":
+                        pass
+                    elif fw >= 12 and fh >= 12 and i in (2, fw - 3) and j in (2, fh - 3):
                         col = (170, 172, 168)
                     elif fw >= 12 and fh >= 12 and i in (2, fw - 3) and j in (3, fh - 2):
                         col = mul(col, 0.6)

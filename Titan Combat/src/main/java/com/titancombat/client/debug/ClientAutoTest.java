@@ -386,11 +386,24 @@ public final class ClientAutoTest {
             case "tone" -> ModEntities.TONE_TITAN.get();
             case "trooper" -> ModEntities.TROOPER_TITAN.get();
             case "scout" -> ModEntities.SCOUT_TITAN.get();
+            case "shade" -> ModEntities.SHADE_TITAN.get();
             default -> ModEntities.MONARCH_TITAN.get();
         };
     }
 
     private static final Step[] FLIGHT = buildFlight();
+
+    // cloak: board a Shade, engage the cloak (Defense key), screenshot it, fire to break it.
+    private static final Step[] CLOAK = {
+            new Step(60, mc -> spawnAndBoard(mc)),
+            new Step(140, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK)),
+            new Step(180, mc -> shot(mc, "c1_visible")),
+            new Step(185, mc -> ModNetworking.sendToServer(new com.titancombat.network.MechControlC2SPacket(0, 0, false, false, true, false, false, false))),
+            new Step(220, mc -> { shot(mc, "c2_cloaked"); TitanCombatMod.LOGGER.info("[autotest] cloak invisible={}", mc.player.getVehicle().isInvisible()); }),
+            new Step(225, mc -> server(mc, (p, t) -> t.firePrimaryWeapon(p))),
+            new Step(260, mc -> { shot(mc, "c3_broken"); TitanCombatMod.LOGGER.info("[autotest] after fire invisible={}", mc.player.getVehicle().isInvisible()); }),
+            new Step(270, mc -> { TitanCombatMod.LOGGER.info("[autotest] done"); mc.stop(); }),
+    };
 
     // fly_<module id>: install that flight module, hold jump for 3 s, log the climb.
     private static final Step[] FLY = {
@@ -509,7 +522,7 @@ public final class ClientAutoTest {
             mc.options.pauseOnLostFocus = false; // keep running when the window isn't focused
             if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen) mc.setScreen(null);
         }
-        Step[] script = NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
+        Step[] script = NAME.startsWith("cloak") ? CLOAK : NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
         for (Step step : script) {
             if (step.at() == tick) step.action().accept(mc);
         }
@@ -548,6 +561,7 @@ public final class ClientAutoTest {
                 case "tone" -> ModEntities.TONE_TITAN.get();
                 case "trooper" -> ModEntities.TROOPER_TITAN.get();
                 case "scout" -> ModEntities.SCOUT_TITAN.get();
+            case "shade" -> ModEntities.SHADE_TITAN.get();
                 default -> ModEntities.MONARCH_TITAN.get();
             };
             if (!(type.create(level) instanceof BaseTitanEntity titan)) return;

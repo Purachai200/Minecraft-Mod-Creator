@@ -38,7 +38,7 @@ public class TitanWeaponSwapLayer<T extends BaseTitanEntity> extends GeoRenderLa
     @Override
     public void renderForBone(PoseStack poseStack, T titan, GeoBone bone, RenderType renderType, MultiBufferSource bufferSource,
                               VertexConsumer buffer, float partialTick, int packedLight, int packedOverlay) {
-        if (this.drawing || !isSwapped(titan)) return;
+        if (this.drawing || !isSwapped(titan) || titan.isInvisible()) return;
 
         boolean stowed = titan.isWeaponStowed();
         String ownPart = stowed ? "weaponBack" : "weapon";

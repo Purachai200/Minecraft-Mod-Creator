@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-/** Cheap drop beacon for the light frames: deploys the MP-01 Trooper or the SR-07 Scout (Shift + right-click to switch). */
+/** Cheap drop beacon for the light frames: deploys the MP-01 Trooper, SR-07 Scout or MP-03 Shade (Shift + right-click to switch). */
 public class TrooperBeaconItem extends TitanDropBeaconItem {
 
     public TrooperBeaconItem(Properties properties) {
@@ -24,7 +24,8 @@ public class TrooperBeaconItem extends TitanDropBeaconItem {
 
     @Override
     protected TitanClass selectedTitan(ItemStack stack) {
-        return getSelectedTitan(stack) == TitanClass.SCOUT ? TitanClass.SCOUT : TitanClass.TROOPER;
+        TitanClass c = getSelectedTitan(stack);
+        return c == TitanClass.SCOUT || c == TitanClass.SHADE ? c : TitanClass.TROOPER;
     }
 
     @Override
@@ -32,7 +33,8 @@ public class TrooperBeaconItem extends TitanDropBeaconItem {
         ItemStack stack = player.getItemInHand(hand);
         if (!player.isShiftKeyDown()) return InteractionResultHolder.pass(stack);
         if (!level.isClientSide) {
-            TitanClass next = selectedTitan(stack) == TitanClass.TROOPER ? TitanClass.SCOUT : TitanClass.TROOPER;
+            TitanClass cur = selectedTitan(stack);
+            TitanClass next = cur == TitanClass.TROOPER ? TitanClass.SCOUT : cur == TitanClass.SCOUT ? TitanClass.SHADE : TitanClass.TROOPER;
             setSelectedTitan(stack, next);
             player.sendSystemMessage(Component.translatable("message.titancombat.beacon_switched", next.getDisplayName(), next.getRole()));
             level.playSound(null, player.blockPosition(), SoundEvents.UI_BUTTON_CLICK.get(), SoundSource.PLAYERS, 0.8F, 1.4F);
@@ -47,6 +49,6 @@ public class TrooperBeaconItem extends TitanDropBeaconItem {
         tooltip.add(Component.literal("Right-click ground: ").withStyle(ChatFormatting.GREEN)
                 .append(Component.literal("Assemble & Deploy on Ground").withStyle(ChatFormatting.WHITE)));
         tooltip.add(Component.literal("Shift + Right-Click in air: ").withStyle(ChatFormatting.DARK_AQUA)
-                .append(Component.literal("Trooper / Scout").withStyle(ChatFormatting.YELLOW)));
+                .append(Component.literal("Trooper / Scout / Shade").withStyle(ChatFormatting.YELLOW)));
     }
 }

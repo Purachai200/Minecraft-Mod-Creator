@@ -39,7 +39,17 @@ public class TitanRenderer<T extends BaseTitanEntity> extends GeoEntityRenderer<
 
     @Override
     public RenderType getRenderType(T animatable, ResourceLocation texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
-        return RenderType.entityCutoutNoCull(texture);
+        return animatable.isInvisible() ? RenderType.entityTranslucent(texture) : RenderType.entityCutoutNoCull(texture);
+    }
+
+    /** Cloaked (Shade): a faint shimmer, a little clearer for its own pilot. */
+    @Override
+    public software.bernie.geckolib.core.object.Color getRenderColor(T animatable, float partialTick, int packedLight) {
+        if (!animatable.isInvisible()) return super.getRenderColor(animatable, partialTick, packedLight);
+        Minecraft mc = Minecraft.getInstance();
+        boolean own = mc.player != null && mc.player.getVehicle() == animatable;
+        float shimmer = 0.04F * Mth.sin((animatable.tickCount + partialTick) * 0.3F);
+        return software.bernie.geckolib.core.object.Color.ofRGBA(0.8F, 0.9F, 1.0F, (own ? 0.35F : 0.12F) + shimmer);
     }
 
     /** Pose at the entity's origin this frame; layers use it to turn bone-space points into entity-relative ones. */

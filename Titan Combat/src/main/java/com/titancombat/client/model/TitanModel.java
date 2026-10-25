@@ -56,6 +56,13 @@ public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
             setHidden("drill", saw);
             setHidden("chainsaw", !saw);
         }
+        if (titan.getTitanClass() == TitanClass.SHADE) {
+            // Cloak streams back with speed and ripples gently while idle.
+            double speed = titan.getDeltaMovement().horizontalDistance();
+            float t = titan.tickCount + state.getPartialTick();
+            float lift = (float) Math.min(1.1D, speed * 2.5D);
+            addRotation("cape", -(lift + 0.05F + 0.04F * Mth.sin(t * 0.12F)), 0, 0.03F * Mth.sin(t * 0.09F));
+        }
         if (titan.getTitanClass() == TitanClass.RONIN) {
             boolean swordOut = titan.getEntityData().get(BaseTitanEntity.DATA_IS_MELEEING);
             setHidden("sword", !swordOut);

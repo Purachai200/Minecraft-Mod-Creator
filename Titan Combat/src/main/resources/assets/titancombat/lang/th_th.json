@@ -130,6 +130,7 @@
   "weapon.titancombat.mining_drill": "HEAVY MINING DRILL",
   "item.titancombat.weapon_mining_drill": "หัวสว่านขุดเจาะไฮดรอลิกไททัน",
   "item.titancombat.ammo_mining_drill": "ตลับน้ำยาหล่อเย็นสว่านไททัน",
+  "entity.titancombat.shade_titan": "ไททันพรางตัว Shade",
   "weapon.titancombat.light_smg": "LIGHT RECON SMG",
   "item.titancombat.weapon_light_smg": "ปืนกลมือลาดตระเวนไททัน",
   "item.titancombat.ammo_light_smg": "แม็กกาซีนปืนกลมือไททัน",

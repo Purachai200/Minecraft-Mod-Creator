@@ -40,6 +40,7 @@ public class ClientSetup {
         event.registerEntityRenderer(ModEntities.NORTHSTAR_TITAN.get(), TitanRenderer::new);
         event.registerEntityRenderer(ModEntities.TROOPER_TITAN.get(), TitanRenderer::new);
         event.registerEntityRenderer(ModEntities.SCOUT_TITAN.get(), TitanRenderer::new);
+        event.registerEntityRenderer(ModEntities.SHADE_TITAN.get(), TitanRenderer::new);
         event.registerEntityRenderer(ModEntities.ENERGY_BLAST.get(), ThrownItemRenderer::new);
     }
 
