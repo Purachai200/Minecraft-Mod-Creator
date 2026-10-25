@@ -606,6 +606,8 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
             double groundY = getGroundYBelow((int) flight.getMaxFlightCeiling() + 5);
             double alt = this.getY() - groundY;
             boolean hasFuel = getDashCharge() > 0.5F;
+            // Thrust first cancels this tick's gravity; the module's lift is the climb on top of that.
+            double hold = this.isNoGravity() ? 0.0D : 0.08D;
 
             if (hasFuel) {
                 if (flight == TitanFlightModule.DRONE_LIFTER) {
@@ -614,12 +616,12 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
                         vy = vy * 0.55D;
                     }
                     if (clientJumpHeld && alt < flight.getMaxFlightCeiling()) {
-                        double lift = 0.14D * (flight.getVerticalLift() / c.getWeightMultiplier());
+                        double lift = hold + 0.14D * (flight.getVerticalLift() / c.getWeightMultiplier());
                         vy = Math.min(vy + lift, 0.42D);
                     }
                 } else if (flight == TitanFlightModule.ROCKET_JETPACK) {
                     if (clientJumpHeld && alt < flight.getMaxFlightCeiling()) {
-                        double lift = 0.22D * (flight.getVerticalLift() / c.getWeightMultiplier());
+                        double lift = hold + 0.22D * (flight.getVerticalLift() / c.getWeightMultiplier());
                         vy = Math.min(vy + lift, 0.75D);
                     } else if (!grounded && vy < -0.6D) {
                         vy = -0.6D;
@@ -629,7 +631,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
                         vy = Math.max(vy, -0.06D);
                     }
                     if (clientJumpHeld && alt < flight.getMaxFlightCeiling()) {
-                        double lift = 0.12D * (flight.getVerticalLift() / c.getWeightMultiplier());
+                        double lift = hold + 0.12D * (flight.getVerticalLift() / c.getWeightMultiplier());
                         vy = Math.min(vy + lift, 0.50D);
                     }
                 }

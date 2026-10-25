@@ -391,6 +391,18 @@ public final class ClientAutoTest {
 
     private static final Step[] FLIGHT = buildFlight();
 
+    // fly_<module id>: install that flight module, hold jump for 3 s, log the climb.
+    private static final Step[] FLY = {
+            new Step(60, mc -> spawnAndBoard(mc)),
+            new Step(120, mc -> server(mc, (p, t) -> t.getTitanInventory().setItem(TitanMenu.FLIGHT_SLOT, new ItemStack(ModItems.FLIGHT_MODULES.get(
+                    com.titancombat.entity.TitanFlightModule.byId(NAME.substring(NAME.indexOf('_') + 1))).get())))),
+            new Step(140, mc -> server(mc, (p, t) -> TitanCombatMod.LOGGER.info("[autotest] fly start module={} y={}", t.getFlightModule(), t.getY()))),
+            new Step(141, mc -> mc.options.keyJump.setDown(true)),
+            new Step(200, mc -> TitanCombatMod.LOGGER.info("[autotest] fly 3s y={} vy={}", mc.player.getVehicle().getY(), mc.player.getVehicle().getDeltaMovement().y)),
+            new Step(201, mc -> mc.options.keyJump.setDown(false)),
+            new Step(260, mc -> { TitanCombatMod.LOGGER.info("[autotest] done"); mc.stop(); }),
+    };
+
     private static Step[] buildFlight() {
         java.util.List<Step> steps = new java.util.ArrayList<>();
         steps.add(new Step(60, mc -> spawnDisplay(mc)));
@@ -496,7 +508,7 @@ public final class ClientAutoTest {
             mc.options.pauseOnLostFocus = false; // keep running when the window isn't focused
             if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen) mc.setScreen(null);
         }
-        Step[] script = NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
+        Step[] script = NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
         for (Step step : script) {
             if (step.at() == tick) step.action().accept(mc);
         }
