@@ -138,5 +138,12 @@
   "weapon.titancombat.chainsaw": "HYDRAULIC CHAINSAW",
   "item.titancombat.weapon_chainsaw": "เลื่อยตัดไม้ไฮดรอลิกไททัน",
   "item.titancombat.ammo_chainsaw": "ตลับน้ำมันหล่อลื่นเลื่อยไททัน",
+  "item.titancombat.hauler_truck": "กุญแจเรียกรถบรรทุกชานต่ำ 8x8 (Titan Hauler Truck)",
+  "entity.titancombat.hauler_truck": "รถบรรทุกชานต่ำขนหุ่น 8x8 (Titan Hauler Truck)",
+  "item.titancombat.cargo_barge": "กุญแจเรียกเรือลำเลียงพลระบายพล (Amphibious Cargo Barge)",
+  "entity.titancombat.cargo_barge": "เรือลำเลียงพลระบายพลหุ้มเกราะ (Amphibious Cargo Barge)",
+  "item.titancombat.skycrane_drone": "กุญแจเรียกโดรนขนส่งยกของหนัก (Sky-Crane Drone)",
+  "entity.titancombat.skycrane_drone": "โดรนขนส่งอากาศยานยกของหนัก (Heavy Sky-Crane Drone)",
+  "item.titancombat.transport_winch": "สายวินช์แม่เหล็กและสลิงล็อกหุ่น (Transport Winch)",
   "gui.titancombat.bay.flight": "อุปกรณ์ไอพ่น"
 }

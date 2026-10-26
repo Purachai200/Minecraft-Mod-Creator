@@ -138,5 +138,12 @@
   "weapon.titancombat.chainsaw": "HYDRAULIC CHAINSAW",
   "item.titancombat.weapon_chainsaw": "Titan Hydraulic Chainsaw",
   "item.titancombat.ammo_chainsaw": "Titan Chainsaw Lubricant Magazine",
+  "item.titancombat.hauler_truck": "Titan 8x8 Hauler Truck Deployment Key",
+  "entity.titancombat.hauler_truck": "Titan 8x8 Hauler Truck",
+  "item.titancombat.cargo_barge": "Amphibious Cargo Barge Deployment Key",
+  "entity.titancombat.cargo_barge": "Amphibious Cargo Barge",
+  "item.titancombat.skycrane_drone": "Heavy Sky-Crane Drone Deployment Key",
+  "entity.titancombat.skycrane_drone": "Heavy Sky-Crane Drone",
+  "item.titancombat.transport_winch": "Industrial Magnetic Winch & Ratchet Cable",
   "gui.titancombat.bay.flight": "EQUIP / JETPACK"
 }

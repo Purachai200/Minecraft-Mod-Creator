@@ -59,6 +59,9 @@ public class TitanCombatMod {
         event.put(ModEntities.TROOPER_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.TROOPER).build());
         event.put(ModEntities.SCOUT_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.SCOUT).build());
         event.put(ModEntities.SHADE_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.SHADE).build());
+        event.put(ModEntities.HAULER_TRUCK.get(), com.titancombat.entity.transport.TitanHaulerTruckEntity.createHaulerAttributes().build());
+        event.put(ModEntities.CARGO_BARGE.get(), com.titancombat.entity.transport.TitanCargoBargeEntity.createBargeAttributes().build());
+        event.put(ModEntities.SKYCRANE_DRONE.get(), com.titancombat.entity.transport.TitanSkyCraneDroneEntity.createDroneAttributes().build());
     }
 
     @SubscribeEvent

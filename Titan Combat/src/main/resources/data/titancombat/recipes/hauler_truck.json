@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " C ",
+    "FHF",
+    "WWW"
+  ],
+  "key": {
+    "C": {
+      "item": "titancombat:cockpit_module"
+    },
+    "F": {
+      "item": "titancombat:chassis_frame"
+    },
+    "H": {
+      "item": "titancombat:hydraulic_actuator"
+    },
+    "W": {
+      "item": "minecraft:iron_block"
+    }
+  },
+  "result": {
+    "item": "titancombat:hauler_truck",
+    "count": 1
+  }
+}

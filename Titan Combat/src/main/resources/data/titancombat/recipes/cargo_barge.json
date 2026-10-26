@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "F F",
+    "FHF",
+    "BBB"
+  ],
+  "key": {
+    "F": {
+      "item": "titancombat:chassis_frame"
+    },
+    "H": {
+      "item": "titancombat:hydraulic_actuator"
+    },
+    "B": {
+      "item": "minecraft:iron_block"
+    }
+  },
+  "result": {
+    "item": "titancombat:cargo_barge",
+    "count": 1
+  }
+}

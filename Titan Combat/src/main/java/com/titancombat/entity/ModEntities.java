@@ -58,6 +58,18 @@ public class ModEntities {
             ENTITY_TYPES.register("energy_blast", () -> EntityType.Builder.<TitanEnergyBlastEntity>of(TitanEnergyBlastEntity::new, MobCategory.MISC)
                     .sized(0.5F, 0.5F).clientTrackingRange(8).updateInterval(1).build("energy_blast"));
 
+    public static final RegistryObject<EntityType<com.titancombat.entity.transport.TitanHaulerTruckEntity>> HAULER_TRUCK =
+            ENTITY_TYPES.register("hauler_truck", () -> EntityType.Builder.of(com.titancombat.entity.transport.TitanHaulerTruckEntity::new, MobCategory.MISC)
+                    .sized(3.8F, 3.2F).clientTrackingRange(16).updateInterval(2).build("hauler_truck"));
+
+    public static final RegistryObject<EntityType<com.titancombat.entity.transport.TitanCargoBargeEntity>> CARGO_BARGE =
+            ENTITY_TYPES.register("cargo_barge", () -> EntityType.Builder.of(com.titancombat.entity.transport.TitanCargoBargeEntity::new, MobCategory.MISC)
+                    .sized(5.2F, 2.8F).clientTrackingRange(16).updateInterval(2).build("cargo_barge"));
+
+    public static final RegistryObject<EntityType<com.titancombat.entity.transport.TitanSkyCraneDroneEntity>> SKYCRANE_DRONE =
+            ENTITY_TYPES.register("skycrane_drone", () -> EntityType.Builder.of(com.titancombat.entity.transport.TitanSkyCraneDroneEntity::new, MobCategory.MISC)
+                    .sized(5.0F, 3.5F).clientTrackingRange(16).updateInterval(2).build("skycrane_drone"));
+
     public static void register(IEventBus eventBus) {
         ENTITY_TYPES.register(eventBus);
     }

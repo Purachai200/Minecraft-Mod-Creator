@@ -43,6 +43,18 @@ public class ModItems {
     public static final RegistryObject<Item> HANGAR_TRANSPONDER = ITEMS.register("hangar_transponder",
             () -> new HangarTransponderItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
+    public static final RegistryObject<Item> TRANSPORT_WINCH = ITEMS.register("transport_winch",
+            () -> new HeavyTransportWinchItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+
+    public static final RegistryObject<Item> HAULER_TRUCK = ITEMS.register("hauler_truck",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.HAULER_TRUCK::get, "Titan 8x8 Hauler Truck", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> CARGO_BARGE = ITEMS.register("cargo_barge",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.CARGO_BARGE::get, "Amphibious Cargo Barge", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> SKYCRANE_DRONE = ITEMS.register("skycrane_drone",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.SKYCRANE_DRONE::get, "Heavy Sky-Crane Drone", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
     // Assembly Components
     public static final RegistryObject<Item> CHASSIS_FRAME = ITEMS.register("chassis_frame",
             () -> new Item(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));

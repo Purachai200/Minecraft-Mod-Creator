@@ -4,6 +4,7 @@ import com.titancombat.TitanCombatMod;
 import com.titancombat.entity.BaseTitanEntity;
 import com.titancombat.entity.MechState;
 import com.titancombat.entity.ModEntities;
+import com.titancombat.entity.TitanClass;
 import com.titancombat.entity.TitanWeapon;
 import com.titancombat.gui.TitanMenu;
 import com.titancombat.item.ModItems;
@@ -17,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
@@ -541,17 +543,335 @@ public final class ClientAutoTest {
         return steps.toArray(new Step[0]);
     }
 
+    private static int truckId = -1;
+    private static int droneId = -1;
+    private static int bargeId = -1;
+    private static double tBaseX = 9600.0D;
+    private static double tBaseY = -60.0D;
+    private static double tBaseZ = -1500.0D;
+
+    private static void setCamPos(Minecraft mc, double camX, double camY, double camZ, float yaw, float pitch) {
+        server2(mc, (player, level) -> {
+            player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+            player.teleportTo(level, camX, camY, camZ, yaw, pitch);
+        });
+        if (mc.player != null) {
+            mc.player.setPos(camX, camY, camZ);
+            mc.player.setYRot(yaw);
+            mc.player.setXRot(pitch);
+            mc.player.yRotO = yaw;
+            mc.player.xRotO = pitch;
+        }
+    }
+
+    private static void aimCameraAt(Minecraft mc, double targetX, double targetY, double targetZ, double dist, double elevAngleDeg, double azimuthDeg) {
+        double radAz = Math.toRadians(azimuthDeg);
+        double radEl = Math.toRadians(elevAngleDeg);
+        double camX = targetX - dist * Math.cos(radEl) * Math.sin(radAz);
+        double camY = Math.max(tBaseY + 1.2D, targetY + dist * Math.sin(radEl));
+        double camZ = targetZ - dist * Math.cos(radEl) * Math.cos(radAz);
+
+        double dx = targetX - camX;
+        double dy = targetY - (camY + 1.62D);
+        double dz = targetZ - camZ;
+        double horizDist = Math.sqrt(dx * dx + dz * dz);
+
+        float yaw = (float) (Math.atan2(dz, dx) * (180.0D / Math.PI)) - 90.0F;
+        float pitch = (float) (-(Math.atan2(dy, horizDist) * (180.0D / Math.PI)));
+
+        setCamPos(mc, camX, camY, camZ, yaw, pitch);
+    }
+
+    private static final Step[] TRANSPORT = buildTransport();
+
+    private static Step[] buildTransport() {
+        java.util.List<Step> steps = new java.util.ArrayList<>();
+        steps.add(new Step(40, mc -> server2(mc, (player, level) -> {
+            if (player.getVehicle() != null) player.stopRiding();
+            level.setWeatherParameters(60000, 0, false, false);
+            level.setDayTime(5000L); // Bright morning sunlight
+
+            tBaseX = player.getX();
+            tBaseY = player.getY();
+            tBaseZ = player.getZ();
+
+            int bx = (int) tBaseX;
+            int by = (int) tBaseY;
+            int bz = (int) tBaseZ;
+
+            // Discard any existing transport entities or titans anywhere in world to guarantee clean scene
+            for (var entity : level.getAllEntities()) {
+                if (entity instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity ||
+                    entity instanceof com.titancombat.entity.BaseTitanEntity) {
+                    entity.discard();
+                }
+            }
+
+            // 1. Clear overhead air: dy from 1 to 32
+            for (int dx = -35; dx <= 35; dx++) {
+                for (int dz = -35; dz <= 35; dz++) {
+                    for (int dy = 1; dy <= 32; dy++) {
+                        level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by + dy, bz + dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                    }
+                }
+            }
+
+            // 2. Build showcase proving ground: Road on Left, River on Right, matching the iconic showcase concept
+            for (int dx = -35; dx <= 35; dx++) {
+                for (int dz = -35; dz <= 35; dz++) {
+                    // River: dx from 6 to 34 (on the right)
+                    if (dx >= 6 && dx <= 34) {
+                        level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by - 3, bz + dz), net.minecraft.world.level.block.Blocks.SAND.defaultBlockState());
+                        level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by - 2, bz + dz), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState());
+                        level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by - 1, bz + dz), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState());
+                        level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by, bz + dz), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState());
+                    }
+                    // Riverbank: dx from 3 to 5
+                    else if (dx >= 3 && dx <= 5) {
+                        for (int dy = -2; dy <= -1; dy++) {
+                            level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by + dy, bz + dz), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState());
+                        }
+                        level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by, bz + dz), net.minecraft.world.level.block.Blocks.SAND.defaultBlockState());
+                    }
+                    // Convoy Dirt Road: dx from -16 to -6 (on the left)
+                    else if (dx >= -16 && dx <= -6) {
+                        for (int dy = -2; dy <= -1; dy++) {
+                            level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by + dy, bz + dz), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState());
+                        }
+                        var roadBlock = (dx == -16 || dx == -6 || (dz % 3 == 0)) ? net.minecraft.world.level.block.Blocks.COARSE_DIRT.defaultBlockState()
+                                : net.minecraft.world.level.block.Blocks.DIRT_PATH.defaultBlockState();
+                        level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by, bz + dz), roadBlock);
+                    }
+                    // Forest Grass: other areas
+                    else {
+                        for (int dy = -2; dy <= -1; dy++) {
+                            level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by + dy, bz + dz), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState());
+                        }
+                        level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by, bz + dz), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState());
+                    }
+                }
+            }
+
+            // Spruce trees on the forest side: dx = -24 to -32
+            for (int[] treePos : new int[][]{{-26, -18}, {-30, -6}, {-24, 10}, {-30, 22}, {-22, 28}}) {
+                int tx = bx + treePos[0];
+                int tz = bz + treePos[1];
+                for (int h = 1; h <= 6; h++) {
+                    level.setBlockAndUpdate(new net.minecraft.core.BlockPos(tx, by + h, tz), net.minecraft.world.level.block.Blocks.SPRUCE_LOG.defaultBlockState());
+                }
+                for (int lx = -2; lx <= 2; lx++) {
+                    for (int lz = -2; lz <= 2; lz++) {
+                        for (int ly = 3; ly <= 7; ly++) {
+                            if (Math.abs(lx) + Math.abs(lz) <= 3) {
+                                level.setBlockAndUpdate(new net.minecraft.core.BlockPos(tx + lx, by + ly, tz + lz), net.minecraft.world.level.block.Blocks.SPRUCE_LEAVES.defaultBlockState());
+                            }
+                        }
+                    }
+                }
+            }
+
+            double groundY = by + 1.0D;
+
+            // 1. Spawn 8x8 Hauler Truck with kneeling Trooper Titan on the Left Dirt Road
+            double truckX = bx - 11.0D;
+            double truckY = groundY;
+            double truckZ = bz - 2.0D;
+            var truck = new com.titancombat.entity.transport.TitanHaulerTruckEntity(ModEntities.HAULER_TRUCK.get(), level);
+            truck.moveTo(truckX, truckY, truckZ, 195.0F, 0.0F);
+            truck.setNoGravity(true);
+            level.addFreshEntity(truck);
+            truckId = truck.getId();
+
+            var trooper = new com.titancombat.entity.TrooperTitanEntity(ModEntities.TROOPER_TITAN.get(), level);
+            trooper.moveTo(truckX, truckY, truckZ, 195.0F, 0.0F);
+            trooper.setOwner(player);
+            trooper.setNoGravity(true);
+            trooper.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT,
+                    new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.XO16_CHAINGUN).get()));
+            level.addFreshEntity(trooper);
+            truck.lockTitanToDeck(trooper, null);
+
+            // 2. Spawn Sky-Crane Drone hovering above the convoy clearing (centered between road & river)
+            double droneX = bx + 4.5D;
+            double droneY = groundY + 12.0D;
+            double droneZ = bz - 2.0D;
+            var drone = new com.titancombat.entity.transport.TitanSkyCraneDroneEntity(ModEntities.SKYCRANE_DRONE.get(), level);
+            drone.moveTo(droneX, droneY, droneZ, 165.0F, 0.0F);
+            drone.setNoGravity(true);
+            level.addFreshEntity(drone);
+            droneId = drone.getId();
+
+            var slungTitan = new com.titancombat.entity.TrooperTitanEntity(ModEntities.TROOPER_TITAN.get(), level);
+            slungTitan.moveTo(droneX, droneY, droneZ, 165.0F, 0.0F);
+            slungTitan.setOwner(player);
+            slungTitan.setNoGravity(true);
+            slungTitan.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT,
+                    new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.factoryWeaponOf(TitanClass.TROOPER)).get()));
+            level.addFreshEntity(slungTitan);
+            drone.lockTitanToDeck(slungTitan, null);
+
+            // 3. Spawn Cargo Barge with 2 Titans in the River on the Right
+            double bargeX = bx + 20.0D;
+            double bargeY = groundY - 0.4D;
+            double bargeZ = bz - 2.0D;
+            var barge = new com.titancombat.entity.transport.TitanCargoBargeEntity(ModEntities.CARGO_BARGE.get(), level);
+            barge.moveTo(bargeX, bargeY, bargeZ, 170.0F, 0.0F);
+            barge.setNoGravity(true);
+            level.addFreshEntity(barge);
+            bargeId = barge.getId();
+
+            var bt1 = ModEntities.MONARCH_TITAN.get().create(level);
+            if (bt1 != null) {
+                bt1.moveTo(bargeX, bargeY, bargeZ, 170.0F, 0.0F);
+                bt1.setOwner(player);
+                bt1.setNoGravity(true);
+                bt1.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT,
+                        new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.factoryWeaponOf(bt1.getTitanClass())).get()));
+                level.addFreshEntity(bt1);
+                barge.lockTitanToDeck(bt1, null);
+            }
+            var bt2 = ModEntities.SCORCH_TITAN.get().create(level);
+            if (bt2 != null) {
+                bt2.moveTo(bargeX, bargeY, bargeZ, 170.0F, 0.0F);
+                bt2.setOwner(player);
+                bt2.setNoGravity(true);
+                bt2.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT,
+                        new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.factoryWeaponOf(bt2.getTitanClass())).get()));
+                level.addFreshEntity(bt2);
+                barge.lockTitanToDeck(bt2, null);
+            }
+        })));
+
+        // Camera setup
+        steps.add(new Step(80, mc -> {
+            mc.options.hideGui = true;
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+        }));
+
+        // Shot 1: The Iconic Showcase Recreation (Convoy Front 3/4 Hero View: Truck on left, Drone center-sky, Barge on right)
+        steps.add(new Step(90, mc -> {
+            double groundY = ((int) tBaseY) + 1.0D;
+            aimCameraAt(mc, tBaseX + 4.0D, groundY + 3.8D, tBaseZ - 1.5D, 24.0D, 9.0D, 168.0D);
+        }));
+        steps.add(new Step(125, mc -> {
+            double groundY = ((int) tBaseY) + 1.0D;
+            aimCameraAt(mc, tBaseX + 4.0D, groundY + 3.8D, tBaseZ - 1.5D, 24.0D, 9.0D, 168.0D);
+        }));
+        steps.add(new Step(130, mc -> shot(mc, "01_hauler_truck_mounted")));
+
+        // Shot 2: Hauler Truck Front Cab & Orange Ratchet Straps (Medium Hero Shot)
+        steps.add(new Step(140, mc -> {
+            double truckX = tBaseX - 11.0D;
+            double groundY = ((int) tBaseY) + 1.0D;
+            double truckZ = tBaseZ - 2.0D;
+            aimCameraAt(mc, truckX, groundY + 2.0D, truckZ - 2.0D, 12.0D, 12.0D, 205.0D);
+        }));
+        steps.add(new Step(175, mc -> {
+            double truckX = tBaseX - 11.0D;
+            double groundY = ((int) tBaseY) + 1.0D;
+            double truckZ = tBaseZ - 2.0D;
+            aimCameraAt(mc, truckX, groundY + 2.0D, truckZ - 2.0D, 12.0D, 12.0D, 205.0D);
+        }));
+        steps.add(new Step(180, mc -> shot(mc, "02_truck_cargo_bed")));
+
+        // Shot 3: Ducted-Fan Sky-Crane Drone Airborne Transit (Suspended Airlift)
+        steps.add(new Step(190, mc -> {
+            double droneX = tBaseX + 4.5D;
+            double groundY = ((int) tBaseY) + 1.0D;
+            double droneY = groundY + 12.0D;
+            double droneZ = tBaseZ - 2.0D;
+            aimCameraAt(mc, droneX, droneY - 3.4D, droneZ, 16.0D, -10.0D, 160.0D);
+        }));
+        steps.add(new Step(225, mc -> {
+            double droneX = tBaseX + 4.5D;
+            double groundY = ((int) tBaseY) + 1.0D;
+            double droneY = groundY + 12.0D;
+            double droneZ = tBaseZ - 2.0D;
+            aimCameraAt(mc, droneX, droneY - 3.4D, droneZ, 16.0D, -10.0D, 160.0D);
+        }));
+        steps.add(new Step(230, mc -> shot(mc, "03_skycrane_drone_airlift")));
+
+        // Shot 4: Amphibious Cargo Barge in the River with 2 Titans
+        steps.add(new Step(240, mc -> {
+            double bargeX = tBaseX + 20.0D;
+            double groundY = ((int) tBaseY) + 1.0D;
+            double bargeZ = tBaseZ - 2.0D;
+            aimCameraAt(mc, bargeX, groundY + 2.0D, bargeZ - 0.5D, 15.0D, 18.0D, 130.0D);
+        }));
+        steps.add(new Step(275, mc -> {
+            double bargeX = tBaseX + 20.0D;
+            double groundY = ((int) tBaseY) + 1.0D;
+            double bargeZ = tBaseZ - 2.0D;
+            aimCameraAt(mc, bargeX, groundY + 2.0D, bargeZ - 0.5D, 15.0D, 18.0D, 130.0D);
+        }));
+        steps.add(new Step(280, mc -> shot(mc, "04_cargo_barge_twin_titans")));
+
+        // Shot 5: Wide Cinematic Convoy Line-Up Overview
+        steps.add(new Step(290, mc -> {
+            double groundY = ((int) tBaseY) + 1.0D;
+            aimCameraAt(mc, tBaseX + 4.0D, groundY + 4.5D, tBaseZ + 1.0D, 26.0D, 14.0D, 170.0D);
+        }));
+        steps.add(new Step(325, mc -> {
+            double groundY = ((int) tBaseY) + 1.0D;
+            aimCameraAt(mc, tBaseX + 4.0D, groundY + 4.5D, tBaseZ + 1.0D, 26.0D, 14.0D, 170.0D);
+        }));
+        steps.add(new Step(330, mc -> shot(mc, "05_truck_driver_cab"))); // Wide fleet overview
+
+        // Shot 6: Hauler Truck Rear Cargo & Straps Detail
+        steps.add(new Step(340, mc -> {
+            double truckX = tBaseX - 11.0D;
+            double groundY = ((int) tBaseY) + 1.0D;
+            double truckZ = tBaseZ - 2.0D;
+            aimCameraAt(mc, truckX, groundY + 2.5D, truckZ - 3.5D, 9.0D, 15.0D, 35.0D);
+        }));
+        steps.add(new Step(375, mc -> {
+            double truckX = tBaseX - 11.0D;
+            double groundY = ((int) tBaseY) + 1.0D;
+            double truckZ = tBaseZ - 2.0D;
+            aimCameraAt(mc, truckX, groundY + 2.5D, truckZ - 3.5D, 9.0D, 15.0D, 35.0D);
+        }));
+        steps.add(new Step(380, mc -> shot(mc, "06_skycrane_cockpit_view"))); // Rear deck view
+
+        steps.add(new Step(400, mc -> {
+            TitanCombatMod.LOGGER.info("[autotest] transport playtest complete");
+            mc.stop();
+        }));
+
+        return steps.toArray(new Step[0]);
+    }
+
+    private static boolean worldCreationTriggered = false;
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (NAME.isEmpty() || event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null) return;
+        if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null) {
+            if (mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen && !worldCreationTriggered) {
+                worldCreationTriggered = true;
+                TitanCombatMod.LOGGER.info("[autotest] TitleScreen detected, opening CreateWorldScreen...");
+                net.minecraft.client.gui.screens.worldselection.CreateWorldScreen.openFresh(mc, null);
+            } else if (mc.screen instanceof net.minecraft.client.gui.screens.worldselection.CreateWorldScreen cws) {
+                for (var child : cws.children()) {
+                    if (child instanceof net.minecraft.client.gui.components.Button b) {
+                        String text = b.getMessage().getString();
+                        if (text.toLowerCase().contains("create")) {
+                            TitanCombatMod.LOGGER.info("[autotest] Clicking Create button: {}", text);
+                            b.onPress();
+                            break;
+                        }
+                    }
+                }
+            }
+            return;
+        }
         tick++;
         if (tick == 1) {
             mc.options.pauseOnLostFocus = false; // keep running when the window isn't focused
+            mc.options.gamma().set(1.0D);
             if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen) mc.setScreen(null);
         }
-        Step[] script = NAME.startsWith("bind") ? BIND : NAME.startsWith("cloak") ? CLOAK : NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
+        Step[] script = NAME.startsWith("transport") ? TRANSPORT : NAME.startsWith("bind") ? BIND : NAME.startsWith("cloak") ? CLOAK : NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
         for (Step step : script) {
             if (step.at() == tick) step.action().accept(mc);
         }

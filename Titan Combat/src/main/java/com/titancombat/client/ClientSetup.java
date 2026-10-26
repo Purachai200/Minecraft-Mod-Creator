@@ -6,6 +6,7 @@ import com.titancombat.client.gui.TitanScreen;
 import com.titancombat.client.model.AegisStrikerModel;
 import com.titancombat.client.renderer.AegisStrikerRenderer;
 import com.titancombat.client.renderer.TitanRenderer;
+import com.titancombat.client.renderer.TransportVehicleRenderer;
 import com.titancombat.entity.ModEntities;
 import com.titancombat.gui.ModMenuTypes;
 import net.minecraft.client.gui.screens.MenuScreens;
@@ -42,6 +43,9 @@ public class ClientSetup {
         event.registerEntityRenderer(ModEntities.SCOUT_TITAN.get(), TitanRenderer::new);
         event.registerEntityRenderer(ModEntities.SHADE_TITAN.get(), TitanRenderer::new);
         event.registerEntityRenderer(ModEntities.ENERGY_BLAST.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(ModEntities.HAULER_TRUCK.get(), TransportVehicleRenderer::new);
+        event.registerEntityRenderer(ModEntities.CARGO_BARGE.get(), TransportVehicleRenderer::new);
+        event.registerEntityRenderer(ModEntities.SKYCRANE_DRONE.get(), TransportVehicleRenderer::new);
     }
 
     @SubscribeEvent

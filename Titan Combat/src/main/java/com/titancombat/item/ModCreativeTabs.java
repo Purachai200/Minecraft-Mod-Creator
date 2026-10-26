@@ -24,6 +24,10 @@ public class ModCreativeTabs {
                         output.accept(ModItems.TROOPER_BEACON.get());
                         output.accept(ModItems.HANGAR_TRANSPONDER.get());
                         output.accept(ModItems.PILOT_LICENSE.get());
+                        output.accept(ModItems.TRANSPORT_WINCH.get());
+                        output.accept(ModItems.HAULER_TRUCK.get());
+                        output.accept(ModItems.CARGO_BARGE.get());
+                        output.accept(ModItems.SKYCRANE_DRONE.get());
                         output.accept(ModBlocks.HANGAR_DOCK.get());
 
                         // Maintenance & Weaponry
