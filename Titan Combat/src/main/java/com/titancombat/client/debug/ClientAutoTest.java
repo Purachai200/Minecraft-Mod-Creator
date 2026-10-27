@@ -382,8 +382,37 @@ public final class ClientAutoTest {
             });
         }));
         steps.add(new Step(530, mc -> shot(mc, "04_third_person_side_mining_drill")));
+        steps.add(new Step(531, mc -> server(mc, (p, ti) -> ti.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT,
+                new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.LIGHT_SMG).get())))));
+        steps.add(new Step(538, mc -> shot(mc, "04b_third_person_side_light_smg")));
 
-        steps.add(new Step(560, mc -> {
+        // 5. Light SMG stowed on the back: park (kneel) and dismount, then look from behind and from the side
+        steps.add(new Step(540, mc -> server(mc, (p, ti) -> {
+            ti.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT,
+                    new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.LIGHT_SMG).get()));
+            ti.setSitting(true);
+            p.stopRiding();
+            p.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+            // Clear trees around the titan so the close-up cameras see it
+            var base = ti.blockPosition();
+            for (var pos : net.minecraft.core.BlockPos.betweenClosed(base.offset(-8, 0, -8), base.offset(8, 14, 8))) {
+                ti.level().setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+            }
+        })));
+        // aimCameraAt puts the camera at target - dist*(sin az, cos az): az = -yaw is straight behind, -yaw+90 the titan's right
+        for (int[] view : new int[][]{{570, 0}, {590, 90}, {610, 180}, {630, 270}}) {
+            steps.add(new Step(view[0], mc -> {
+                mc.options.setCameraType(CameraType.FIRST_PERSON);
+                mc.options.hideGui = true;
+                if (mc.level.getEntity(titanId) instanceof BaseTitanEntity t) {
+                    tBaseY = t.getY();
+                    aimCameraAt(mc, t.getX(), t.getY() + 3.0D, t.getZ(), 4.5D, 5.0D, -t.getYRot() + view[1]);
+                }
+            }));
+            steps.add(new Step(view[0] + 15, mc -> shot(mc, "05_smg_stowed_az" + view[1])));
+        }
+
+        steps.add(new Step(660, mc -> {
             TitanCombatMod.LOGGER.info("[autotest] done");
             mc.stop();
         }));
