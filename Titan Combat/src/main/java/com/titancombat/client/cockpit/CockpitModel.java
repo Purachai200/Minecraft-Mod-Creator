@@ -45,8 +45,25 @@ public class CockpitModel extends GeoModel<CockpitPart> {
         super.setCustomAnimations(part, instanceId, state);
         if (part.getKind() != CockpitPart.Kind.ARMS) return;
         BaseTitanEntity titan = CockpitState.titan();
+        boolean hasWep = titan != null && titan.hasWeapon();
         var gun = getAnimationProcessor().getBone("weapon");
-        if (gun != null) gun.setHidden(titan != null && !titan.hasWeapon());
+        if (gun != null) gun.setHidden(!hasWep);
+
+        // Trooper chassis has two tools (Mining Drill & Chainsaw) under the weapon bone
+        var drill = getAnimationProcessor().getBone("drill");
+        var saw = getAnimationProcessor().getBone("chainsaw");
+        if (drill != null || saw != null) {
+            boolean isSaw = titan != null && titan.getActiveWeapon() == com.titancombat.entity.TitanWeapon.CHAINSAW;
+            boolean isDrill = titan != null && titan.getActiveWeapon() == com.titancombat.entity.TitanWeapon.MINING_DRILL;
+            if (drill != null) drill.setHidden(!hasWep || !isDrill);
+            if (saw != null) saw.setHidden(!hasWep || !isSaw);
+        }
+
+        // Hide shoulder laser bones on non-Ion rigs if present
+        var laser = getAnimationProcessor().getBone("laser1");
+        if (laser != null && (titan == null || titan.getActiveWeapon() != com.titancombat.entity.TitanWeapon.SPLITTER_RIFLE)) {
+            laser.setHidden(true);
+        }
     }
 
     @Override

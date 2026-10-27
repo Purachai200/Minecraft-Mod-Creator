@@ -58,6 +58,7 @@ public class TitanWeaponSwapLayer<T extends BaseTitanEntity> extends GeoRenderLa
         GeoBone target = ownGun.get();
         boolean wasHidden = gun.isHidden();
         boolean wasHidingChildren = gun.isHidingChildren();
+        float sx = gun.getScaleX(), sy = gun.getScaleY(), sz = gun.getScaleZ();
 
         // The Trooper's weapon bone holds both tools; draw only the mounted one.
         Optional<GeoBone> drill = donorModel.getBone("drill"), saw = donorModel.getBone("chainsaw");
@@ -72,6 +73,9 @@ public class TitanWeaponSwapLayer<T extends BaseTitanEntity> extends GeoRenderLa
             poseStack.translate((target.getPivotX() - gun.getPivotX()) / 16.0F,
                     (target.getPivotY() - gun.getPivotY()) / 16.0F,
                     (target.getPivotZ() - gun.getPivotZ()) / 16.0F);
+            gun.setScaleX(1.0F);
+            gun.setScaleY(1.0F);
+            gun.setScaleZ(1.0F);
             gun.setHidden(false);
             RenderType donorType = RenderType.entityCutoutNoCull(donorTexture(donor, titan.getCamoIndex()));
             VertexConsumer donorBuffer = bufferSource.getBuffer(donorType);
@@ -80,6 +84,9 @@ public class TitanWeaponSwapLayer<T extends BaseTitanEntity> extends GeoRenderLa
         } finally {
             gun.setHidden(wasHidden);
             gun.setChildrenHidden(wasHidingChildren);
+            gun.setScaleX(sx);
+            gun.setScaleY(sy);
+            gun.setScaleZ(sz);
             poseStack.popPose();
             this.drawing = false;
             // Switch the shared buffer back to this titan's own texture for the rest of the model.

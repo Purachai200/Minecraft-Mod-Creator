@@ -40,23 +40,93 @@ public class HangarTransponderItem extends Item {
         if (target instanceof BaseTitanEntity titan) {
             Level level = player.level();
             if (!level.isClientSide) {
-                // Link Remote Key Fob to this Titan
-                // Creative mode hands us a copy of the stack; write to the one actually held so the link sticks.
-                CompoundTag tag = player.getItemInHand(hand).getOrCreateTag();
-                tag.putUUID("TitanUUID", titan.getUUID());
-                tag.putString("TitanName", titan.getTitanClass().getDisplayName());
-                tag.putString("Dimension", level.dimension().location().toString());
-                tag.putLong("LastPos", titan.blockPosition().asLong());
+                if (player.isShiftKeyDown()) {
+                    // UNBIND / CLEAR ACTION
+                    if (titan.getOwnerUUID() != null && !titan.getOwnerUUID().isEmpty()) {
+                        if (player.getUUID().toString().equals(titan.getOwnerUUID())) {
+                            titan.clearOwner();
+                            clearLink(stack);
+                            if (player.getItemInHand(hand) != stack) {
+                                clearLink(player.getItemInHand(hand));
+                            }
+                            player.sendSystemMessage(Component.translatable("message.titancombat.link_cleared", titan.getTitanClass().getDisplayName()));
+                            level.playSound(null, player.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.2F, 1.2F);
+                            return InteractionResult.SUCCESS;
+                        } else {
+                            player.sendSystemMessage(Component.translatable("message.titancombat.cannot_unbind_unowned"));
+                            level.playSound(null, player.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 1.2F);
+                            return InteractionResult.FAIL;
+                        }
+                    } else {
+                        clearLink(stack);
+                        if (player.getItemInHand(hand) != stack) {
+                            clearLink(player.getItemInHand(hand));
+                        }
+                        player.sendSystemMessage(Component.translatable("message.titancombat.device_reset"));
+                        level.playSound(null, player.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.0F, 1.2F);
+                        return InteractionResult.SUCCESS;
+                    }
+                } else {
+                    // BIND / CLAIM ACTION
+                    if (titan.getOwnerUUID() == null || titan.getOwnerUUID().isEmpty()) {
+                        // 1 Pilot = 1 Titan doctrine check
+                        BaseTitanEntity existing = TitanWarpHelper.findCurrentTitanOfPlayer(player.getServer(), player);
+                        if (existing != null && existing != titan) {
+                            player.sendSystemMessage(Component.translatable("message.titancombat.single_titan_limit", existing.getTitanClass().getDisplayName()));
+                            level.playSound(null, player.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 1.2F);
+                            return InteractionResult.FAIL;
+                        }
 
-                player.sendSystemMessage(Component.translatable("message.titancombat.transponder_linked",
-                        titan.getTitanClass().getDisplayName(), titan.blockPosition().getX(), titan.blockPosition().getZ()));
-                level.playSound(null, player.blockPosition(), SoundEvents.NOTE_BLOCK_CHIME.get(), SoundSource.PLAYERS, 1.2F, 1.8F);
-                level.playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_NETHERITE, SoundSource.PLAYERS, 1.0F, 1.2F);
-                return InteractionResult.SUCCESS;
+                        titan.setOwner(player);
+                        writeLink(stack, titan);
+                        if (player.getItemInHand(hand) != stack) {
+                            writeLink(player.getItemInHand(hand), titan);
+                        }
+                        player.sendSystemMessage(Component.translatable("message.titancombat.transponder_linked",
+                                titan.getTitanClass().getDisplayName(), titan.blockPosition().getX(), titan.blockPosition().getZ()));
+                        level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.2F);
+                        level.playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_NETHERITE, SoundSource.PLAYERS, 1.0F, 1.2F);
+                        return InteractionResult.SUCCESS;
+                    } else if (player.getUUID().toString().equals(titan.getOwnerUUID())) {
+                        writeLink(stack, titan);
+                        if (player.getItemInHand(hand) != stack) {
+                            writeLink(player.getItemInHand(hand), titan);
+                        }
+                        player.sendSystemMessage(Component.translatable("message.titancombat.transponder_linked",
+                                titan.getTitanClass().getDisplayName(), titan.blockPosition().getX(), titan.blockPosition().getZ()));
+                        level.playSound(null, player.blockPosition(), SoundEvents.NOTE_BLOCK_CHIME.get(), SoundSource.PLAYERS, 1.2F, 1.8F);
+                        level.playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_NETHERITE, SoundSource.PLAYERS, 1.0F, 1.2F);
+                        return InteractionResult.SUCCESS;
+                    } else {
+                        player.sendSystemMessage(Component.translatable("message.titancombat.access_denied", titan.getOwnerName()));
+                        level.playSound(null, player.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 1.2F);
+                        return InteractionResult.FAIL;
+                    }
+                }
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
         return super.interactLivingEntity(stack, player, target, hand);
+    }
+
+    /** Clear the titan's link from a Transponder stack. */
+    public static void clearLink(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        if (tag != null) {
+            tag.remove("TitanUUID");
+            tag.remove("TitanName");
+            tag.remove("Dimension");
+            tag.remove("LastPos");
+        }
+    }
+
+    /** Write the titan's link (id, name, last known position) into a Transponder stack. */
+    public static void writeLink(ItemStack stack, BaseTitanEntity titan) {
+        CompoundTag tag = stack.getOrCreateTag();
+        tag.putUUID("TitanUUID", titan.getUUID());
+        tag.putString("TitanName", titan.getTitanClass().getDisplayName());
+        tag.putString("Dimension", titan.level().dimension().location().toString());
+        tag.putLong("LastPos", titan.blockPosition().asLong());
     }
 
     @Override
@@ -85,6 +155,30 @@ public class HangarTransponderItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
 
         if (player.isShiftKeyDown()) {
+            // Looking up at sky (pitch < -60 degrees): Device wipe / unbind memory
+            if (player.getXRot() < -60.0F) {
+                if (!level.isClientSide && level instanceof ServerLevel serverLevel) {
+                    CompoundTag tag = stack.getTag();
+                    if (tag != null && tag.contains("TitanUUID")) {
+                        UUID titanUUID = tag.getUUID("TitanUUID");
+                        BaseTitanEntity titan = TitanWarpHelper.findTitan(serverLevel.getServer(), titanUUID, player, null, 0);
+                        if (titan != null && player.getUUID().toString().equals(titan.getOwnerUUID())) {
+                            titan.clearOwner();
+                        }
+                        tag.remove("TitanUUID");
+                        tag.remove("TitanName");
+                        tag.remove("Dimension");
+                        tag.remove("LastPos");
+                        player.sendSystemMessage(Component.translatable("message.titancombat.device_reset"));
+                        level.playSound(null, player.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.0F, 1.4F);
+                    } else {
+                        player.sendSystemMessage(Component.translatable("message.titancombat.device_already_empty"));
+                        level.playSound(null, player.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 1.6F);
+                    }
+                }
+                return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+            }
+
             toggleTitanStandby(level, player, stack);
             return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
         }
@@ -115,7 +209,7 @@ public class HangarTransponderItem extends Item {
 
         CompoundTag tag = stack.getTag();
         if (tag == null || !tag.contains("TitanUUID")) {
-            player.sendSystemMessage(Component.literal("§c[KEY FOB ERROR] Remote not linked to any Mech! Right-click your Mech first."));
+            player.sendSystemMessage(Component.translatable("message.titancombat.device_unpaired"));
             level.playSound(null, player.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 1.6F);
             return false;
         }
@@ -143,7 +237,7 @@ public class HangarTransponderItem extends Item {
         if (!level.isClientSide && level instanceof ServerLevel serverLevel) {
             CompoundTag tag = stack.getTag();
             if (tag == null || !tag.contains("TitanUUID")) {
-                player.sendSystemMessage(Component.literal("§c[KEY FOB ERROR] Remote not linked to any Mech! Right-click your Mech first."));
+                player.sendSystemMessage(Component.translatable("message.titancombat.device_unpaired"));
                 return InteractionResult.FAIL;
             }
 
@@ -153,6 +247,16 @@ public class HangarTransponderItem extends Item {
 
             BaseTitanEntity titan = TitanWarpHelper.findTitan(serverLevel.getServer(), titanUUID, player, dim, lastPosLong);
             if (titan != null) {
+                if (titan.level().dimension() != serverLevel.dimension()) {
+                    player.sendSystemMessage(Component.translatable("message.titancombat.warp_dimension_error"));
+                    return InteractionResult.FAIL;
+                }
+                double dist = titan.position().distanceTo(player.position());
+                if (dist > TitanWarpHelper.MAX_RECALL_RANGE) {
+                    player.sendSystemMessage(Component.translatable("message.titancombat.warp_out_of_range", (int) dist, (int) TitanWarpHelper.MAX_RECALL_RANGE));
+                    return InteractionResult.FAIL;
+                }
+
                 boolean currentStandby = titan.isStandbyMode();
                 titan.setStandbyMode(!currentStandby);
                 if (currentStandby) {
@@ -178,10 +282,14 @@ public class HangarTransponderItem extends Item {
             tooltip.add(Component.literal("Linked Mech: ").withStyle(ChatFormatting.GRAY)
                     .append(Component.literal(tag.getString("TitanName")).withStyle(ChatFormatting.GOLD)));
         } else {
-            tooltip.add(Component.literal("No Mech linked. Right-click your Mech to pair.").withStyle(ChatFormatting.DARK_GRAY));
+            tooltip.add(Component.literal("No Mech linked. Right-click your Mech to pair (1 Mech per Pilot).").withStyle(ChatFormatting.DARK_GRAY));
         }
+        tooltip.add(Component.literal("Shift + Right-Click Titan: ").withStyle(ChatFormatting.RED)
+                .append(Component.literal("Unbind & release ownership").withStyle(ChatFormatting.WHITE)));
+        tooltip.add(Component.literal("Shift + Look UP + Right-Click: ").withStyle(ChatFormatting.DARK_RED)
+                .append(Component.literal("Wipe / Reset transponder memory").withStyle(ChatFormatting.WHITE)));
         tooltip.add(Component.literal("Right-click Ground / Air: ").withStyle(ChatFormatting.AQUA)
-                .append(Component.literal("Warp Titan to selected location (Dome Shield Active)").withStyle(ChatFormatting.WHITE)));
+                .append(Component.literal("Tactical Warp Recall Titan (Max 250m, Dome Shield Active)").withStyle(ChatFormatting.WHITE)));
         tooltip.add(Component.literal("Shift + Right-click: ").withStyle(ChatFormatting.YELLOW)
                 .append(Component.literal("Remote Toggle Standby Mode").withStyle(ChatFormatting.WHITE)));
         super.appendHoverText(stack, level, tooltip, flag);

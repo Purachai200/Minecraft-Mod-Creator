@@ -1,13 +1,18 @@
 package com.titancombat.entity.transport;
 
+import com.titancombat.entity.BaseMechEntity;
 import com.titancombat.entity.BaseTitanEntity;
 import com.titancombat.entity.MechState;
+import com.titancombat.util.InputHelper;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -23,7 +28,8 @@ import software.bernie.geckolib.core.animation.RawAnimation;
  * Capable of VTOL hover, rapid 3D aerial transit (~1.10 blocks/tick), and airborne Combat Hot-Drop deployments.
  */
 public class TitanSkyCraneDroneEntity extends BaseTransportVehicleEntity {
-    private static final Vec3 COCKPIT_OFFSET = new Vec3(0.0D, 1.4D, 2.8D);
+    // Pilot seat in the nose pod: cushion top at model (x0, y24, z-55); -0.7 drops the riding player's hips onto it
+    private static final Vec3 COCKPIT_OFFSET = new Vec3(0.0D, 24 / 16.0D - 0.7D, 55 / 16.0D);
     private static final Vec3 VENTRAL_MOUNT_OFFSET = new Vec3(0.0D, -9.4D, 0.0D); // Titan models are ~100u to the shoulder, so this hangs the shoulders at the Y=-48 clamp pads
 
     public TitanSkyCraneDroneEntity(EntityType<? extends PathfinderMob> type, Level level) {
@@ -55,33 +61,55 @@ public class TitanSkyCraneDroneEntity extends BaseTransportVehicleEntity {
     }
 
     @Override
+    public void tick() {
+        super.tick();
+
+        // When unmanned in the air, gently auto-descend to land (unless noGravity is enabled for aerial hover / docking)
+        if (!this.isNoGravity() && this.getControllingPassenger() == null && !this.onGround() && !this.isInWater()) {
+            Vec3 motion = this.getDeltaMovement();
+            this.setDeltaMovement(motion.x * 0.92D, Math.max(-0.25D, motion.y - 0.04D), motion.z * 0.92D);
+            this.move(MoverType.SELF, this.getDeltaMovement());
+            this.resetFallDistance();
+        }
+    }
+
+    @Override
     protected void travelTransport(LivingEntity driver, Vec3 travelVector) {
-        float forward = driver.zza;
-        float strafe = driver.xxa * 0.5F;
+        // W/S pitch the rotors for forward/back thrust (~83 km/h), A/D yaw the airframe
+        updateThrottle(driver, 1.15F, 0.5F, 0.03F, 0.05F, 0.02F);
+        this.yawDelta = -driver.xxa * 4.0F;
 
-        if (forward < 0.0F) forward *= 0.5F;
-
-        float targetSpeed = forward * 1.10F; // Rapid aerial transit (~80 km/h)
-        this.currentSpeed = this.currentSpeed + (targetSpeed - this.currentSpeed) * 0.18F;
-
-        // VTOL Vertical lift: Driver's pitch and jump state
-        double vertical = 0.0D;
-        if (driver instanceof Player player) {
-            // Looking up lifts drone, looking down descends
-            double pitchFactor = -Math.sin(driver.getXRot() * (Math.PI / 180.0D)) * 0.6D;
-            vertical = pitchFactor;
-
-            // Hover stabilization: counteract gravity when powered
-            if (vertical < 0.0D && this.onGround()) {
-                vertical = 0.0D;
-            } else if (Math.abs(vertical) < 0.05D) {
-                vertical = 0.04D; // Steady VTOL hover
+        // Mass-Based Dynamic Thrust: Check if a heavy Mech is docked
+        boolean hasMech = false;
+        for (Entity p : this.getPassengers()) {
+            if (p instanceof BaseMechEntity) {
+                hasMech = true;
+                break;
             }
         }
+        // Increase upward thrust multiplier to compensate for heavy load
+        double thrustMultiplier = hasMech ? 1.55D : 1.0D;
 
-        this.setSpeed(Math.abs(this.currentSpeed));
-        this.fallDistance = 0.0F; // No fall damage for high-tech sky-crane
-        applyBaseTravel(new Vec3(strafe, vertical, this.currentSpeed));
+        // Ascend / Descend / Hover controls
+        boolean ascend = InputHelper.isJumping(driver);
+        boolean descend = driver.getXRot() > 25.0F || driver.isShiftKeyDown();
+
+        double vertical;
+        if (ascend) {
+            // Apply upward Y-velocity scaled by mass-based thrust
+            vertical = 0.32D * thrustMultiplier;
+        } else if (descend) {
+            // Controlled descent
+            vertical = this.onGround() ? 0.0D : -0.25D;
+        } else {
+            // Steady hover state: counteracting -0.08 gravity so drone maintains fixed altitude
+            vertical = 0.0D;
+        }
+
+        // Airframe carries momentum through turns instead of snapping onto the new heading
+        double climb = Mth.lerp(0.25D, this.getDeltaMovement().y, vertical);
+        moveAlongHeading(0.12F, climb);
+        this.resetFallDistance();
 
         // Rotor downwash air blast particles
         if (this.level().isClientSide && !this.onGround()) {

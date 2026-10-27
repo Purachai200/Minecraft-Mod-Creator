@@ -51,10 +51,11 @@ public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
         setHidden("weapon", stowed || swapped || unarmed);
         setHidden("weaponBack", !stowed || swapped || unarmed);
         if (titan.getTitanClass() == TitanClass.TROOPER) {
-            // One weapon bone, two tool models: show the one that is mounted.
+            // One weapon bone, two tool models: show only the currently mounted one.
             boolean saw = titan.getActiveWeapon() == com.titancombat.entity.TitanWeapon.CHAINSAW;
-            setHidden("drill", saw);
-            setHidden("chainsaw", !saw);
+            boolean drill = titan.getActiveWeapon() == com.titancombat.entity.TitanWeapon.MINING_DRILL;
+            setHidden("drill", !drill || stowed || swapped || unarmed);
+            setHidden("chainsaw", !saw || stowed || swapped || unarmed);
         }
         if (titan.getTitanClass() == TitanClass.SHADE) {
             // Cloak streams back with speed and ripples gently while idle.

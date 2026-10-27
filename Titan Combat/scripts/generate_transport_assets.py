@@ -56,56 +56,151 @@ class TextureDrawer:
 
     def draw_panel(self, x0, y0, w, h, base_rgb, rivet=True):
         br, bg, bb = base_rgb
-        self.fill_rect(x0, y0, w, h, br, bg, bb)
-        for x in range(x0, x0 + w):
-            self.set_pixel(x, y0, min(255, br + 25), min(255, bg + 25), min(255, bb + 25))
-            self.set_pixel(x, y0 + h - 1, max(0, br - 30), max(0, bg - 30), max(0, bb - 30))
+        for y in range(y0, min(self.h, y0 + h)):
+            for x in range(x0, min(self.w, x0 + w)):
+                # Subtle metallic grit & rolled-steel texture
+                noise = ((x * 17 + y * 31) % 9) - 4
+                self.set_pixel(x, y, max(0, min(255, br + noise)), max(0, min(255, bg + noise)), max(0, min(255, bb + noise)))
+
+        # 3D Bevel highlight & shadow
+        for x in range(x0, min(self.w, x0 + w)):
+            self.set_pixel(x, y0, min(255, br + 35), min(255, bg + 35), min(255, bb + 35))
+            self.set_pixel(x, min(self.h - 1, y0 + h - 1), max(0, br - 40), max(0, bg - 40), max(0, bb - 40))
+        for y in range(y0, min(self.h, y0 + h)):
+            self.set_pixel(x0, y, min(255, br + 28), min(255, bg + 28), min(255, bb + 28))
+            self.set_pixel(min(self.w - 1, x0 + w - 1), y, max(0, br - 40), max(0, bg - 40), max(0, bb - 40))
+
+        # Panel Seam Grid dividing large 32+ px plates
+        if w >= 32:
+            mid_x = x0 + w // 2
+            for y in range(y0 + 1, min(self.h, y0 + h - 1)):
+                self.set_pixel(mid_x, y, max(0, br - 45), max(0, bg - 45), max(0, bb - 45))
+                self.set_pixel(mid_x + 1, y, min(255, br + 20), min(255, bg + 20), min(255, bb + 20))
+        if h >= 32:
+            mid_y = y0 + h // 2
+            for x in range(x0 + 1, min(self.w, x0 + w - 1)):
+                self.set_pixel(x, mid_y, max(0, br - 45), max(0, bg - 45), max(0, bb - 45))
+                self.set_pixel(x, mid_y + 1, min(255, br + 20), min(255, bg + 20), min(255, bb + 20))
+
+        # 3D Rivets with drop shadow along borders
+        if rivet and w > 14 and h > 14:
+            for rx in range(x0 + 4, x0 + w - 4, 12):
+                for ry in (y0 + 3, y0 + h - 4):
+                    self.set_pixel(rx, ry, min(255, br + 45), min(255, bg + 45), min(255, bb + 45))
+                    self.set_pixel(rx, ry + 1, max(0, br - 50), max(0, bg - 50), max(0, bb - 50))
+            for ry in range(y0 + 4, y0 + h - 4, 12):
+                for rx in (x0 + 3, x0 + w - 4):
+                    self.set_pixel(rx, ry, min(255, br + 45), min(255, bg + 45), min(255, bb + 45))
+                    self.set_pixel(rx, ry + 1, max(0, br - 50), max(0, bg - 50), max(0, bb - 50))
+
+    def draw_camo(self, x0, y0, w, h, colors, seam=16):
+        """Disruptive camo over riveted plates. colors = (base, blotch A, blotch B, shadow).
+        Plate seams every `seam` px from each corner, so even small faces (which sample a 64px cell's corner) show plating."""
+        for y in range(y0, min(self.h, y0 + h)):
+            for x in range(x0, min(self.w, x0 + w)):
+                n1 = math.sin(x * 0.19 + 1.3) + math.sin(y * 0.23 + 2.2) + math.sin((x + y) * 0.11 + 0.7)
+                n2 = math.sin(x * 0.13 + 4.1) + math.sin(y * 0.29 + 5.0) + math.sin((x - y) * 0.09 + 3.3)
+                c = colors[0]
+                if n1 > 0.9:
+                    c = colors[1]
+                if n2 > 1.3:
+                    c = colors[2]
+                if n1 < -1.7:
+                    c = colors[3]
+                grit = ((x * 17 + y * 31) % 7) - 3
+                self.set_pixel(x, y, c[0] + grit, c[1] + grit, c[2] + grit)
+        shade = lambda x, y, d: self.set_pixel(x, y, *[v + d for v in self.buf[(y * self.w + x) * 4:(y * self.w + x) * 4 + 3]])
         for y in range(y0, y0 + h):
-            self.set_pixel(x0, y, min(255, br + 20), min(255, bg + 20), min(255, bb + 20))
-            self.set_pixel(x0 + w - 1, y, max(0, br - 30), max(0, bg - 30), max(0, bb - 30))
-        if rivet and w > 12 and h > 12:
-            rivet_col = (max(0, br - 38), max(0, bg - 38), max(0, bb - 38))
-            self.set_pixel(x0 + 3, y0 + 3, *rivet_col)
-            self.set_pixel(x0 + w - 4, y0 + 3, *rivet_col)
-            self.set_pixel(x0 + 3, y0 + h - 4, *rivet_col)
-            self.set_pixel(x0 + w - 4, y0 + h - 4, *rivet_col)
+            for x in range(x0, x0 + w):
+                lx, ly = x - x0, y - y0
+                if lx % seam == 0 or ly % seam == 0:
+                    shade(x, y, -38)          # seam groove
+                elif lx % seam == 1 or ly % seam == 1:
+                    shade(x, y, 16)           # lit plate edge
+                elif lx % seam in (3, seam - 3) and ly % seam in (3, seam - 3):
+                    shade(x, y, 40)           # rivet head
+                    if y + 1 < y0 + h:
+                        shade(x, y + 1, -30)
+
+    ACCENTS = [(255, 170, 30), (190, 32, 30), (226, 226, 214), (240, 112, 20), (238, 198, 40), (30, 30, 32),
+               (182, 188, 198), (190, 150, 70), (176, 156, 112), (82, 92, 60), (168, 172, 170), (40, 60, 100),
+               (96, 78, 52), (122, 62, 36), (40, 220, 90), (60, 200, 255)]
+
+    def draw_accents(self):
+        """Row of 32x64 colour swatches at y384 (see accent()), plus muddy camo for low parts at (0,448)."""
+        for i, (r, g, b) in enumerate(self.ACCENTS):
+            for y in range(384, 448):
+                for x in range(i * 32, i * 32 + 32):
+                    n = ((x * 13 + y * 7) % 5) - 2
+                    edge = 18 if y == 384 or x == i * 32 else (-22 if x == i * 32 + 31 else 0)
+                    self.set_pixel(x, y, r + n + edge, g + n + edge, b + n + edge)
+        self.draw_camo(0, 448, 128, 64, ((88, 84, 58), (100, 82, 54), (72, 64, 44), (58, 50, 36)))
+
+    FONT = {"0": "111101101101111", "1": "010110010010111", "4": "101101111001001", "7": "111001010010010",
+            "T": "111010010010010", "S": "111100111001111", "C": "111100100100111", "L": "100100100100111",
+            "-": "000000111000000"}
+
+    def draw_text(self, x0, y0, text, rgb, scale=2):
+        """3x5 stencil lettering for unit numbers."""
+        for i, ch in enumerate(text):
+            bits = self.FONT[ch]
+            for k, bit in enumerate(bits):
+                if bit == "1":
+                    self.fill_rect(x0 + i * 4 * scale + (k % 3) * scale, y0 + (k // 3) * scale, scale, scale, *rgb)
+
+    def draw_armor_atlas(self, colors, stencil):
+        """128x128 armor block at (0,0): plain camo, camo + unit number, camo + engine louvers, darker roof camo."""
+        self.draw_camo(0, 0, 128, 128, colors)
+        self.draw_text(68, 4, stencil, (222, 222, 205))
+        for y in range(68, 92, 4):
+            self.fill_rect(4, y, 40, 2, 16, 18, 16)
+        dark = tuple(tuple(max(0, v - 14) for v in c) for c in colors)
+        self.draw_camo(64, 64, 64, 64, dark)
 
     def draw_hazard_stripes(self, x0, y0, w, h, stripe_w=8):
         for y in range(y0, y0 + h):
             for x in range(x0, x0 + w):
                 diag = (x - x0 + y - y0) // stripe_w
+                noise = ((x * 7 + y * 11) % 5) - 2
                 if diag % 2 == 0:
-                    self.set_pixel(x, y, 245, 185, 15) # Safety Yellow
+                    self.set_pixel(x, y, max(0, min(255, 245 + noise)), max(0, min(255, 185 + noise)), 15) # Safety Yellow
                 else:
-                    self.set_pixel(x, y, 28, 28, 32) # Dark Charcoal Black
+                    self.set_pixel(x, y, max(0, min(255, 28 + noise)), max(0, min(255, 28 + noise)), 32) # Dark Charcoal Black
 
     def draw_orange_strap(self, x0, y0, w, h):
         for y in range(y0, y0 + h):
             for x in range(x0, x0 + w):
-                if x == x0 or x == x0 + w - 1 or y == y0 or y == y0 + h - 1:
-                    self.set_pixel(x, y, 210, 75, 0)
-                elif (x - x0) % 3 == 0 or (y - y0) % 3 == 0:
-                    self.set_pixel(x, y, 255, 150, 35) # Weave highlight
+                pattern = (x + y) % 4
+                if pattern == 0:
+                    self.set_pixel(x, y, 255, 145, 25) # Bright weave
+                elif pattern == 2:
+                    self.set_pixel(x, y, 190, 70, 0)   # Dark groove
                 else:
-                    self.set_pixel(x, y, 255, 110, 0) # High-vis orange
+                    self.set_pixel(x, y, 235, 95, 0)   # High-vis orange
+        for x in range(x0, x0 + w):
+            self.set_pixel(x, y0, 20, 20, 25)
+            self.set_pixel(x, y0 + h - 1, 20, 20, 25)
 
-    def draw_glass(self, x0, y0, w, h):
+    def draw_diamond_plate(self, x0, y0, w, h):
         for y in range(y0, y0 + h):
             for x in range(x0, x0 + w):
-                self.set_pixel(x, y, 36, 52, 70)
-        # Specular reflection streaks across glass
-        for i in range(min(w, h)):
-            if 0 <= x0 + i < self.w and 0 <= y0 + i < self.h:
-                self.set_pixel(x0 + i, y0 + i, 135, 180, 215)
-                if i + 1 < min(w, h):
-                    self.set_pixel(x0 + i + 1, y0 + i, 105, 150, 185)
-        # Gasket border
-        for x in range(x0, x0 + w):
-            self.set_pixel(x, y0, 18, 20, 22)
-            self.set_pixel(x, y0 + h - 1, 18, 20, 22)
+                noise = ((x * 13 + y * 23) % 7) - 3
+                self.set_pixel(x, y, 50 + noise, 55 + noise, 60 + noise)
+        for y in range(y0, y0 + h - 4, 6):
+            for x in range(x0, x0 + w - 4, 6):
+                self.set_pixel(x + 1, y + 1, 135, 145, 160)
+                self.set_pixel(x + 2, y + 2, 115, 125, 140)
+                self.set_pixel(x + 3, y + 3, 25, 28, 32)
+                self.set_pixel(x + 4, y + 2, 135, 145, 160)
+                self.set_pixel(x + 5, y + 1, 25, 28, 32)
+
+    def draw_glass(self, x0, y0, w, h):
+        # Clear pane with a dark gasket: the renderer is cutout, so alpha-0 pixels are see-through
+        # (translucent glass would write depth and hide Titans standing behind it).
         for y in range(y0, y0 + h):
-            self.set_pixel(x0, y, 18, 20, 22)
-            self.set_pixel(x0 + w - 1, y, 18, 20, 22)
+            for x in range(x0, x0 + w):
+                edge = x in (x0, x0 + w - 1) or y in (y0, y0 + h - 1)
+                self.set_pixel(x, y, 18, 20, 22, 255 if edge else 0)
 
     def draw_tire(self, x0, y0, w, h):
         for y in range(y0, y0 + h):
@@ -231,6 +326,15 @@ class TextureDrawer:
         print(f"Saved texture: {filepath} ({len(data)} bytes)")
 
 
+AMBER, RED, WHITE, ORANGE, YELLOW, BLACK, CHROME, BRASS, SAND, OLIVE, LIGHT_GREY, NAVY, MUD, RUST, GREEN_LAMP, CYAN_LAMP = range(16)
+MUDDY = [0, 448]
+
+
+def accent(i):
+    """UV of a TextureDrawer.draw_accents() colour swatch."""
+    return [i * 32, 384]
+
+
 def rod(base, top, w, t, uv):
     """Cube whose long (+Y) axis runs from base to top, pivoted at base.
     A cube without "pivot" rotates around the model origin in GeckoLib, so every tilted part goes through here.
@@ -267,16 +371,84 @@ def _rod_selfcheck():
     assert abs(c["size"][1] - n) < 1e-2
 
 
+def write_geo(path, identifier, bones, bounds_w, bounds_h, bounds_y):
+    model_data = {
+        "format_version": "1.12.0",
+        "minecraft:geometry": [{
+            "description": {
+                "identifier": identifier,
+                "texture_width": 512,
+                "texture_height": 512,
+                "visible_bounds_width": bounds_w,
+                "visible_bounds_height": bounds_h,
+                "visible_bounds_offset": [0, bounds_y, 0]
+            },
+            "bones": per_face_uv(bones)
+        }]
+    }
+    with open(path, 'w') as f:
+        json.dump(model_data, f, indent=2)
+    print(f"Saved model: {path}")
+
+
 # ==============================================================================
 # 1. 8x8 HEAVY TRANSPORTER HAULER TRUCK (MASTER SPEC)
 # ==============================================================================
+
+
+def make_wheel(cx, cy, cz, x0, width, r):
+    """Tyre as three square slabs turned 0/+30/-30 deg about the axle: a 12-lobed outline that reads round
+    and doubles as tread lugs. Rim disc + hub on the outer face (+X is the vehicle's left)."""
+    tyre = [{"origin": [x0, cy - r, cz - r], "size": [width, 2 * r, 2 * r], "pivot": [cx, cy, cz],
+             "rotation": [a, 0, 0], "uv": [0, 256]} for a in (0, 30, -30)]
+    rim_x = x0 + width - 0.6 if cx > 0 else x0 - 0.6
+    hub_x = x0 + width + 0.4 if cx > 0 else x0 - 1.4
+    rim = [{"origin": [rim_x, cy - 9, cz - 9], "size": [1.2, 18, 18], "pivot": [cx, cy, cz], "rotation": [a, 0, 0],
+            "uv": [256, 256]} for a in (0, 45)]
+    hub = [{"origin": [hub_x, cy - 3, cz - 3], "size": [1, 6, 6], "uv": accent(OLIVE)}]
+    return tyre + rim + hub
+
+
+def make_ducted_fan_cowling(cx, cz):
+    """Generates a round 8-sided faceted military ducted fan nacelle with top intake lip and stator guide vanes."""
+    cubes = [
+        # 4 Cardinal outer armor walls (Military Olive Camo Armor: uv [0, 0])
+        {"origin": [cx - 8, 20, cz - 16], "size": [16, 12, 3], "uv": [0, 0]}, # North
+        {"origin": [cx - 8, 20, cz + 13], "size": [16, 12, 3], "uv": [0, 0]}, # South
+        {"origin": [cx - 16, 20, cz - 8], "size": [3, 12, 16], "uv": [0, 0]}, # West
+        {"origin": [cx + 13, 20, cz - 8], "size": [3, 12, 16], "uv": [0, 0]}, # East
+
+        # 4 Diagonal Corner walls connecting the cardinal walls (forming an 8-sided aerodynamic ring)
+        {"origin": [cx - 14, 20, cz - 14], "size": [6, 12, 6], "uv": [0, 0]}, # NW
+        {"origin": [cx + 8,  20, cz - 14], "size": [6, 12, 6], "uv": [0, 0]}, # NE
+        {"origin": [cx - 14, 20, cz + 8],  "size": [6, 12, 6], "uv": [0, 0]}, # SW
+        {"origin": [cx + 8,  20, cz + 8],  "size": [6, 12, 6], "uv": [0, 0]}, # SE
+
+        # Aerodynamic Dark Carbon Top Intake Lip (uv [384, 0])
+        {"origin": [cx - 9, 31.8, cz - 16.5], "size": [18, 1.2, 3.5], "uv": [384, 0]},
+        {"origin": [cx - 9, 31.8, cz + 13],   "size": [18, 1.2, 3.5], "uv": [384, 0]},
+        {"origin": [cx - 16.5, 31.8, cz - 9], "size": [3.5, 1.2, 18], "uv": [384, 0]},
+        {"origin": [cx + 13,   31.8, cz - 9], "size": [3.5, 1.2, 18], "uv": [384, 0]},
+        {"origin": [cx - 14.5, 31.8, cz - 14.5], "size": [6.5, 1.2, 6.5], "uv": [384, 0]},
+        {"origin": [cx + 8,    31.8, cz - 14.5], "size": [6.5, 1.2, 6.5], "uv": [384, 0]},
+        {"origin": [cx - 14.5, 31.8, cz + 8],    "size": [6.5, 1.2, 6.5], "uv": [384, 0]},
+        {"origin": [cx + 8,    31.8, cz + 8],    "size": [6.5, 1.2, 6.5], "uv": [384, 0]},
+
+        # Aerodynamic Cross Guide Vanes & Stator Hub (uv [256, 0])
+        {"origin": [cx - 13, 22, cz - 1], "size": [26, 2, 2], "uv": [256, 0]},
+        {"origin": [cx - 1, 22, cz - 13], "size": [2, 2, 26], "uv": [256, 0]},
+        {"origin": [cx - 3.5, 21, cz - 3.5], "size": [7, 4, 7], "uv": [256, 0]}
+    ]
+    return cubes
+
 
 def generate_hauler_truck_texture(path):
     tex = TextureDrawer(512, 512)
     tex.fill_rect(0, 0, 512, 512, 35, 38, 42)
 
     # (0, 0, 128, 128): Olive drab military armor plating
-    tex.draw_panel(0, 0, 128, 128, (72, 85, 58))
+    tex.draw_armor_atlas(((72, 85, 58), (52, 62, 42), (112, 102, 74), (34, 38, 30)), "T-07")
+    tex.draw_wheel_rim(256, 256, 18, 18)
 
     # (128, 0, 64, 64): Ballistic Windshield Glass
     tex.draw_glass(128, 0, 64, 64)
@@ -322,189 +494,146 @@ def generate_hauler_truck_texture(path):
     # (128, 256, 128, 128): Wheel Rim with Lug Nuts
     tex.draw_wheel_rim(128, 256, 128, 128)
 
+    tex.draw_accents()
     tex.save(path)
 
 
 def generate_hauler_truck_model(path):
-    # Length 156 units (~9.75 blocks), Width 60 units (~3.75 blocks), Height 58 units (~3.6 blocks)
-    # Coordinate system: Front = -Z, Rear = +Z, Right = -X, Left = +X, Up = +Y
-    chassis_cubes = [
-        # Twin chassis I-beam frame rails
-        {"origin": [-15, 10, -76], "size": [4, 8, 152], "uv": [256, 0]},
-        {"origin": [11, 10, -76], "size": [4, 8, 152], "uv": [256, 0]},
-        # Crossmembers
-        {"origin": [-11, 12, -68], "size": [22, 4, 4], "uv": [256, 0]},
-        {"origin": [-11, 12, -24], "size": [22, 4, 4], "uv": [256, 0]},
-        {"origin": [-11, 12, 24], "size": [22, 4, 4], "uv": [256, 0]},
-        {"origin": [-11, 12, 68], "size": [22, 4, 4], "uv": [256, 0]},
-
-        # ----------------------------------------------------------------------
-        # FRONT PUSH BUMPER & HEAVY RECOVERY WINCH ASSEMBLY (Z = -84 to -72)
-        # ----------------------------------------------------------------------
-        # Heavy Front Push Bumper with Hazard Chevrons
-        {"origin": [-30, 4, -80], "size": [60, 12, 8], "uv": [0, 128]},
-        {"origin": [-28, 16, -78], "size": [56, 3, 3], "uv": [256, 0]}, # Bumper top step plate
-        # Recovery Winch Housing Box
-        {"origin": [-10, 8, -84], "size": [20, 8, 6], "uv": [384, 128]},
-        # Winch Cable Drum Spool
-        {"origin": [-7, 9, -83.5], "size": [14, 6, 5], "uv": [384, 128]},
-        # Roller Fairlead Frame & Guide Rollers
-        {"origin": [-8, 9, -84.8], "size": [16, 6, 1], "uv": [256, 0]},
-        # Forged Recovery Hook
-        {"origin": [-1.5, 9, -86.5], "size": [3, 5, 2], "uv": [256, 128]},
-        # Left & Right Tow Clevis Shackles
-        {"origin": [-22, 5, -82], "size": [4, 6, 2], "uv": [256, 128]},
-        {"origin": [18, 5, -82], "size": [4, 6, 2], "uv": [256, 128]},
-
-        # ----------------------------------------------------------------------
-        # FRONT CAB ASSEMBLY (Oshkosh HEMTT Military Cab: Z = -74 to -26)
-        # ----------------------------------------------------------------------
-        # Lower Engine Compartment / Cab Base
-        {"origin": [-28, 16, -74], "size": [56, 18, 48], "uv": [0, 0]},
-        # Slatted Radiator Grille & Dual Headlight Fascia
-        {"origin": [-22, 18, -75.1], "size": [44, 15, 1], "uv": [192, 0]},
-        # Upper Crew Cab Compartment
-        {"origin": [-27, 34, -70], "size": [54, 22, 44], "uv": [0, 0]},
-        # Two-piece Split Ballistic Windshield (facing forward North -Z)
-        {"origin": [-25, 36, -71.1], "size": [23.5, 18, 1], "uv": [128, 0]},
-        {"origin": [1.5, 36, -71.1], "size": [23.5, 18, 1], "uv": [128, 0]},
-        # Windshield Center Armored Divider Post
-        {"origin": [-1.5, 36, -71.2], "size": [3, 18, 1.2], "uv": [0, 0]},
-        # Cab Roof & Visor Brow with 5 Amber Clearance Lights
-        {"origin": [-28, 56, -72], "size": [56, 3, 48], "uv": [0, 0]},
-        {"origin": [-26, 55, -74], "size": [52, 2, 4], "uv": [256, 0]},
-        *[{"origin": [x - 1.5, 59, -72], "size": [3, 1.5, 2], "uv": [392, 196]} for x in (-16, -8, 0, 8, 16)],
-        # Cab Roof High-Intensity LED Lightbar & Twin Air Horns
-        {"origin": [-18, 59, -68], "size": [36, 3, 4], "uv": [384, 192]}, # LED Lightbar
-        {"origin": [-24, 59, -60], "size": [3, 3, 14], "uv": [256, 128]}, # Left Air Horn
-        {"origin": [21, 59, -60], "size": [3, 3, 14], "uv": [256, 128]}, # Right Air Horn
-        # Side Windows (Left & Right)
-        {"origin": [-27.1, 38, -64], "size": [1, 15, 32], "uv": [128, 0]},
-        {"origin": [26.1, 38, -64], "size": [1, 15, 32], "uv": [128, 0]},
-        # Articulated Side Rear-View Mirrors with Dual Brackets
-        {"origin": [-33, 38, -66], "size": [3, 14, 5], "uv": [256, 0]},
-        {"origin": [-30, 48, -65], "size": [3, 2, 2], "uv": [256, 0]},
-        {"origin": [-30, 40, -65], "size": [3, 2, 2], "uv": [256, 0]},
-        {"origin": [30, 38, -66], "size": [3, 14, 5], "uv": [256, 0]},
-        {"origin": [27, 48, -65], "size": [3, 2, 2], "uv": [256, 0]},
-        {"origin": [27, 40, -65], "size": [3, 2, 2], "uv": [256, 0]},
-        # Cab Ingress Boarding Stirrups / Foot Steps
-        {"origin": [-29, 12, -62], "size": [2, 3, 10], "uv": [256, 0]},
-        {"origin": [27, 12, -62], "size": [2, 3, 10], "uv": [256, 0]},
-        # High Air Intake Snorkel on Right Side (-X) with Cyclone Dust Cleaner
-        {"origin": [-29.5, 26, -34], "size": [3, 30, 3], "uv": [256, 0]},
-        {"origin": [-30.5, 54, -35], "size": [5, 6, 5], "uv": [256, 128]},
-        # Front Wheel Fenders with Hazard Chevrons
-        {"origin": [-31, 14, -72], "size": [4, 6, 48], "uv": [0, 128]},
-        {"origin": [27, 14, -72], "size": [4, 6, 48], "uv": [0, 128]},
-
-        # ----------------------------------------------------------------------
-        # EQUIPMENT MODULE BEHIND CAB (Z = -26 to -16)
-        # ----------------------------------------------------------------------
-        # Heavy Steel Lattice Headache Rack (Cab Protector Screen)
-        {"origin": [-28, 16, -26], "size": [56, 40, 4], "uv": [256, 0]},
-        # Vertically Mounted Spare 8x8 Off-Road Tire behind Headache Rack
-        {"origin": [-12, 24, -22], "size": [8, 22, 22], "uv": [0, 256]},
-        {"origin": [-13, 31, -15], "size": [10, 8, 8], "uv": [128, 256]}, # Spare Wheel Hub
-        # Dual Tall Vertical Exhaust Smokestacks with Heat Shields & Angled Rain Flappers
-        {"origin": [-25, 20, -22], "size": [4, 44, 4], "uv": [256, 128]},
-        {"origin": [21, 20, -22], "size": [4, 44, 4], "uv": [256, 128]},
-        {"origin": [-25, 64, -22], "size": [4, 4, 6], "uv": [256, 128]}, # Left Angled Tip
-        {"origin": [21, 64, -22], "size": [4, 4, 6], "uv": [256, 128]}, # Right Angled Tip
-        # Dual Cylindrical Air Brake Tanks with Brass End Fittings
-        {"origin": [15, 18, -20], "size": [8, 8, 18], "uv": [256, 192]},
-        # Side-Mounted Heavy Toolboxes / Battery Storage
-        {"origin": [-29, 11, -16], "size": [6, 8, 20], "uv": [256, 192]},
-        {"origin": [23, 11, -16], "size": [6, 8, 20], "uv": [256, 192]},
-
-        # ----------------------------------------------------------------------
-        # LOWBED CARGO FLATBED DECK (Z = -22 to +88)
-        # ----------------------------------------------------------------------
-        # Diamond-Plate Flatbed Cargo Deck
-        {"origin": [-28, 16, -22], "size": [56, 4, 110], "uv": [384, 0]},
-        # Deck Side Coamings / Rub Rails with Yellow-Black Hazard Chevrons
-        {"origin": [-30, 16, -22], "size": [2, 6, 110], "uv": [0, 128]},
-        {"origin": [28, 16, -22], "size": [2, 6, 110], "uv": [0, 128]},
-        # Rear Bumper with Hazard Chevrons, Mudflaps & Commercial Tail Light Clusters
-        {"origin": [-30, 14, 88], "size": [60, 8, 2], "uv": [0, 128]},
-        {"origin": [-26, 15, 90.1], "size": [14, 5, 1], "uv": [0, 192]}, # Left Tail Light
-        {"origin": [12, 15, 90.1], "size": [14, 5, 1], "uv": [0, 192]}, # Right Tail Light
-        {"origin": [-2, 13, 89], "size": [4, 5, 4], "uv": [256, 0]}, # Heavy Pintle Hitch
-        {"origin": [-28, 6, 88.5], "size": [10, 8, 1], "uv": [0, 256]}, # Left Mudflap
-        {"origin": [18, 6, 88.5], "size": [10, 8, 1], "uv": [0, 256]}, # Right Mudflap
-
-        # ----------------------------------------------------------------------
-        # HIGH-VIS ORANGE RATCHET TIE-DOWN STRAPS (Centering at Z = +33)
-        # ----------------------------------------------------------------------
-        # Front Diagonal Straps (Deck anchor Z=+18 up over the knees, Z=+28)
-        rod((-24.5, 20, 18), (-12, 38, 28), 3, 1, [128, 128]),
-        rod((24.5, 20, 18), (12, 38, 28), 3, 1, [128, 128]),
-        # Rear Diagonal Straps (Rear deck anchor Z=+48 up over the hips, Z=+38)
-        rod((-24.5, 20, 48), (-12, 36, 38), 3, 1, [128, 128]),
-        rod((24.5, 20, 48), (12, 36, 38), 3, 1, [128, 128]),
-        # Cross Knee Restraint Strap (Horizontal heavy tensioner strap over legs)
-        {"origin": [-23, 22, 28], "size": [46, 3, 2], "uv": [128, 128]},
-        # Heavy Cast Steel Ratchet Tensioner Buckles
-        {"origin": [-28, 22, 20], "size": [5, 4, 3], "uv": [256, 128]},
-        {"origin": [23, 22, 20], "size": [5, 4, 3], "uv": [256, 128]},
-
-        # ----------------------------------------------------------------------
-        # SUSPENSION DIFFERENTIALS & LEAF SPRING PACKS
-        # ----------------------------------------------------------------------
-        {"origin": [-5, 9, -58], "size": [10, 8, 8], "uv": [128, 192]}, # Axle 1 Diff
-        {"origin": [-5, 9, -32], "size": [10, 8, 8], "uv": [128, 192]}, # Axle 2 Diff
-        {"origin": [-5, 9, 30], "size": [10, 8, 8], "uv": [128, 192]},  # Axle 3 Diff
-        {"origin": [-5, 9, 58], "size": [10, 8, 8], "uv": [128, 192]}   # Axle 4 Diff
-    ]
-
-    # Wheel definitions (8 massive off-road tires, diameter 24, width 10)
-    # Front steering axles: Z = -56, Z = -30
-    # Rear heavy drive axles: Z = +32, Z = +60
-    wheel_defs = [
-        ("wheel_fl1",  25, 12, -56,  20, 0, -68, 10, 24, 24),
-        ("wheel_fr1", -25, 12, -56, -30, 0, -68, 10, 24, 24),
-        ("wheel_fl2",  25, 12, -30,  20, 0, -42, 10, 24, 24),
-        ("wheel_fr2", -25, 12, -30, -30, 0, -42, 10, 24, 24),
-        ("wheel_rl1",  25, 12,  32,  20, 0,  20, 10, 24, 24),
-        ("wheel_rr1", -25, 12,  32, -30, 0,  20, 10, 24, 24),
-        ("wheel_rl2",  25, 12,  60,  20, 0,  48, 10, 24, 24),
-        ("wheel_rr2", -25, 12,  60, -30, 0,  48, 10, 24, 24)
+    # Conventional-nose 8x8 hauler, ~12.5 x 4 x 5 blocks. GeckoLib mirrors X on load: +X here is the vehicle's LEFT.
+    # Cab is sized for a seated player: driver cushion top y42 (left seat, x+13, z-56), roof underside y74.
+    W = 30
+    glass, armor, stencil, louver, roof, steel = [128, 0], [0, 0], [64, 0], [0, 64], [64, 64], [256, 0]
+    body = [
+        # Ladder frame and axle differentials
+        {"origin": [-15, 14, -94], "size": [4, 8, 186], "uv": steel},
+        {"origin": [11, 14, -94], "size": [4, 8, 186], "uv": steel},
+        *[{"origin": [-5, 10, z - 4], "size": [10, 8, 8], "uv": [128, 192]} for z in (-68, -42, 40, 66)],
+        # ---- Front end: bumper, tow hooks, winch, brush guard ----
+        {"origin": [-32, 10, -106], "size": [64, 12, 6], "uv": [0, 128]},
+        {"origin": [-27, 12, -108], "size": [4, 6, 2], "uv": accent(RED)},       # tow hooks
+        {"origin": [23, 12, -108], "size": [4, 6, 2], "uv": accent(RED)},
+        {"origin": [-10, 13, -109], "size": [20, 8, 3], "uv": [384, 128]},
+        *[{"origin": [x, 22, -105], "size": [2, 18, 2], "uv": accent(BLACK)} for x in (-21, -9, 7, 19)],
+        {"origin": [-23, 40, -105], "size": [46, 2, 2], "uv": accent(BLACK)},
+        *[{"origin": [x, 30, -104.8], "size": [9, 10, 1], "uv": accent(CHROME)} for x in (-30.5, 21.5)],  # headlight bezels
+        {"origin": [-6, 16, -106.6], "size": [12, 4, 1], "uv": accent(WHITE)},   # number plate
+        # ---- Bonnet with louvers, raked top, headlight pods, indicator lamps ----
+        {"origin": [-24, 22, -104], "size": [48, 18, 24], "uv": louver},
+        rod((0, 40, -104), (0, 46, -80), 44, 2, louver),                     # bonnet top slopes up to the cowl
+        rod((23, 38, -92), (19, 42, -92), 2, 24, armor),                     # bevelled bonnet shoulders
+        rod((-23, 38, -92), (-19, 42, -92), 2, 24, armor),
+        {"origin": [-22, 23, -104.6], "size": [44, 15, 1], "uv": [192, 0]},  # grille
+        {"origin": [-30, 28, -102], "size": [7, 8, 6], "uv": [84, 192]},     # headlight pods
+        {"origin": [23, 28, -102], "size": [7, 8, 6], "uv": [84, 192]},
+        {"origin": [-30, 24, -101], "size": [7, 3, 5], "uv": [42, 192]},     # amber indicators
+        {"origin": [23, 24, -101], "size": [7, 3, 5], "uv": [42, 192]},
+        # Front wheel arches (flat top with sloped ends)
+        *[c for x0 in (-32, 20) for c in (
+            {"origin": [x0, 30, -80], "size": [12, 2, 24], "uv": MUDDY},
+            rod((x0 + 6, 22, -86), (x0 + 6, 31, -80), 12, 2, MUDDY),
+            rod((x0 + 6, 31, -56), (x0 + 6, 22, -50), 12, 2, MUDDY),
+        )],
+        # ---- Cab (z -80..-40): floor y34, roof y74 ----
+        {"origin": [-W, 28, -80], "size": [60, 6, 40], "uv": MUDDY},         # cab floor/sill
+        *[{"origin": [x, 44, -60], "size": [1, 2, 5], "uv": accent(CHROME)} for x in (-30.6, 29.6)],  # door handles
+        rod((-14, 48, -81.4), (-4, 54, -80.2), 1, 1, accent(BLACK)),        # wipers
+        rod((14, 48, -81.4), (4, 54, -80.2), 1, 1, accent(BLACK)),
+        {"origin": [-W, 34, -82], "size": [60, 14, 2], "uv": armor},         # cowl under the windshield
+        rod((0, 48, -81), (0, 74, -76), 56, 1, glass),                       # raked windshield
+        rod((-29, 48, -81.5), (-29, 74, -76.5), 2, 3, armor),                # A-pillars + centre post
+        rod((29, 48, -81.5), (29, 74, -76.5), 2, 3, armor),
+        rod((0, 48, -81.6), (0, 74, -76.6), 2, 2, armor),
+        {"origin": [-W, 34, -78], "size": [2, 18, 36], "uv": stencil},       # doors carry the unit number
+        {"origin": [W - 2, 34, -78], "size": [2, 18, 36], "uv": stencil},
+        {"origin": [-W + 0.5, 52, -76], "size": [1, 20, 26], "uv": glass},   # side windows
+        {"origin": [W - 1.5, 52, -76], "size": [1, 20, 26], "uv": glass},
+        {"origin": [-W, 52, -50], "size": [2, 22, 10], "uv": armor},         # B-pillars
+        {"origin": [W - 2, 52, -50], "size": [2, 22, 10], "uv": armor},
+        {"origin": [-W, 72, -78], "size": [2, 2, 28], "uv": armor},          # window headers
+        {"origin": [W - 2, 72, -78], "size": [2, 2, 28], "uv": armor},
+        # Back wall with a small rear window
+        {"origin": [-W, 34, -42], "size": [60, 22, 2], "uv": armor},
+        {"origin": [-W, 68, -42], "size": [60, 6, 2], "uv": armor},
+        {"origin": [-W, 56, -42], "size": [16, 12, 2], "uv": armor},
+        {"origin": [14, 56, -42], "size": [16, 12, 2], "uv": armor},
+        {"origin": [-14, 56, -41.5], "size": [28, 12, 1], "uv": glass},
+        # Roof with chamfered edges, visor, marker lamps, lightbar, antenna
+        {"origin": [-28, 74, -78], "size": [56, 3, 38], "uv": roof},
+        rod((-30, 73, -59), (-27, 77, -59), 2, 38, roof),
+        rod((30, 73, -59), (27, 77, -59), 2, 38, roof),
+        {"origin": [-28, 73, -82], "size": [56, 2, 4], "uv": steel},
+        *[{"origin": [x - 1.5, 77, -78], "size": [3, 1.5, 2], "uv": [392, 196]} for x in (-16, -8, 0, 8, 16)],
+        {"origin": [-18, 77, -74], "size": [36, 3, 4], "uv": [384, 192]},
+        rod((24, 77, -46), (24, 100, -48), 1, 1, steel),
+        *[c for x in (-23, 19) for c in (                                    # amber roof beacons
+            {"origin": [x, 77, -48], "size": [4, 1, 4], "uv": accent(BLACK)},
+            {"origin": [x + 0.5, 78, -47.5], "size": [3, 3, 3], "uv": accent(AMBER)},
+        )],
+        {"origin": [-6, 77, -66], "size": [5, 4, 5], "uv": accent(CHROME)},  # roof spotlight
+        # Mirrors on arms
+        {"origin": [W, 60, -76], "size": [6, 2, 2], "uv": steel},
+        {"origin": [W + 5, 50, -77], "size": [3, 12, 5], "uv": steel},
+        {"origin": [-W - 6, 60, -76], "size": [6, 2, 2], "uv": steel},
+        {"origin": [-W - 8, 50, -77], "size": [3, 12, 5], "uv": steel},
+        # ---- Cab interior: dashboard, seats, wheel kept below eye line ----
+        {"origin": [-28, 34, -80], "size": [56, 14, 6], "uv": steel},
+        {"origin": [6, 34, -62], "size": [14, 8, 12], "uv": steel},          # driver (left)
+        {"origin": [6, 42, -51], "size": [14, 22, 3], "uv": steel},
+        {"origin": [-20, 34, -62], "size": [14, 8, 12], "uv": steel},        # passenger
+        {"origin": [-20, 42, -51], "size": [14, 22, 3], "uv": steel},
+        rod((13, 42, -76), (13, 47, -70), 3, 3, steel),
+        {"origin": [9, 43, -71], "size": [8, 8, 1], "pivot": [13, 47, -70.5], "rotation": [-55, 0, 0], "uv": [256, 128]},
+        # ---- Behind the cab: mesh headache rack, exhaust stacks with heat shields, air tanks ----
+        {"origin": [-W, 34, -39], "size": [60, 30, 2], "uv": [256, 128]},
+        *[c for x in (-35, 31) for c in (
+            {"origin": [x, 22, -40], "size": [4, 54, 4], "uv": [256, 128]},
+            {"origin": [x - 0.5, 42, -40.5], "size": [5, 18, 5], "uv": steel},
+            rod((x + 2, 76, -38), (x + 2, 79, -35), 4, 4, accent(RUST)),
+        )],
+        # Jerry cans and extinguisher on the rack; fuel tank, battery box and toolbox under the deck
+        *[{"origin": [x, 34, -37], "size": [6, 10, 4], "uv": accent(SAND)} for x in (-22, -15, -8)],
+        {"origin": [20, 34, -37], "size": [3, 9, 3], "uv": accent(RED)},
+        {"origin": [17, 14, -22], "size": [10, 11, 30], "uv": accent(CHROME)},
+        *[{"origin": [16.5, 13.5, z], "size": [11, 12, 2], "uv": accent(BLACK)} for z in (-16, 0)],
+        {"origin": [-27, 15, -22], "size": [10, 10, 14], "uv": accent(OLIVE)},
+        {"origin": [-27, 15, -4], "size": [10, 10, 12], "uv": accent(BLACK)},
+        *[{"origin": [x, 18, -28], "size": [1, 3, 54], "uv": accent(YELLOW)} for x in (-31, 30)],  # side under-run guards
+        # ---- Flatbed (top y34): stake pockets, stowed loading ramps, rear fenders ----
+        {"origin": [-W, 28, -37], "size": [60, 6, 129], "uv": [384, 0]},
+        {"origin": [-W - 2, 28, -37], "size": [2, 8, 129], "uv": [0, 128]},
+        {"origin": [W, 28, -37], "size": [2, 8, 129], "uv": [0, 128]},
+        *[{"origin": [x, 29, z], "size": [1, 5, 3], "uv": [256, 128]} for x in (-W - 3, W + 2) for z in range(-30, 90, 16)],
+        {"origin": [-24, 34, 86], "size": [10, 18, 3], "uv": steel},
+        {"origin": [14, 34, 86], "size": [10, 18, 3], "uv": steel},
+        *[{"origin": [x0, 24, 24], "size": [12, 2, 58], "uv": MUDDY} for x0 in (-32, 20)],
+        # Rear bumper, lamps, mudflaps, hitch
+        {"origin": [-32, 20, 92], "size": [64, 8, 3], "uv": [0, 128]},
+        *[{"origin": [x, 22, 95.1], "size": [10, 4, 1], "uv": [0, 192]} for x in (-28, 18)],
+        *[{"origin": [x, 22, 95.1], "size": [4, 4, 1], "uv": [42, 192]} for x in (-17, 13)],
+        *[{"origin": [x, 22, 95.1], "size": [3, 4, 1], "uv": accent(WHITE)} for x in (-12, 9)],  # reversing lamps
+        {"origin": [-2, 16, 94], "size": [4, 5, 4], "uv": steel},
+        {"origin": [-31, 4, 82], "size": [10, 14, 1], "uv": MUDDY},
+        {"origin": [21, 4, 82], "size": [10, 14, 1], "uv": MUDDY},
+        # Orange tie-down straps around the deck centre (z30) over the kneeling Titan
+        *[rod((26 * sx, 34, 30 + 15 * sf), (12 * sx, 51, 30 + 5 * sf), 3, 1, [128, 128]) for sx in (1, -1) for sf in (1, -1)],
+        {"origin": [-23, 36, 34], "size": [46, 3, 2], "uv": [128, 128]},
+        *[{"origin": [26 * sx - 2.5, 34, 12], "size": [5, 4, 3], "uv": [256, 128]} for sx in (1, -1)],
     ]
 
     bones = [
         {"name": "root", "pivot": [0, 0, 0]},
-        {"name": "chassis", "parent": "root", "pivot": [0, 16, 0], "cubes": chassis_cubes}
+        {"name": "body", "parent": "root", "pivot": [0, 14, 0], "cubes": body},
     ]
-
-    for name, px, py, pz, ox, oy, oz, sx, sy, sz in wheel_defs:
-        bones.append({
-            "name": name,
-            "parent": "chassis",
-            "pivot": [px, py, pz],
-            "cubes": [
-                {"origin": [ox, oy, oz], "size": [sx, sy, sz], "uv": [0, 256]}
-            ]
-        })
-
-    model_data = {
-        "format_version": "1.12.0",
-        "minecraft:geometry": [
-            {
-                "description": {
-                    "identifier": "geometry.titan_hauler_truck",
-                    "texture_width": 512,
-                    "texture_height": 512,
-                    "visible_bounds_width": 8.5,
-                    "visible_bounds_height": 4.8,
-                    "visible_bounds_offset": [0, 1.8, 0]
-                },
-                "bones": per_face_uv(bones)
-            }
-        ]
-    }
-    with open(path, 'w') as f:
-        json.dump(model_data, f, indent=2)
-    print(f"Saved model: {path}")
+    # Each front wheel gets its own steering knuckle at the wheel centre; the wheel bone inside only spins.
+    for axle, z, steered in (("1", -68, True), ("2", -42, True), ("1", 40, False), ("2", 66, False)):
+        for side, px, ox in (("l", 25, 20), ("r", -25, -30)):
+            name = f"wheel_{'f' if steered else 'r'}{side}{axle}"
+            parent = "root"
+            if steered:
+                parent = f"steer_f{side}{axle}"
+                bones.append({"name": parent, "parent": "root", "pivot": [px, 14, z]})
+            bones.append({"name": name, "parent": parent, "pivot": [px, 14, z], "cubes": make_wheel(px, 14, z, ox, 10, 14)})
+    write_geo(path, "geometry.titan_hauler_truck", bones, 14.0, 7.0, 2.6)
 
 
 def generate_hauler_truck_animation(path):
@@ -513,13 +642,13 @@ def generate_hauler_truck_animation(path):
         "animations": {
             "animation.titan_hauler_truck.idle": {
                 "loop": True,
-                "animation_length": 2.0,
+                "animation_length": 0.2,
                 "bones": {
-                    "chassis": {
+                    "body": {
                         "position": {
                             "0.0": [0, 0, 0],
-                            "1.0": [0, 0.25, 0],
-                            "2.0": [0, 0, 0]
+                            "0.1": [0, 0.12, 0],
+                            "0.2": [0, 0, 0]
                         }
                     }
                 }
@@ -528,23 +657,15 @@ def generate_hauler_truck_animation(path):
                 "loop": True,
                 "animation_length": 1.0,
                 "bones": {
-                    "chassis": {
+                    "body": {
                         "position": {
                             "0.0": [0, 0, 0],
-                            "0.25": [0, 0.4, 0],
+                            "0.25": [0, 0.2, 0],
                             "0.5": [0, 0, 0],
-                            "0.75": [0, 0.4, 0],
+                            "0.75": [0, 0.2, 0],
                             "1.0": [0, 0, 0]
                         }
-                    },
-                    "wheel_fl1": {"rotation": {"0.0": [0, 0, 0], "1.0": [-360, 0, 0]}},
-                    "wheel_fr1": {"rotation": {"0.0": [0, 0, 0], "1.0": [-360, 0, 0]}},
-                    "wheel_fl2": {"rotation": {"0.0": [0, 0, 0], "1.0": [-360, 0, 0]}},
-                    "wheel_fr2": {"rotation": {"0.0": [0, 0, 0], "1.0": [-360, 0, 0]}},
-                    "wheel_rl1": {"rotation": {"0.0": [0, 0, 0], "1.0": [-360, 0, 0]}},
-                    "wheel_rr1": {"rotation": {"0.0": [0, 0, 0], "1.0": [-360, 0, 0]}},
-                    "wheel_rl2": {"rotation": {"0.0": [0, 0, 0], "1.0": [-360, 0, 0]}},
-                    "wheel_rr2": {"rotation": {"0.0": [0, 0, 0], "1.0": [-360, 0, 0]}}
+                    }
                 }
             }
         }
@@ -563,7 +684,7 @@ def generate_skycrane_texture(path):
     tex.fill_rect(0, 0, 512, 512, 32, 35, 38)
 
     # (0, 0, 128, 128): Military Olive Camo Armor Plating
-    tex.draw_panel(0, 0, 128, 128, (66, 78, 54))
+    tex.draw_armor_atlas(((84, 90, 84), (64, 70, 66), (104, 110, 104), (46, 50, 48)), "SC-1")
 
     # (128, 0, 64, 64): Gunship Cockpit Canopy Glass
     tex.draw_glass(128, 0, 64, 64)
@@ -606,163 +727,108 @@ def generate_skycrane_texture(path):
     # (128, 256, 128, 128): Rotor Hubs & Bearings
     tex.draw_wheel_rim(128, 256, 128, 128)
 
+    tex.draw_accents()
     tex.save(path)
 
 
 def generate_skycrane_model(path):
-    # Wingspan 120 units (~7.5 blocks), Length 100 units (~6.2 blocks), Height 44 units (~2.75 blocks)
-    # Coordinate system: Front = -Z, Rear = +Z, Right = -X, Left = +X, Up = +Y
+    # Quad ducted-fan sky crane with an enclosed, raked-canopy cockpit a seated player fits in:
+    # pod 2 blocks wide, floor y16, roof underside y52; pilot cushion top y24 at (x0, z-55).
+    glass, armor, stencil, roof, steel = [128, 0], [0, 0], [64, 0], [64, 64], [256, 0]
     fuselage_cubes = [
-        # Main center armored hull (Z = -42 to +42)
-        {"origin": [-18, 16, -42], "size": [36, 20, 84], "uv": [0, 0]},
-        # Dorsal Engine Deck: Dual Turboshaft Engine Nacelles
-        {"origin": [-16, 36, -30], "size": [14, 8, 48], "uv": [384, 128]}, # Right Engine
-        {"origin": [2, 36, -30], "size": [14, 8, 48], "uv": [384, 128]},   # Left Engine
-        # Dorsal Air Intake Scoops (facing North -Z)
-        {"origin": [-15, 37, -34], "size": [12, 6, 4], "uv": [256, 0]},
-        {"origin": [3, 37, -34], "size": [12, 6, 4], "uv": [256, 0]},
-        # Rear Engine Exhaust Heat Nozzles
-        {"origin": [-15, 37, 18], "size": [12, 6, 4], "uv": [256, 0]},
-        {"origin": [3, 37, 18], "size": [12, 6, 4], "uv": [256, 0]},
-        # Avionics Dorsal Spine & Antenna Blades
-        {"origin": [-2, 36, -10], "size": [4, 10, 20], "uv": [256, 0]},
-        {"origin": [-0.5, 46, -4], "size": [1, 8, 8], "uv": [256, 128]},
-
-        # ----------------------------------------------------------------------
-        # FORWARD COCKPIT NOSE & SENSOR TURRET (Z = -64 to -42)
-        # ----------------------------------------------------------------------
-        # Forward Chiseled Nose
-        {"origin": [-16, 18, -64], "size": [32, 16, 22], "uv": [0, 0]},
-        # Multifacet Gunship Canopy Glass (facing North -Z)
-        {"origin": [-14, 22, -62.1], "size": [28, 11, 16], "uv": [128, 0]},
-        # Canopy Center Armored Frame Rib
-        {"origin": [-1, 22, -62.2], "size": [2, 11, 16.2], "uv": [0, 0]},
-        # Raked upper canopy facet & side cheek windows
-        rod((0, 33, -63), (0, 38, -46), 26, 1, [128, 0]),
-        {"origin": [-16.1, 24, -60], "size": [1, 8, 14], "uv": [128, 0]},
-        {"origin": [15.1, 24, -60], "size": [1, 8, 14], "uv": [128, 0]},
-        # Chin EO/IR FLIR Sensor Turret Ball with Glowing Cyan Optic
-        {"origin": [-6, 12, -70], "size": [12, 10, 10], "uv": [256, 0]},
-        {"origin": [-3, 14, -71], "size": [6, 5, 1], "uv": [208, 20]},
-
-        # ----------------------------------------------------------------------
-        # OUTRIGGER WING STRUCTURES & DIAGONAL BRACING
-        # ----------------------------------------------------------------------
-        # Port wing outrigger boom (+X) with fore/aft pylons into the fan shrouds
-        {"origin": [18, 22, -10], "size": [46, 10, 20], "uv": [256, 0]},
-        {"origin": [46, 22, -20], "size": [8, 6, 10], "uv": [256, 0]},
-        {"origin": [46, 22, 10], "size": [8, 6, 10], "uv": [256, 0]},
-        # Diagonal Pylon Truss Bracing
-        rod((18, 17, 0), (44, 22, 0), 4, 8, [256, 0]),
-
-        # Starboard wing outrigger boom (-X)
-        {"origin": [-64, 22, -10], "size": [46, 10, 20], "uv": [256, 0]},
-        {"origin": [-54, 22, -20], "size": [8, 6, 10], "uv": [256, 0]},
-        {"origin": [-54, 22, 10], "size": [8, 6, 10], "uv": [256, 0]},
-        # Diagonal Pylon Truss Bracing
-        rod((-18, 17, 0), (-44, 22, 0), 4, 8, [256, 0]),
-
-        # Wingtip Navigation Lights (Port Red: +X, Starboard Green: -X)
-        {"origin": [64, 24, -2], "size": [2, 4, 4], "uv": [128, 192]}, # Port
-        {"origin": [-66, 24, -2], "size": [2, 4, 4], "uv": [192, 192]}, # Starboard
-
-        # ----------------------------------------------------------------------
-        # 4 OPEN DUCTED FAN COWLINGS (28 wide, 12 tall) with 4-point stator cross & motor hub
-        # ----------------------------------------------------------------------
-        *[c for cx, cz in ((52, -34), (-52, -34), (52, 34), (-52, 34)) for c in (
-            {"origin": [cx - 14, 20, cz - 14], "size": [28, 12, 2], "uv": [0, 128]},
-            {"origin": [cx - 14, 20, cz + 12], "size": [28, 12, 2], "uv": [0, 128]},
-            {"origin": [cx - 14, 20, cz - 12], "size": [2, 12, 24], "uv": [0, 128]},
-            {"origin": [cx + 12, 20, cz - 12], "size": [2, 12, 24], "uv": [0, 128]},
-            {"origin": [cx - 12, 22, cz - 1], "size": [24, 2, 2], "uv": [256, 0]},
-            {"origin": [cx - 1, 22, cz - 12], "size": [2, 2, 24], "uv": [256, 0]},
-            {"origin": [cx - 3, 21, cz - 3], "size": [6, 4, 6], "uv": [256, 0]},
+        # Main hull with chamfered edges, tail boom, fin and stabiliser
+        {"origin": [-16, 16, -44], "size": [32, 22, 84], "uv": armor},
+        *[rod((14 * sx, 36, -2), (10 * sx, 41, -2), 3, 84, roof) for sx in (1, -1)],
+        *[rod((14 * sx, 18, -2), (10 * sx, 13, -2), 3, 84, armor) for sx in (1, -1)],
+        {"origin": [-6, 22, 40], "size": [12, 10, 32], "uv": armor},
+        rod((0, 32, 62), (0, 50, 74), 2, 10, armor),
+        {"origin": [-18, 26, 64], "size": [36, 2, 8], "uv": armor},
+        {"origin": [-1, 50, 72], "size": [2, 2, 2], "uv": accent(WHITE)},   # tail strobe
+        {"origin": [-6.4, 21.6, 56], "size": [12.8, 10.8, 4], "uv": accent(ORANGE)},  # hi-vis tail band
+        *[{"origin": [x, 26.2, 64], "size": [6, 2, 8], "uv": accent(ORANGE)} for x in (-18, 12)],  # stabiliser tips
+        {"origin": [-1, 41, -10], "size": [2, 2, 2], "uv": accent(RED)},    # dorsal anti-collision beacon
+        {"origin": [-1, 10, 10], "size": [2, 2, 2], "uv": accent(RED)},     # belly beacon
+        *[{"origin": [x, 18, -24], "size": [4, 9, 30], "uv": accent(OLIVE)} for x in (-20, 16)],  # side fuel cells
+        # Twin turboshafts with dark intakes and exhausts
+        *[c for x in (-15, 3) for c in (
+            {"origin": [x, 38, -26], "size": [12, 9, 40], "uv": roof},
+            {"origin": [x + 1, 39, -29], "size": [10, 7, 3], "uv": [384, 0]},
+            {"origin": [x + 1, 40, 14], "size": [10, 6, 5], "uv": accent(RUST)},
         )],
-
-        # ----------------------------------------------------------------------
-        # QUAD LANDING GEAR SKIDS & SHOCK OLEOS
-        # ----------------------------------------------------------------------
-        # Left Landing Skid (+X)
-        {"origin": [16, 2, -36], "size": [3, 3, 72], "uv": [0, 192]},
-        {"origin": [16, 5, -28], "size": [3, 11, 3], "uv": [0, 192]}, # Forward Oleo Strut
-        {"origin": [16, 5, 25], "size": [3, 11, 3], "uv": [0, 192]},  # Aft Oleo Strut
-        # Right Landing Skid (-X)
-        {"origin": [-19, 2, -36], "size": [3, 3, 72], "uv": [0, 192]},
-        {"origin": [-19, 5, -28], "size": [3, 11, 3], "uv": [0, 192]}, # Forward Oleo Strut
-        {"origin": [-19, 5, 25], "size": [3, 11, 3], "uv": [0, 192]},  # Aft Oleo Strut
-
-        # ----------------------------------------------------------------------
-        # VENTRAL SLING RIG & SUSPENSION CABLES (Hanging down to Y = -42)
-        # ----------------------------------------------------------------------
-        # Main ventral winch gantry frame under fuselage
+        rod((0, 47, 0), (0, 56, 4), 1, 8, steel),                            # antenna blade
+        # ---- Cockpit pod (z -96..-40) ----
+        {"origin": [-16, 12, -88], "size": [32, 4, 48], "uv": armor},        # floor
+        {"origin": [-12, 12, -98], "size": [24, 16, 10], "uv": armor},       # nose below the glass
+        {"origin": [-12, 28, -98], "size": [24, 0.6, 6], "uv": accent(BLACK)},  # anti-glare panel
+        {"origin": [5, 8, -92], "size": [5, 5, 5], "uv": accent(CHROME)},   # nose searchlight
+        rod((-8, 20, -98), (-8, 20, -110), 1, 1, accent(CHROME)),          # pitot probe
+        rod((0, 12, -98), (0, 6, -94), 20, 4, armor),                        # chin fairing
+        {"origin": [-16, 16, -88], "size": [2, 12, 48], "uv": stencil},      # lower side walls with tail number
+        {"origin": [14, 16, -88], "size": [2, 12, 48], "uv": stencil},
+        rod((0, 28, -92), (0, 52, -84), 28, 1, glass),                       # raked windscreen
+        rod((-14.5, 28, -92.5), (-14.5, 52, -84.5), 2, 3, armor),
+        rod((14.5, 28, -92.5), (14.5, 52, -84.5), 2, 3, armor),
+        {"origin": [-16, 28, -84], "size": [1, 24, 40], "uv": glass},        # side glass
+        {"origin": [15, 28, -84], "size": [1, 24, 40], "uv": glass},
+        {"origin": [-16, 28, -62], "size": [2, 24, 2], "uv": armor},         # canopy frame ribs
+        {"origin": [14, 28, -62], "size": [2, 24, 2], "uv": armor},
+        {"origin": [-17, 52, -86], "size": [34, 3, 46], "uv": roof},         # roof
+        *[rod((15 * sx, 52, -63), (11 * sx, 56, -63), 2, 46, roof) for sx in (1, -1)],
+        {"origin": [-16, 38, -44], "size": [32, 14, 8], "uv": armor},        # pod-to-spine fairing
+        {"origin": [-14, 16, -82], "size": [28, 12, 5], "uv": steel},        # instrument console
+        {"origin": [-6, 16, -60], "size": [12, 8, 10], "uv": steel},         # pilot seat
+        {"origin": [-6, 24, -51], "size": [12, 22, 3], "uv": steel},
+        {"origin": [-1, 16, -70], "size": [2, 10, 2], "uv": steel},          # cyclic stick
+        # Chin EO/IR turret with cyan optic
+        {"origin": [-5, 2, -96], "size": [10, 6, 8], "uv": steel},
+        {"origin": [-3, 3, -96.6], "size": [6, 4, 1], "uv": [208, 20]},
+        # ---- Tapered outrigger arms, motor pods and ducts ----
+        *[c for sx in (1, -1) for c in (
+            rod((16 * sx, 26, 0), (46 * sx, 30, 0), 8, 14, steel),
+            rod((44 * sx, 26, -4), (52 * sx, 26, -30), 6, 6, steel),
+            rod((44 * sx, 26, 4), (52 * sx, 26, 30), 6, 6, steel),
+            {"origin": [(64 if sx > 0 else -66), 24, -2], "size": [2, 4, 4], "uv": [128 if sx > 0 else 192, 192]},
+            {"origin": [(40 if sx > 0 else -46), 25.6, -7.4], "size": [6, 8.8, 14.8], "uv": accent(YELLOW)},  # arm hazard collar
+        )],
+        *[{"origin": [cx - 4, 14, cz - 4], "size": [8, 8, 8], "uv": roof} for cx, cz in ((52, -34), (-52, -34), (52, 34), (-52, 34))],
+        *[c for cx, cz in ((52, -34), (-52, -34), (52, 34), (-52, 34)) for c in make_ducted_fan_cowling(cx, cz)],
+        # ---- Landing skids with upturned toes ----
+        *[c for x in (18, -21) for c in (
+            {"origin": [x, 0, -44], "size": [3, 3, 82], "uv": MUDDY},
+            rod((x + 1.5, 1.5, -44), (x + 1.5, 7, -50), 3, 3, MUDDY),
+            *[{"origin": [x, 3, z], "size": [3, 13, 3], "uv": [0, 192]} for z in (-34, 25)],
+        )],
+        # ---- Ventral sling rig (Titan shoulders hang at the y-48 clamp pads) ----
         {"origin": [-16, 14, -22], "size": [32, 2, 44], "uv": [256, 128]},
-        # Winch Cable Spool Drums hanging below the gantry (Y = 12..14)
-        {"origin": [-10, 12, -12], "size": [20, 2, 6], "uv": [384, 128]},
-        {"origin": [-10, 12, 6], "size": [20, 2, 6], "uv": [384, 128]},
-        # 4 taut hoist cables from drum ends down to the spreader-bar corners at Y = -39
-        *[rod((32.5 * sx, -39, 32.5 * sz), (10 * sx, 12, 9 * sz), 1.5, 1.5, [128, 128])
-          for sx in (1, -1) for sz in (1, -1)],
-        # Hollow spreader-bar frame (Y = -42..-39), wide enough for any Titan torso/head to pass through
+        {"origin": [-10, 12, -12], "size": [20, 2, 6], "uv": accent(YELLOW)},
+        {"origin": [-10, 12, 6], "size": [20, 2, 6], "uv": accent(YELLOW)},
+        *[rod((32.5 * sx, -39, 32.5 * sz), (10 * sx, 12, 9 * sz), 1.5, 1.5, [128, 128]) for sx in (1, -1) for sz in (1, -1)],
         {"origin": [-34, -42, -34], "size": [68, 3, 3], "uv": [256, 128]},
         {"origin": [-34, -42, 31], "size": [68, 3, 3], "uv": [256, 128]},
         {"origin": [-34, -42, -31], "size": [3, 3, 62], "uv": [256, 128]},
         {"origin": [31, -42, -31], "size": [3, 3, 62], "uv": [256, 128]},
-        # Shoulder clamp arms with glowing cyan magnetic pads (shoulder lugs sit at x +-24, z +10)
         {"origin": [29, -48, 7], "size": [3, 6, 6], "uv": [256, 128]},
         {"origin": [20, -49, 6], "size": [12, 2, 8], "uv": [128, 128]},
         {"origin": [-32, -48, 7], "size": [3, 6, 6], "uv": [256, 128]},
-        {"origin": [-32, -49, 6], "size": [12, 2, 8], "uv": [128, 128]}
-    ]
-
-    # 4 Spinning Rotor Blades inside shrouds
-    rotor_defs = [
-        ("rotor_fl",  52, 26, -34),
-        ("rotor_fr", -52, 26, -34),
-        ("rotor_rl",  52, 26,  34),
-        ("rotor_rr", -52, 26,  34)
+        {"origin": [-32, -49, 6], "size": [12, 2, 8], "uv": [128, 128]},
     ]
 
     bones = [
         {"name": "root", "pivot": [0, 0, 0]},
-        {"name": "fuselage", "parent": "root", "pivot": [0, 24, 0], "cubes": fuselage_cubes}
+        {"name": "fuselage", "parent": "root", "pivot": [0, 24, 0], "cubes": fuselage_cubes},
     ]
-
-    for name, px, py, pz in rotor_defs:
-        bones.append({
-            "name": name,
-            "parent": "fuselage",
-            "pivot": [px, py, pz],
-            "cubes": [
-                {"origin": [px - 11, py, pz - 2], "size": [22, 1, 4], "uv": [0, 280]},
-                {"origin": [px - 2, py, pz - 11], "size": [4, 1, 22], "uv": [0, 280]},
-                # Yellow safety tips
-                {"origin": [px - 11, py + 0.01, pz - 2], "size": [2, 1, 4], "uv": [0, 256]},
-                {"origin": [px + 9, py + 0.01, pz - 2], "size": [2, 1, 4], "uv": [0, 256]},
-                {"origin": [px - 2, py + 0.01, pz - 11], "size": [4, 1, 2], "uv": [0, 256]},
-                {"origin": [px - 2, py + 0.01, pz + 9], "size": [4, 1, 2], "uv": [0, 256]},
-                {"origin": [px - 3, py - 1, pz - 3], "size": [6, 3, 6], "uv": [128, 256]}
-            ]
-        })
-
-    model_data = {
-        "format_version": "1.12.0",
-        "minecraft:geometry": [
-            {
-                "description": {
-                    "identifier": "geometry.titan_skycrane_drone",
-                    "texture_width": 512,
-                    "texture_height": 512,
-                    "visible_bounds_width": 9.0,
-                    "visible_bounds_height": 7.0,
-                    "visible_bounds_offset": [0, 0.2, 0]
-                },
-                "bones": per_face_uv(bones)
-            }
-        ]
-    }
-    with open(path, 'w') as f:
-        json.dump(model_data, f, indent=2)
-    print(f"Saved model: {path}")
+    for name, px, pz in (("rotor_fl", 52, -34), ("rotor_fr", -52, -34), ("rotor_rl", 52, 34), ("rotor_rr", -52, 34)):
+        py = 26
+        bones.append({"name": name, "parent": "fuselage", "pivot": [px, py, pz], "cubes": [
+            {"origin": [px - 11, py, pz - 2], "size": [22, 1, 4], "uv": [0, 280]},
+            {"origin": [px - 2, py, pz - 11], "size": [4, 1, 22], "uv": [0, 280]},
+            {"origin": [px - 11, py + 0.01, pz - 2], "size": [2, 1, 4], "uv": [0, 256]},
+            {"origin": [px + 9, py + 0.01, pz - 2], "size": [2, 1, 4], "uv": [0, 256]},
+            {"origin": [px - 2, py + 0.01, pz - 11], "size": [4, 1, 2], "uv": [0, 256]},
+            {"origin": [px - 2, py + 0.01, pz + 9], "size": [4, 1, 2], "uv": [0, 256]},
+            {"origin": [px - 3, py - 1, pz - 3], "size": [6, 3, 6], "uv": [128, 256]},
+        ]})
+    write_geo(path, "geometry.titan_skycrane_drone", bones, 10.0, 7.0, 0.2)
 
 
 def generate_skycrane_animation(path):
@@ -795,11 +861,6 @@ def generate_skycrane_animation(path):
                             "0.0": [0, 0, 0],
                             "0.5": [0, 0.3, 0],
                             "1.0": [0, 0, 0]
-                        },
-                        "rotation": {
-                            "0.0": [6.0, 0, 0],
-                            "0.5": [5.0, 0, 0],
-                            "1.0": [6.0, 0, 0]
                         }
                     },
                     "rotor_fl": {"rotation": {"0.0": [0, 0, 0], "1.0": [0, 2160, 0]}},
@@ -824,7 +885,7 @@ def generate_cargo_barge_texture(path):
     tex.fill_rect(0, 0, 512, 512, 34, 38, 42)
 
     # (0, 0, 128, 128): Marine Olive-Grey Steel Plating
-    tex.draw_panel(0, 0, 128, 128, (62, 72, 65))
+    tex.draw_armor_atlas(((96, 104, 110), (76, 84, 90), (116, 122, 126), (58, 64, 70)), "L-04")
 
     # (128, 0, 64, 64): Panoramic Wheelhouse Bridge Windows
     tex.draw_glass(128, 0, 64, 64)
@@ -835,7 +896,7 @@ def generate_cargo_barge_texture(path):
     tex.fill_rect(240, 8, 8, 8, 40, 255, 60)   # Starboard Green
 
     # (256, 0, 128, 64): Hull Antifouling Keel Plating
-    tex.fill_rect(256, 0, 128, 64, 30, 32, 36)
+    tex.draw_panel(256, 0, 128, 64, (112, 36, 30), rivet=False)  # red antifouling below the waterline
 
     # (384, 0, 128, 128): Non-Skid Marine Cargo Deck
     tex.draw_diamond_plate(384, 0, 128, 128)
@@ -872,143 +933,95 @@ def generate_cargo_barge_texture(path):
     # Small life ring sized for the 8x8 side faces of the bulkhead buoy cubes
     tex.draw_life_ring(200, 308, 8, 8)
 
+    tex.draw_accents()
+    tex.draw_camo(128, 448, 128, 64, ((176, 180, 178), (156, 160, 160), (190, 192, 188), (138, 142, 144)))  # light-grey superstructure
     tex.save(path)
 
 
 def generate_cargo_barge_model(path):
-    # Length 164 units (~10.2 blocks), Width 100 units (~6.2 blocks), Height 48 units (~3 blocks)
-    # Coordinate system: Front (Bow) = -Z, Rear (Stern) = +Z, Right = -X, Left = +X, Up = +Y
-    hull_cubes = [
-        # ----------------------------------------------------------------------
-        # TWIN CATAMARAN SPONSONS & WAVE-PIERCING BOWS
-        # ----------------------------------------------------------------------
-        # Port Catamaran Pontoon (+X)
-        {"origin": [28, 0, -80], "size": [20, 16, 160], "uv": [0, 0]},
-        rod((38, 2.83, -77.17), (38, 18.83, -93.17), 20, 8, [0, 0]), # 45-degree bow wedge
-        {"origin": [28, 0, -78], "size": [2, 3, 156], "uv": [256, 0]}, # Lower Keel Strake
-        # Starboard Catamaran Pontoon (-X)
-        {"origin": [-48, 0, -80], "size": [20, 16, 160], "uv": [0, 0]},
-        rod((-38, 2.83, -77.17), (-38, 18.83, -93.17), 20, 8, [0, 0]), # 45-degree bow wedge
-        {"origin": [-30, 0, -78], "size": [2, 3, 156], "uv": [256, 0]}, # Lower Keel Strake
-
-        # ----------------------------------------------------------------------
-        # LOW-SLUNG CENTER WELL DECK & COAMINGS (Z = -74 to +48)
-        # ----------------------------------------------------------------------
-        # Diamond-Plate Well Deck Floor
-        {"origin": [-28, 6, -74], "size": [56, 4, 122], "uv": [384, 0]},
-        # Deck Perimeter Coamings with Yellow-Black Hazard Stripes
-        {"origin": [-30, 9, -74], "size": [2, 7, 122], "uv": [0, 128]},
-        {"origin": [28, 9, -74], "size": [2, 7, 122], "uv": [0, 128]},
-        # Heavy Marine Mooring Bollards (Twin Bitts)
-        {"origin": [36, 16, -72], "size": [6, 6, 6], "uv": [128, 256]}, # Bow Port
-        {"origin": [-42, 16, -72], "size": [6, 6, 6], "uv": [128, 256]}, # Bow Starboard
-        {"origin": [36, 16, 68], "size": [6, 6, 6], "uv": [128, 256]},  # Stern Port
-        {"origin": [-42, 16, 68], "size": [6, 6, 6], "uv": [128, 256]},  # Stern Starboard
-
-        # ----------------------------------------------------------------------
-        # ARTICULATED BOW LANDING DROP RAMP & HYDRAULIC RAMS (Z = -98 to -74)
-        # ----------------------------------------------------------------------
-        # Bow Landing Drop Ramp hinged at the well-deck lip, sloping down to Z = -98
-        rod((0, 8, -74), (0, 2, -96), 54, 4, [256, 128]),
-        rod((0, 2, -96), (0, 1.5, -98), 54, 4, [0, 128]), # Ramp Lip Hazard Stripe
-        # Hydraulic lift cylinder mounts on the sponson inner walls
-        {"origin": [24, 10, -80], "size": [4, 13, 4], "uv": [256, 0]},
-        {"origin": [-28, 10, -80], "size": [4, 13, 4], "uv": [256, 0]},
-        # Port/Starboard cylinders (dark barrel) with chrome rams down to the ramp mid-span
-        *[c for x in (25.5, -25.5) for c in (
-            rod((x, 22, -78), (x, 14.8, -83.4), 3, 3, [384, 128]),
-            rod((x, 14.8, -83.4), (x, 6, -88), 2, 2, [384, 164]),
+    # Landing craft, 6 x 12 blocks: raked bow ramp at -Z, open well deck (top y10) for two standing Titans,
+    # walk-in wheelhouse aft. Helm cushion top y26 at (x0, z73); wheelhouse ceiling y62.
+    house = [128, 448]  # light-grey superstructure over the dark-grey hull
+    glass, armor, stencil, roof, steel, keel = [128, 0], [0, 0], [64, 0], [64, 64], [208, 16], [256, 0]  # (256,0) is red antifouling here
+    hull = [
+        # ---- Hull: red antifouling bottom with sloped bilges, black boot-top, camo topsides ----
+        {"origin": [-40, 0, -88], "size": [80, 4, 180], "uv": keel},
+        *[rod((40 * sx, 1, 2), (47 * sx, 13, 2), 3, 180, keel) for sx in (1, -1)],
+        *[{"origin": [x, 12, -88], "size": [4, 20, 180], "uv": armor} for x in (-48, 44)],
+        *[{"origin": [x, 12, -88], "size": [0.6, 2, 180], "uv": [384, 0]} for x in (-48.3, 47.7)],
+        *[{"origin": [x, 22, -88], "size": [1.5, 3, 180], "uv": [0, 256]} for x in (-49.5, 48)],   # rubbing strake
+        *[{"origin": [x, 32, -88], "size": [4, 2, 180], "uv": [0, 128]} for x in (-48, 44)],     # hazard gunwale
+        *[{"origin": [x, 16, -80], "size": [0.5, 12, 34], "uv": stencil} for x in (-48.5, 48)],  # hull number
+        *[{"origin": [x, 12, z], "size": [2, 7, 6], "uv": [0, 256]} for x in (-50, 48) for z in (-60, -20, 20, 60)],  # tyre fenders
+        {"origin": [-44, 0, 88], "size": [88, 26, 4], "uv": armor},          # transom
+        {"origin": [-44, 4, -84], "size": [88, 6, 132], "uv": [384, 0]},     # well deck
+        *[{"origin": [x, 10, -84], "size": [2, 0.3, 132], "uv": accent(YELLOW)} for x in (-36, 34)],  # deck safety lines
+        *[{"origin": [x, 20, -84], "size": [0.6, 8, 6], "uv": accent(BLACK)} for x in (-48.6, 48)],   # stowed anchors
+        *[rod((40 * sx, 32, -86), (40 * sx, 34, -94), 2, 2, accent(YELLOW)) for sx in (1, -1)],      # ramp hinge guides
+        # Raked bow ramp with hazard lip and hydraulic rams
+        rod((0, 6, -88), (0, 44, -96), 86, 4, [256, 128]),
+        {"origin": [-43, 43, -98], "size": [86, 2, 4], "uv": [0, 128]},
+        *[rod((40 * sx, 30, -80), (36 * sx, 40, -92), 3, 3, [384, 128]) for sx in (1, -1)],
+        # ---- Raised aft deck (top y18) with stern rail ----
+        {"origin": [-44, 4, 48], "size": [88, 14, 40], "uv": armor},
+        *[{"origin": [x, 18, 89], "size": [1, 9, 1], "uv": steel} for x in range(-42, 43, 12)],
+        {"origin": [-44, 26, 89], "size": [88, 1, 1], "uv": steel},
+        # ---- Wheelhouse (floor y18, ceiling y62), bridge windows raked forward like a real ship ----
+        {"origin": [-22, 18, 54], "size": [44, 16, 2], "uv": house},
+        rod((0, 34, 55), (0, 56, 52), 40, 1, glass),
+        *[rod((21 * sx, 34, 55), (21 * sx, 56, 52), 2, 2, house) for sx in (1, -1)],
+        {"origin": [-23, 56, 49], "size": [46, 6, 7], "uv": house},          # brow over the windows
+        {"origin": [-22, 18, 56], "size": [2, 16, 30], "uv": house},         # side walls
+        {"origin": [20, 18, 56], "size": [2, 16, 30], "uv": house},
+        {"origin": [-22, 34, 58], "size": [1, 22, 22], "uv": glass},         # side windows
+        {"origin": [21, 34, 58], "size": [1, 22, 22], "uv": glass},
+        *[{"origin": [x, 34, z], "size": [2, 22, d], "uv": house} for x in (-22, 20) for z, d in ((56, 2), (80, 6))],
+        {"origin": [-22, 56, 56], "size": [2, 6, 30], "uv": house},
+        {"origin": [20, 56, 56], "size": [2, 6, 30], "uv": house},
+        {"origin": [-22, 18, 84], "size": [14, 44, 2], "uv": house},         # back wall with a door gap
+        {"origin": [8, 18, 84], "size": [14, 44, 2], "uv": house},
+        {"origin": [-8, 50, 84], "size": [16, 12, 2], "uv": house},
+        {"origin": [-24, 62, 48], "size": [48, 3, 40], "uv": house},          # roof with chamfered edges
+        *[rod((24 * sx, 62, 68), (26 * sx, 64, 68), 2, 40, house) for sx in (1, -1)],
+        {"origin": [-14, 18, 56], "size": [28, 12, 4], "uv": steel},         # helm console
+        {"origin": [-4, 27, 60], "size": [8, 8, 1], "pivot": [0, 31, 60.5], "rotation": [-30, 0, 0], "uv": [256, 128]},
+        {"origin": [-6, 18, 68], "size": [12, 8, 10], "uv": steel},          # helm seat
+        {"origin": [-6, 26, 77], "size": [12, 18, 3], "uv": steel},
+        {"origin": [-23, 22, 66], "size": [1, 8, 8], "uv": [200, 308]},      # life rings
+        {"origin": [22, 22, 66], "size": [1, 8, 8], "uv": [200, 308]},
+        # Roof gear: searchlight, life-raft canisters, mast with yardarm and nav lamps
+        {"origin": [-3, 65, 50], "size": [6, 5, 4], "uv": accent(CHROME)},
+        *[c for x in (-20, 14) for c in (                                    # life-raft canisters
+            {"origin": [x, 65, 74], "size": [6, 6, 10], "uv": accent(WHITE)},
+            {"origin": [x - 0.2, 64.8, 78], "size": [6.4, 6.4, 2], "uv": accent(ORANGE)},
         )],
-
-        # ----------------------------------------------------------------------
-        # AFT WHEELHOUSE COMMAND BRIDGE & BRIDGE WINGS (Z = +48 to +78)
-        # ----------------------------------------------------------------------
-        # Lower Superstructure Compartment
-        {"origin": [-26, 10, 48], "size": [52, 24, 30], "uv": [0, 0]},
-        # Forward Panoramic Bridge Windows (Looking North -Z across cargo deck)
-        # Raked outward 15 degrees (tops lean out) like a real wheelhouse
-        {"origin": [-24, 22, 47.4], "size": [48, 9, 1], "pivot": [0, 22, 47.9], "rotation": [15, 0, 0], "uv": [128, 0]},
-        # Side Bridge Windows (Port & Starboard)
-        {"origin": [-26.6, 22, 54], "size": [1, 9, 20], "pivot": [-26.1, 22, 64], "rotation": [0, 0, -15], "uv": [128, 0]},
-        {"origin": [25.6, 22, 54], "size": [1, 9, 20], "pivot": [26.1, 22, 64], "rotation": [0, 0, 15], "uv": [128, 0]},
-        # Port Bridge-Wing Catwalk & Safety Railing (+X)
-        {"origin": [26, 20, 52], "size": [14, 2, 16], "uv": [384, 0]},
-        {"origin": [39, 22, 52], "size": [1, 8, 16], "uv": [0, 0]}, # Safety Railing
-        # Starboard Bridge-Wing Catwalk & Safety Railing (-X)
-        {"origin": [-40, 20, 52], "size": [14, 2, 16], "uv": [384, 0]},
-        {"origin": [-40, 22, 52], "size": [1, 8, 16], "uv": [0, 0]}, # Safety Railing
-        # Orange Marine Life Rings mounted on Superstructure Walls
-        {"origin": [-27.1, 14, 58], "size": [1, 8, 8], "uv": [200, 308]}, # Port Wall
-        {"origin": [26.1, 14, 58], "size": [1, 8, 8], "uv": [200, 308]},  # Starboard Wall
-        # Bridge Roof
-        {"origin": [-28, 34, 46], "size": [56, 3, 34], "uv": [0, 0]},
-        # Dual Marine Diesel Exhaust Stacks with Rain Caps
-        {"origin": [-20, 36, 68], "size": [4, 12, 4], "uv": [128, 192]},
-        {"origin": [16, 36, 68], "size": [4, 12, 4], "uv": [128, 192]},
-        # Forward Searchlight on Bridge Brow
-        {"origin": [-3, 37, 46], "size": [6, 6, 4], "uv": [192, 0]},
-
-        # ----------------------------------------------------------------------
-        # LATTICE RADAR & COMMUNICATIONS MAST
-        # ----------------------------------------------------------------------
-        {"origin": [-2, 37, 62], "size": [4, 14, 4], "uv": [192, 0]},
-        # Port & Starboard Navigation Light Arms
-        {"origin": [2, 44, 63], "size": [8, 1, 1], "uv": [192, 0]},
-        {"origin": [9, 44, 62.5], "size": [2, 3, 2], "uv": [192, 0]}, # Port Green Light
-        {"origin": [-10, 44, 63], "size": [8, 1, 1], "uv": [192, 0]},
-        {"origin": [-11, 44, 62.5], "size": [2, 3, 2], "uv": [192, 0]}, # Starboard Red Light
-
-        # ----------------------------------------------------------------------
-        # ORANGE RATCHET TIE-DOWN STRAPS (Rendered on Deck for 2 Titans)
-        # ----------------------------------------------------------------------
-        # Independent strap set per bay: deck anchors 14u fore/aft of the bay, up over knees/hips
-        *[rod((26 * sx, 10, bz + 14 * sf), (12 * sx, 30, bz + 4 * sf), 3, 1, [128, 128])
-          for bz in (-40, 20) for sx in (1, -1) for sf in (1, -1)],
-        # Ratchet buckles at each bay's forward anchors
-        *[{"origin": [26 * sx - 2.5, 10, bz - 16], "size": [5, 4, 3], "uv": [128, 192]}
-          for bz in (-40, 20) for sx in (1, -1)],
-
-        # ----------------------------------------------------------------------
-        # DUAL TRANSOM WATERJET PROPULSION UNITS (Aft Transom: Z = +78 to +84)
-        # ----------------------------------------------------------------------
-        {"origin": [-44, 2, 78], "size": [12, 9, 6], "uv": [0, 256]},
-        {"origin": [-42, 3, 84], "size": [8, 7, 4], "uv": [0, 256]}, # Port Nozzle
-        {"origin": [32, 2, 78], "size": [12, 9, 6], "uv": [0, 256]},
-        {"origin": [34, 3, 84], "size": [8, 7, 4], "uv": [0, 256]}  # Starboard Nozzle
+        {"origin": [1.5, 80, 67], "size": [0.4, 5, 8], "uv": accent(RED)},  # pennant on the yardarm
+        {"origin": [-1.5, 65, 66], "size": [3, 22, 3], "uv": accent(LIGHT_GREY)},
+        {"origin": [-12, 80, 66.5], "size": [24, 1.5, 2], "uv": accent(LIGHT_GREY)},
+        {"origin": [11, 78, 66.5], "size": [2, 2, 2], "uv": [196, 8]},       # port (left) red
+        {"origin": [-13, 78, 66.5], "size": [2, 2, 2], "uv": [240, 8]},      # starboard (right) green
+        # Exhaust stacks with caps
+        *[c for x in (-36, 30) for c in (
+            {"origin": [x, 18, 74], "size": [6, 26, 6], "uv": [128, 192]},
+            {"origin": [x - 1, 44, 73], "size": [8, 2, 8], "uv": accent(BLACK)},
+            {"origin": [x - 0.2, 38, 73.8], "size": [6.4, 3, 6.4], "uv": accent(RED)},  # funnel band
+        )],
+        # Bollards and waterjets
+        *[{"origin": [x, y, z], "size": [6, 6, 6], "uv": accent(BLACK)} for x, y, z in ((34, 10, -80), (-40, 10, -80), (34, 18, 80), (-40, 18, 80))],
+        {"origin": [-36, 2, 92], "size": [12, 9, 6], "uv": [0, 256]},
+        {"origin": [24, 2, 92], "size": [12, 9, 6], "uv": [0, 256]},
+        # Tie-down straps for bay A (z-50) and bay B (z6)
+        *[rod((40 * sx, 10, bz + 14 * sf), (16 * sx, 26, bz + 4 * sf), 3, 1, [128, 128])
+          for bz in (-50, 6) for sx in (1, -1) for sf in (1, -1)],
+        *[{"origin": [40 * sx - 2.5, 10, bz - 16], "size": [5, 4, 3], "uv": [128, 192]} for bz in (-50, 6) for sx in (1, -1)],
     ]
-
     bones = [
         {"name": "root", "pivot": [0, 0, 0]},
-        {"name": "hull", "parent": "root", "pivot": [0, 10, 0], "cubes": hull_cubes},
-        {
-            "name": "radar",
-            "parent": "hull",
-            "pivot": [0, 51, 64],
-            "cubes": [
-                {"origin": [-14, 50, 63], "size": [28, 2, 2], "uv": [256, 192]}
-            ]
-        }
+        {"name": "hull", "parent": "root", "pivot": [0, 10, 0], "cubes": hull},
+        {"name": "radar", "parent": "hull", "pivot": [0, 88, 67.5],
+         "cubes": [{"origin": [-12, 87, 66], "size": [24, 2, 3], "uv": [256, 192]}]},
     ]
-
-    model_data = {
-        "format_version": "1.12.0",
-        "minecraft:geometry": [
-            {
-                "description": {
-                    "identifier": "geometry.titan_cargo_barge",
-                    "texture_width": 512,
-                    "texture_height": 512,
-                    "visible_bounds_width": 9.0,
-                    "visible_bounds_height": 4.8,
-                    "visible_bounds_offset": [0, 1.5, 0]
-                },
-                "bones": per_face_uv(bones)
-            }
-        ]
-    }
-    with open(path, 'w') as f:
-        json.dump(model_data, f, indent=2)
-    print(f"Saved model: {path}")
+    write_geo(path, "geometry.titan_cargo_barge", bones, 12.0, 6.5, 2.0)
 
 
 def generate_cargo_barge_animation(path):

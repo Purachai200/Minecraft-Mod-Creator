@@ -328,6 +328,68 @@ public final class ClientAutoTest {
         return steps.toArray(new Step[0]);
     }
 
+    private static final Step[] COCKPIT_TOOLS = buildCockpitTools();
+
+    private static Step[] buildCockpitTools() {
+        java.util.List<Step> steps = new java.util.ArrayList<>();
+        steps.add(new Step(60, mc -> spawnAndBoard(mc)));
+        steps.add(new Step(150, mc -> server2(mc, (p, level) -> {
+            level.setDayTime(6000L);
+            level.setWeatherParameters(60000, 0, false, false);
+        })));
+        steps.add(new Step(180, mc -> server(mc, (p, ti) -> {
+            ti.setEnergy(50000);
+            ti.setMechState(MechState.PILOTED);
+        })));
+
+        // 1. First-Person View with Mining Drill
+        steps.add(new Step(210, mc -> {
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            mc.options.hideGui = false;
+            server(mc, (p, ti) -> {
+                ti.setEnergy(50000);
+                ti.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT,
+                        new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.MINING_DRILL).get()));
+            });
+        }));
+        steps.add(new Step(280, mc -> shot(mc, "01_cockpit_mining_drill")));
+
+        // 2. First-Person View with Chainsaw
+        steps.add(new Step(300, mc -> server(mc, (p, ti) -> {
+            ti.setEnergy(50000);
+            ti.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT,
+                    new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.CHAINSAW).get()));
+        })));
+        steps.add(new Step(370, mc -> shot(mc, "02_cockpit_chainsaw")));
+
+        // 3. First-Person View with Light SMG
+        steps.add(new Step(390, mc -> server(mc, (p, ti) -> {
+            ti.setEnergy(50000);
+            ti.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT,
+                    new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.LIGHT_SMG).get()));
+        })));
+        steps.add(new Step(460, mc -> shot(mc, "03_cockpit_light_smg")));
+
+        // 4. Side view with Mining Drill
+        steps.add(new Step(480, mc -> {
+            mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            mc.player.setXRot(5.0F);
+            mc.player.setYRot(mc.player.getYRot() - 90.0F);
+            server(mc, (p, ti) -> {
+                ti.setEnergy(50000);
+                ti.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT,
+                        new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.MINING_DRILL).get()));
+            });
+        }));
+        steps.add(new Step(530, mc -> shot(mc, "04_third_person_side_mining_drill")));
+
+        steps.add(new Step(560, mc -> {
+            TitanCombatMod.LOGGER.info("[autotest] done");
+            mc.stop();
+        }));
+        return steps.toArray(new Step[0]);
+    }
+
     private ClientAutoTest() {}
 
     private static void display(Minecraft mc, java.util.function.BiConsumer<ServerPlayer, BaseTitanEntity> action) {
@@ -395,30 +457,141 @@ public final class ClientAutoTest {
 
     private static final Step[] FLIGHT = buildFlight();
 
-    // bind: right-click a titan with License and Transponder (vanilla interactOn order), then warp it.
+    // bind: right-click a titan with License and Transponder (vanilla interactOn order), warp it, then unbind.
+    private static BaseTitanEntity bindTitan = null;
+    private static BaseTitanEntity energyTitan = null;
+    private static final Step[] ENERGY = {
+            new Step(60, mc -> server2(mc, (player, level) -> {
+                if (player.getVehicle() != null) player.stopRiding();
+                for (var entity : level.getAllEntities()) {
+                    if (entity instanceof BaseTitanEntity t) t.discard();
+                }
+                player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+
+                // 1. Test Battery Item FE, bar visibility, bar width, and bar color
+                ItemStack emptyBat = new ItemStack(ModItems.EMPTY_BATTERY.get());
+                ItemStack fullBat = new ItemStack(ModItems.TITAN_BATTERY.get());
+                int emptyEnergy = com.titancombat.item.TitanBatteryItem.getEnergy(emptyBat);
+                int fullEnergy = com.titancombat.item.TitanBatteryItem.getEnergy(fullBat);
+                boolean emptyBarVis = emptyBat.getItem().isBarVisible(emptyBat);
+                int fullBarWidth = fullBat.getItem().getBarWidth(fullBat);
+                int fullBarColor = fullBat.getItem().getBarColor(fullBat);
+                TitanCombatMod.LOGGER.info("[autotest] battery items: emptyEnergy={} emptyBarVis={} fullEnergy={} fullBarWidth={} fullBarColor=0x{}",
+                        emptyEnergy, emptyBarVis, fullEnergy, fullBarWidth, Integer.toHexString(fullBarColor));
+
+                // 2. Test Battery Charger BlockEntity
+                var chargerPos = player.blockPosition().relative(player.getDirection());
+                level.setBlockAndUpdate(chargerPos, com.titancombat.block.ModBlocks.BATTERY_CHARGER.get().defaultBlockState());
+                var be = level.getBlockEntity(chargerPos);
+                if (be instanceof com.titancombat.block.entity.BatteryChargerBlockEntity charger) {
+                    charger.addEnergy(6000);
+                    charger.setBatterySlot(emptyBat);
+                    TitanCombatMod.LOGGER.info("[autotest] charger before tick: storedEnergy={} slotEnergy={}",
+                            charger.getEnergyStored(), com.titancombat.item.TitanBatteryItem.getEnergy(charger.getBatterySlot()));
+
+                    // Simulate 20 charger ticks
+                    for (int i = 0; i < 20; i++) {
+                        com.titancombat.block.entity.BatteryChargerBlockEntity.serverTick(level, chargerPos, level.getBlockState(chargerPos), charger);
+                    }
+                    TitanCombatMod.LOGGER.info("[autotest] charger after 20 ticks: storedEnergy={} slotEnergy={}",
+                            charger.getEnergyStored(), com.titancombat.item.TitanBatteryItem.getEnergy(charger.getBatterySlot()));
+                }
+
+                // 3. Test Titan Initial Energy
+                var titan = ModEntities.MONARCH_TITAN.get().create(level);
+                if (titan == null) return;
+                Vec3 look = player.getLookAngle().multiply(1, 0, 1).normalize();
+                Vec3 at = player.position().add(look.scale(5.0D));
+                titan.moveTo(at.x, player.getY(), at.z, player.getYRot() + 180.0F, 0.0F);
+                titan.setOwner(player);
+                level.addFreshEntity(titan);
+                energyTitan = titan;
+                TitanCombatMod.LOGGER.info("[autotest] titan spawned energy={} maxEnergy={}", titan.getEnergy(), titan.getMaxEnergy());
+            })),
+            new Step(120, mc -> server2(mc, (player, level) -> {
+                if (energyTitan == null) return;
+                // Test right-click with full battery item
+                player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ModItems.TITAN_BATTERY.get()));
+                var interactRes = energyTitan.mobInteract(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+                ItemStack handItemAfter = player.getMainHandItem();
+                TitanCombatMod.LOGGER.info("[autotest] battery insert result={} titanEnergyAfter={} handItemAfter={}",
+                        interactRes, energyTitan.getEnergy(), handItemAfter.getItem());
+            })),
+            new Step(180, mc -> server2(mc, (player, level) -> {
+                if (energyTitan == null) return;
+                // Test energy consumption (sprint/walk/dash)
+                int initialE = energyTitan.getEnergy();
+                energyTitan.consumeEnergy(1500);
+                TitanCombatMod.LOGGER.info("[autotest] after consumeEnergy: initial={} current={}", initialE, energyTitan.getEnergy());
+
+                // Test Slot 0 onboard battery transfer
+                ItemStack halfBat = new ItemStack(ModItems.TITAN_BATTERY.get());
+                com.titancombat.item.TitanBatteryItem.setEnergy(halfBat, 4000);
+                energyTitan.getTitanInventory().setItem(TitanMenu.BATTERY_SLOT, halfBat);
+                TitanCombatMod.LOGGER.info("[autotest] placed 4,000 FE battery in bay slot 0");
+            })),
+            new Step(240, mc -> server2(mc, (player, level) -> {
+                if (energyTitan == null) return;
+                ItemStack bayBat = energyTitan.getTitanInventory().getItem(TitanMenu.BATTERY_SLOT);
+                TitanCombatMod.LOGGER.info("[autotest] bay auto-transfer after ticks: titanEnergy={} bayBatEnergy={}",
+                        energyTitan.getEnergy(), com.titancombat.item.TitanBatteryItem.getEnergy(bayBat));
+            })),
+            new Step(280, mc -> { TitanCombatMod.LOGGER.info("[autotest] energy tests complete"); mc.stop(); }),
+    };
+
     private static final Step[] BIND = {
-            new Step(60, mc -> spawnDisplay(mc)),
-            new Step(140, mc -> placeDisplay(mc)),
-            new Step(180, mc -> display(mc, (p, t) -> {
-                p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ModItems.PILOT_LICENSE.get()));
-                var r = p.interactOn(t, net.minecraft.world.InteractionHand.MAIN_HAND);
-                var tag = p.getMainHandItem().getTag();
-                TitanCombatMod.LOGGER.info("[autotest] license result={} riding={} linked={} owner={}", r, p.isPassenger(),
-                        tag != null && tag.contains("TitanUUID"), t.getOwnerName());
+            new Step(40, mc -> server2(mc, (player, level) -> {
+                if (player.getVehicle() != null) player.stopRiding();
+                for (var entity : level.getAllEntities()) {
+                    if (entity instanceof BaseTitanEntity t) t.discard();
+                }
+                player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                level.setDayTime(6000L);
+                var titan = ModEntities.MONARCH_TITAN.get().create(level);
+                if (titan == null) return;
+                Vec3 look = player.getLookAngle().multiply(1, 0, 1).normalize();
+                Vec3 at = player.position().add(look.scale(5.0D));
+                titan.moveTo(at.x, player.getY(), at.z, player.getYRot() + 180.0F, 0.0F);
+                titan.setStandbyMode(true);
+                level.addFreshEntity(titan);
+                bindTitan = titan;
+                displayId = titan.getId();
+                TitanCombatMod.LOGGER.info("[autotest] bind titan spawned id={}", displayId);
             })),
-            new Step(190, mc -> display(mc, (p, t) -> {
-                p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ModItems.HANGAR_TRANSPONDER.get()));
-                var r = p.interactOn(t, net.minecraft.world.InteractionHand.MAIN_HAND);
-                var tag = p.getMainHandItem().getTag();
-                TitanCombatMod.LOGGER.info("[autotest] transponder result={} riding={} linked={}", r, p.isPassenger(), tag != null && tag.contains("TitanUUID"));
+            new Step(80, mc -> server2(mc, (player, level) -> {
+                if (bindTitan == null) return;
+                TitanCombatMod.LOGGER.info("[autotest] initial owner='{}'", bindTitan.getOwnerUUID());
+                player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ModItems.PILOT_LICENSE.get()));
+                var r = bindTitan.mobInteract(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+                var tag = player.getMainHandItem().getTag();
+                TitanCombatMod.LOGGER.info("[autotest] license result={} riding={} linked={} owner='{}'", r, player.isPassenger(),
+                        tag != null && tag.contains("TitanUUID"), bindTitan.getOwnerName());
             })),
-            new Step(200, mc -> display(mc, (p, t) -> {
-                var before = t.position();
-                p.setYRot(p.getYRot() + 90.0F);
-                p.getMainHandItem().use(p.level(), p, net.minecraft.world.InteractionHand.MAIN_HAND);
-                TitanCombatMod.LOGGER.info("[autotest] warp moved={} blocks", String.format("%.1f", before.distanceTo(t.position())));
+            new Step(120, mc -> server2(mc, (player, level) -> {
+                if (bindTitan == null) return;
+                player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ModItems.HANGAR_TRANSPONDER.get()));
+                var r = bindTitan.mobInteract(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+                var tag = player.getMainHandItem().getTag();
+                TitanCombatMod.LOGGER.info("[autotest] transponder result={} riding={} linked={}", r, player.isPassenger(),
+                        tag != null && tag.contains("TitanUUID"));
             })),
-            new Step(260, mc -> { TitanCombatMod.LOGGER.info("[autotest] done"); mc.stop(); }),
+            new Step(160, mc -> server2(mc, (player, level) -> {
+                if (bindTitan == null) return;
+                var before = bindTitan.position();
+                player.setYRot(player.getYRot() + 90.0F);
+                player.getMainHandItem().use(player.level(), player, net.minecraft.world.InteractionHand.MAIN_HAND);
+                TitanCombatMod.LOGGER.info("[autotest] warp moved={} blocks", String.format("%.1f", before.distanceTo(bindTitan.position())));
+            })),
+            new Step(200, mc -> server2(mc, (player, level) -> {
+                if (bindTitan == null) return;
+                player.setShiftKeyDown(true);
+                var r = bindTitan.mobInteract(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+                player.setShiftKeyDown(false);
+                var tag = player.getMainHandItem().getTag();
+                boolean tagHasUUID = tag != null && tag.contains("TitanUUID");
+                TitanCombatMod.LOGGER.info("[autotest] unbind result={} ownerAfter='{}' tagHasUUID={}", r, bindTitan.getOwnerUUID(), tagHasUUID);
+            })),
+            new Step(240, mc -> { TitanCombatMod.LOGGER.info("[autotest] done"); mc.stop(); }),
     };
 
     // cloak: board a Shade, engage the cloak (Defense key), screenshot it, fire to break it.
@@ -586,8 +759,17 @@ public final class ClientAutoTest {
 
     private static Step[] buildTransport() {
         java.util.List<Step> steps = new java.util.ArrayList<>();
-        steps.add(new Step(40, mc -> server2(mc, (player, level) -> {
-            if (player.getVehicle() != null) player.stopRiding();
+        steps.add(new Step(40, mc -> {
+            if (mc.player != null && mc.player.getVehicle() != null) {
+                mc.player.stopRiding();
+            }
+            server2(mc, (player, level) -> {
+                if (player.getVehicle() instanceof BaseTitanEntity old) {
+                    old.setSitting(true);
+                    player.stopRiding();
+                } else if (player.getVehicle() != null) {
+                    player.stopRiding();
+                }
             level.setWeatherParameters(60000, 0, false, false);
             level.setDayTime(5000L); // Bright morning sunlight
 
@@ -740,22 +922,26 @@ public final class ClientAutoTest {
                 level.addFreshEntity(bt2);
                 barge.lockTitanToDeck(bt2, null);
             }
-        })));
+        });
+        }));
 
         // Camera setup
         steps.add(new Step(80, mc -> {
             mc.options.hideGui = true;
             mc.options.setCameraType(CameraType.FIRST_PERSON);
+            server2(mc, (player, level) -> {
+                player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+            });
         }));
 
         // Shot 1: The Iconic Showcase Recreation (Convoy Front 3/4 Hero View: Truck on left, Drone center-sky, Barge on right)
         steps.add(new Step(90, mc -> {
             double groundY = ((int) tBaseY) + 1.0D;
-            aimCameraAt(mc, tBaseX + 4.0D, groundY + 3.8D, tBaseZ - 1.5D, 24.0D, 9.0D, 168.0D);
+            aimCameraAt(mc, tBaseX - 1.0D, groundY + 4.2D, tBaseZ - 2.0D, 18.0D, 12.0D, 168.0D);
         }));
         steps.add(new Step(125, mc -> {
             double groundY = ((int) tBaseY) + 1.0D;
-            aimCameraAt(mc, tBaseX + 4.0D, groundY + 3.8D, tBaseZ - 1.5D, 24.0D, 9.0D, 168.0D);
+            aimCameraAt(mc, tBaseX - 1.0D, groundY + 4.2D, tBaseZ - 2.0D, 18.0D, 12.0D, 168.0D);
         }));
         steps.add(new Step(130, mc -> shot(mc, "01_hauler_truck_mounted")));
 
@@ -764,13 +950,13 @@ public final class ClientAutoTest {
             double truckX = tBaseX - 11.0D;
             double groundY = ((int) tBaseY) + 1.0D;
             double truckZ = tBaseZ - 2.0D;
-            aimCameraAt(mc, truckX, groundY + 2.0D, truckZ - 2.0D, 12.0D, 12.0D, 205.0D);
+            aimCameraAt(mc, truckX, groundY + 2.2D, truckZ, 11.0D, 14.0D, 165.0D);
         }));
         steps.add(new Step(175, mc -> {
             double truckX = tBaseX - 11.0D;
             double groundY = ((int) tBaseY) + 1.0D;
             double truckZ = tBaseZ - 2.0D;
-            aimCameraAt(mc, truckX, groundY + 2.0D, truckZ - 2.0D, 12.0D, 12.0D, 205.0D);
+            aimCameraAt(mc, truckX, groundY + 2.2D, truckZ, 11.0D, 14.0D, 165.0D);
         }));
         steps.add(new Step(180, mc -> shot(mc, "02_truck_cargo_bed")));
 
@@ -780,14 +966,14 @@ public final class ClientAutoTest {
             double groundY = ((int) tBaseY) + 1.0D;
             double droneY = groundY + 12.0D;
             double droneZ = tBaseZ - 2.0D;
-            aimCameraAt(mc, droneX, droneY - 3.4D, droneZ, 16.0D, -10.0D, 160.0D);
+            aimCameraAt(mc, droneX, droneY - 3.0D, droneZ, 16.0D, 8.0D, 165.0D);
         }));
         steps.add(new Step(225, mc -> {
             double droneX = tBaseX + 4.5D;
             double groundY = ((int) tBaseY) + 1.0D;
             double droneY = groundY + 12.0D;
             double droneZ = tBaseZ - 2.0D;
-            aimCameraAt(mc, droneX, droneY - 3.4D, droneZ, 16.0D, -10.0D, 160.0D);
+            aimCameraAt(mc, droneX, droneY - 3.0D, droneZ, 16.0D, 8.0D, 165.0D);
         }));
         steps.add(new Step(230, mc -> shot(mc, "03_skycrane_drone_airlift")));
 
@@ -796,24 +982,24 @@ public final class ClientAutoTest {
             double bargeX = tBaseX + 20.0D;
             double groundY = ((int) tBaseY) + 1.0D;
             double bargeZ = tBaseZ - 2.0D;
-            aimCameraAt(mc, bargeX, groundY + 2.0D, bargeZ - 0.5D, 15.0D, 18.0D, 130.0D);
+            aimCameraAt(mc, bargeX, groundY + 2.0D, bargeZ, 16.0D, 14.0D, 165.0D);
         }));
         steps.add(new Step(275, mc -> {
             double bargeX = tBaseX + 20.0D;
             double groundY = ((int) tBaseY) + 1.0D;
             double bargeZ = tBaseZ - 2.0D;
-            aimCameraAt(mc, bargeX, groundY + 2.0D, bargeZ - 0.5D, 15.0D, 18.0D, 130.0D);
+            aimCameraAt(mc, bargeX, groundY + 2.0D, bargeZ, 16.0D, 14.0D, 165.0D);
         }));
         steps.add(new Step(280, mc -> shot(mc, "04_cargo_barge_twin_titans")));
 
         // Shot 5: Wide Cinematic Convoy Line-Up Overview
         steps.add(new Step(290, mc -> {
             double groundY = ((int) tBaseY) + 1.0D;
-            aimCameraAt(mc, tBaseX + 4.0D, groundY + 4.5D, tBaseZ + 1.0D, 26.0D, 14.0D, 170.0D);
+            aimCameraAt(mc, tBaseX - 1.0D, groundY + 4.0D, tBaseZ - 2.0D, 24.0D, 15.0D, 168.0D);
         }));
         steps.add(new Step(325, mc -> {
             double groundY = ((int) tBaseY) + 1.0D;
-            aimCameraAt(mc, tBaseX + 4.0D, groundY + 4.5D, tBaseZ + 1.0D, 26.0D, 14.0D, 170.0D);
+            aimCameraAt(mc, tBaseX - 1.0D, groundY + 4.0D, tBaseZ - 2.0D, 24.0D, 15.0D, 168.0D);
         }));
         steps.add(new Step(330, mc -> shot(mc, "05_truck_driver_cab"))); // Wide fleet overview
 
@@ -822,18 +1008,105 @@ public final class ClientAutoTest {
             double truckX = tBaseX - 11.0D;
             double groundY = ((int) tBaseY) + 1.0D;
             double truckZ = tBaseZ - 2.0D;
-            aimCameraAt(mc, truckX, groundY + 2.5D, truckZ - 3.5D, 9.0D, 15.0D, 35.0D);
+            aimCameraAt(mc, truckX, groundY + 2.5D, truckZ + 1.2D, 10.0D, 18.0D, 35.0D);
         }));
         steps.add(new Step(375, mc -> {
             double truckX = tBaseX - 11.0D;
             double groundY = ((int) tBaseY) + 1.0D;
             double truckZ = tBaseZ - 2.0D;
-            aimCameraAt(mc, truckX, groundY + 2.5D, truckZ - 3.5D, 9.0D, 15.0D, 35.0D);
+            aimCameraAt(mc, truckX, groundY + 2.5D, truckZ + 1.2D, 10.0D, 18.0D, 35.0D);
         }));
         steps.add(new Step(380, mc -> shot(mc, "06_skycrane_cockpit_view"))); // Rear deck view
 
+        // Shot 7: Driver Cockpit with Transport HUD & Energy Telemetry Bar
+        steps.add(new Step(390, mc -> server2(mc, (p, l) -> {
+            p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            var truck = l.getEntity(truckId);
+            if (truck instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity transport) {
+                transport.setEnergy(78500); // 78% energy
+                p.startRiding(transport, true);
+            }
+        })));
         steps.add(new Step(400, mc -> {
-            TitanCombatMod.LOGGER.info("[autotest] transport playtest complete");
+            mc.options.hideGui = false;
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            if (mc.player != null) {
+                mc.player.setXRot(4.0F);
+                mc.player.setYRot(195.0F); // Face forward along the dirt road heading!
+            }
+        }));
+        steps.add(new Step(430, mc -> shot(mc, "07_truck_cockpit_energy_hud")));
+
+        // Shot 8: Sky-Crane Drone Flight HUD with Climb Rate & Ventral Load Status
+        steps.add(new Step(440, mc -> server2(mc, (p, l) -> {
+            p.stopRiding();
+            var drone = l.getEntity(droneId);
+            if (drone instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity transport) {
+                transport.setEnergy(92000);
+                p.startRiding(transport, true);
+                transport.setDeltaMovement(0.0D, 0.35D, 0.45D);
+            }
+        })));
+        steps.add(new Step(450, mc -> {
+            mc.options.hideGui = false;
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            if (mc.player != null) {
+                mc.player.setXRot(10.0F);
+                mc.player.setYRot(165.0F);
+            }
+        }));
+        steps.add(new Step(475, mc -> shot(mc, "08_skycrane_flight_energy_hud")));
+        // Seat check: front camera looks back through the canopy at the seated pilot
+        steps.add(new Step(480, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT)));
+        steps.add(new Step(495, mc -> shot(mc, "09_skycrane_pilot_seat")));
+
+        // Barge helm: first person through the bridge windows over the well deck
+        steps.add(new Step(500, mc -> server2(mc, (p, l) -> {
+            p.stopRiding();
+            if (l.getEntity(bargeId) instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity transport) {
+                p.startRiding(transport, true);
+            }
+        })));
+        steps.add(new Step(510, mc -> {
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            mc.player.setXRot(8.0F);
+            mc.player.setYRot(mc.player.getVehicle() != null ? mc.player.getVehicle().getYRot() : 0.0F);
+        }));
+        steps.add(new Step(530, mc -> shot(mc, "10_barge_helm_view")));
+
+        // Truck drive: hold W+A; the hull must arc round on its wheels instead of snapping to the mouse
+        steps.add(new Step(560, mc -> server2(mc, (p, l) -> {
+            p.stopRiding();
+            if (l.getEntity(truckId) instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity transport) {
+                p.startRiding(transport, true);
+            }
+        })));
+        steps.add(new Step(570, mc -> {
+            mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            mc.options.hideGui = true;
+        }));
+        steps.add(new Step(585, mc -> shot(mc, "12_truck_driver_seat")));
+        steps.add(new Step(590, mc -> {
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            mc.options.keyUp.setDown(true);
+        }));
+        steps.add(new Step(620, mc -> mc.options.keyLeft.setDown(true)));
+        for (int t = 620; t <= 680; t += 15) {
+            steps.add(new Step(t, mc -> {
+                if (mc.player.getVehicle() instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity v) {
+                    TitanCombatMod.LOGGER.info("[autotest] truck yaw={} vis={} rate={} playerYaw={}", String.format("%.1f", v.getYRot()),
+                            String.format("%.3f", v.visSpeed), String.format("%.2f", v.visYawRate), String.format("%.1f", mc.player.getYRot()));
+                }
+            }));
+        }
+        steps.add(new Step(660, mc -> shot(mc, "13_truck_turning")));
+        steps.add(new Step(685, mc -> {
+            mc.options.keyUp.setDown(false);
+            mc.options.keyLeft.setDown(false);
+        }));
+
+        steps.add(new Step(700, mc -> {
+            TitanCombatMod.LOGGER.info("[autotest] transport playtest complete with full energy and HUD telemetry verification");
             mc.stop();
         }));
 
@@ -871,7 +1144,7 @@ public final class ClientAutoTest {
             mc.options.gamma().set(1.0D);
             if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen) mc.setScreen(null);
         }
-        Step[] script = NAME.startsWith("transport") ? TRANSPORT : NAME.startsWith("bind") ? BIND : NAME.startsWith("cloak") ? CLOAK : NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
+        Step[] script = NAME.startsWith("weapons_1st") ? COCKPIT_TOOLS : NAME.startsWith("energy") ? ENERGY : NAME.startsWith("transport") ? TRANSPORT : NAME.startsWith("bind") ? BIND : NAME.startsWith("cloak") ? CLOAK : NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
         for (Step step : script) {
             if (step.at() == tick) step.action().accept(mc);
         }

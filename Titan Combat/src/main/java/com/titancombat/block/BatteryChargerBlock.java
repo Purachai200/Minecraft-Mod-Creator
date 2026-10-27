@@ -2,7 +2,7 @@ package com.titancombat.block;
 
 import com.titancombat.block.entity.BatteryChargerBlockEntity;
 import com.titancombat.block.entity.ModBlockEntities;
-import com.titancombat.item.ModItems;
+import com.titancombat.item.TitanBatteryItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -97,12 +97,19 @@ public class BatteryChargerBlock extends BaseEntityBlock {
 
         ItemStack held = player.getItemInHand(hand);
 
-        // 1. Insert Empty Battery
-        if (held.is(ModItems.EMPTY_BATTERY.get())) {
+        // 1. Insert Battery (Empty or Partially Charged)
+        if (held.getItem() instanceof TitanBatteryItem) {
             if (charger.getBatterySlot().isEmpty()) {
+                int heldEnergy = TitanBatteryItem.getEnergy(held);
+                int heldCapacity = TitanBatteryItem.getCapacity(held);
+                if (heldEnergy >= heldCapacity) {
+                    player.sendSystemMessage(Component.translatable("message.titancombat.battery_already_full"));
+                    return InteractionResult.CONSUME;
+                }
                 charger.setBatterySlot(held.split(1));
                 level.playSound(null, pos, SoundEvents.IRON_DOOR_CLOSE, SoundSource.BLOCKS, 1.0F, 1.4F);
-                player.sendSystemMessage(Component.translatable("message.titancombat.battery_inserted_charger"));
+                player.sendSystemMessage(Component.translatable("message.titancombat.battery_inserted_charger_energy",
+                        String.format("%,d", heldEnergy), String.format("%,d", heldCapacity)));
                 return InteractionResult.SUCCESS;
             }
         }
@@ -134,22 +141,27 @@ public class BatteryChargerBlock extends BaseEntityBlock {
         if (!charger.getBatterySlot().isEmpty()) {
             ItemStack extracted = charger.getBatterySlot().copy();
             charger.setBatterySlot(ItemStack.EMPTY);
+            int extractedEnergy = TitanBatteryItem.getEnergy(extracted);
+            int extractedCap = TitanBatteryItem.getCapacity(extracted);
             if (!player.getInventory().add(extracted)) {
                 player.drop(extracted, false);
             }
             level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
-            player.sendSystemMessage(Component.translatable("message.titancombat.battery_extracted_charger"));
+            player.sendSystemMessage(Component.translatable("message.titancombat.battery_extracted_charger_energy",
+                    String.format("%,d", extractedEnergy), String.format("%,d", extractedCap)));
             return InteractionResult.SUCCESS;
         }
 
         // 4. Query Status
-        String batteryStatus = "None";
+        String batteryStatus = "§7[None]";
         if (!charger.getBatterySlot().isEmpty()) {
-            if (charger.getBatterySlot().is(ModItems.TITAN_BATTERY.get())) {
-                batteryStatus = "§aFully Charged (Titan Battery)";
+            int cur = TitanBatteryItem.getEnergy(charger.getBatterySlot());
+            int cap = TitanBatteryItem.getCapacity(charger.getBatterySlot());
+            int pct = Math.round((float) cur * 100.0F / (float) Math.max(1, cap));
+            if (cur >= cap) {
+                batteryStatus = "§aFully Charged (" + String.format("%,d", cur) + " / " + String.format("%,d", cap) + " FE)";
             } else {
-                int percent = (int) ((charger.getBatteryProgress() / (double) BatteryChargerBlockEntity.CHARGE_PER_BATTERY) * 100);
-                batteryStatus = "§eCharging (" + percent + "%)";
+                batteryStatus = "§eCharging " + pct + "% (" + String.format("%,d", cur) + " / " + String.format("%,d", cap) + " FE)";
             }
         }
         player.sendSystemMessage(Component.translatable("message.titancombat.battery_charger_status",

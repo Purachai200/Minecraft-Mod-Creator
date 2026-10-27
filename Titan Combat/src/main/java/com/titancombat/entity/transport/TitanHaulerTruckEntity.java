@@ -18,8 +18,16 @@ import software.bernie.geckolib.core.object.PlayState;
  * Can haul 1 full-size Titan in kneeling lockdown at high road cruise speeds.
  */
 public class TitanHaulerTruckEntity extends BaseTransportVehicleEntity {
-    private static final Vec3 DRIVER_OFFSET = new Vec3(0.0D, 2.1D, 3.0D);
-    private static final Vec3 CARGO_OFFSET = new Vec3(0.0D, 2.50D, -0.7D); // the loaded pose leans the Titan forward, so this lands its knees on the Z=+28 straps
+    // Left-hand driver's seat in the cab: cushion top at model (x13, y42, z-56); -0.7 drops the riding player's hips onto it
+    private static final Vec3 DRIVER_OFFSET = new Vec3(13 / 16.0D, 42 / 16.0D - 0.7D, 56 / 16.0D);
+    // Flatbed deck top is y34, straps centred at model z30; the kneeling pose draws the Titan ~1.3 blocks
+    // forward of its position, so anchor it that far behind the straps (measured in autotest shot 06)
+    private static final Vec3 CARGO_OFFSET = new Vec3(0.0D, 34 / 16.0D, -30 / 16.0D - 1.3D);
+    private static final float WHEELBASE = 6.75F; // blocks between the steering pair and the rear bogie
+    private static final float MAX_STEER_RAD = (float) Math.toRadians(32.0D);
+
+    /** Smoothed A/D input, -1..1 (positive = left). */
+    private float steer = 0.0F;
 
     public TitanHaulerTruckEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -45,19 +53,14 @@ public class TitanHaulerTruckEntity extends BaseTransportVehicleEntity {
 
     @Override
     protected void travelTransport(LivingEntity driver, Vec3 travelVector) {
-        float forward = driver.zza;
-        float strafe = driver.xxa * 0.4F;
+        updateThrottle(driver, 0.8F, 0.25F, 0.018F, 0.05F, 0.006F + Math.abs(this.currentSpeed) * 0.01F);
 
-        if (forward < 0.0F) {
-            forward *= 0.45F; // Slower reverse
-        }
+        // A/D turn the front wheels; the hull follows the wheels (bicycle model), so no turning on the spot
+        this.steer = approach(this.steer, driver.xxa, 0.12F);
+        float steerRad = this.steer * MAX_STEER_RAD;
+        this.yawDelta = -(float) Math.toDegrees(this.currentSpeed * Math.tan(steerRad) / WHEELBASE);
 
-        // Heavy vehicle acceleration smoothing
-        float targetSpeed = forward * 0.78F;
-        this.currentSpeed = this.currentSpeed + (targetSpeed - this.currentSpeed) * 0.15F;
-
-        this.setSpeed(Math.abs(this.currentSpeed));
-        applyBaseTravel(new Vec3(strafe, travelVector.y, this.currentSpeed));
+        moveAlongHeading(1.0F, gravityMotion());
 
         // Wheel road dust particles while driving fast
         if (Math.abs(this.currentSpeed) > 0.15F && this.onGround() && this.level().isClientSide) {
@@ -75,7 +78,7 @@ public class TitanHaulerTruckEntity extends BaseTransportVehicleEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "drive", 4, event -> {
-            if (Math.abs(this.currentSpeed) > 0.05F) {
+            if (Math.abs(this.visSpeed) > 0.03F) {
                 return event.setAndContinue(RawAnimation.begin().thenLoop("animation.titan_hauler_truck.drive"));
             }
             return event.setAndContinue(RawAnimation.begin().thenLoop("animation.titan_hauler_truck.idle"));

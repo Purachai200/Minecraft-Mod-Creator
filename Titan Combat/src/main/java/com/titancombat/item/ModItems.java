@@ -26,10 +26,16 @@ public class ModItems {
             () -> new PaintSprayCanItem(new Item.Properties().stacksTo(1).durability(64).rarity(Rarity.RARE)));
 
     public static final RegistryObject<Item> TITAN_BATTERY = ITEMS.register("titan_battery",
-            () -> new TitanBatteryItem(new Item.Properties().stacksTo(4).rarity(Rarity.EPIC)));
+            () -> new TitanBatteryItem(TitanBatteryItem.TIER_1_CAPACITY, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+
+    public static final RegistryObject<Item> HEAVY_TITAN_BATTERY = ITEMS.register("heavy_titan_battery",
+            () -> new TitanBatteryItem(TitanBatteryItem.TIER_2_CAPACITY, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> DENSE_FUSION_BATTERY = ITEMS.register("dense_fusion_battery",
+            () -> new TitanBatteryItem(TitanBatteryItem.TIER_3_CAPACITY, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
     public static final RegistryObject<Item> EMPTY_BATTERY = ITEMS.register("empty_battery",
-            () -> new Item(new Item.Properties().stacksTo(8).rarity(Rarity.UNCOMMON)));
+            () -> new TitanBatteryItem(TitanBatteryItem.TIER_1_CAPACITY, new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
 
     public static final RegistryObject<Item> TITAN_AMMO = ITEMS.register("titan_ammo",
             () -> new TitanAmmoItem(new Item.Properties().stacksTo(64).rarity(Rarity.UNCOMMON)));

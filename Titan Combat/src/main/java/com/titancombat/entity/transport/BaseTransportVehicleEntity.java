@@ -1,5 +1,6 @@
 package com.titancombat.entity.transport;
 
+import com.titancombat.entity.BaseMechEntity;
 import com.titancombat.entity.BaseTitanEntity;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -39,14 +40,23 @@ import java.util.List;
 public abstract class BaseTransportVehicleEntity extends PathfinderMob implements GeoEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
+    public static final int MAX_ENERGY = 100000;
+
     public static final EntityDataAccessor<Boolean> DATA_HAS_CARGO =
             SynchedEntityData.defineId(BaseTransportVehicleEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Boolean> DATA_RAMP_OPEN =
             SynchedEntityData.defineId(BaseTransportVehicleEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Boolean> DATA_HEADLIGHTS =
             SynchedEntityData.defineId(BaseTransportVehicleEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Integer> DATA_ENERGY =
+            SynchedEntityData.defineId(BaseTransportVehicleEntity.class, EntityDataSerializers.INT);
 
+    /** Signed speed along the heading in blocks/tick. */
     protected float currentSpeed = 0.0F;
+    /** Degrees the hull turned this tick; carried onto the driver's view like a boat. */
+    protected float yawDelta = 0.0F;
+    /** Client-only motion read back from position/rotation so wheels, steering and lean also animate on other players' screens. */
+    public float visSpeed, visYawRate, wheelRot, wheelRotO;
 
     public BaseTransportVehicleEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -69,6 +79,31 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         this.entityData.define(DATA_HAS_CARGO, false);
         this.entityData.define(DATA_RAMP_OPEN, false);
         this.entityData.define(DATA_HEADLIGHTS, true);
+        this.entityData.define(DATA_ENERGY, MAX_ENERGY);
+    }
+
+    public int getEnergy() {
+        return this.entityData.get(DATA_ENERGY);
+    }
+
+    public void setEnergy(int energy) {
+        this.entityData.set(DATA_ENERGY, Mth.clamp(energy, 0, getMaxEnergy()));
+    }
+
+    public int getMaxEnergy() {
+        return MAX_ENERGY;
+    }
+
+    public void consumeEnergy(int amount) {
+        if (!this.level().isClientSide) {
+            setEnergy(getEnergy() - amount);
+        }
+    }
+
+    public void addEnergy(int amount) {
+        if (!this.level().isClientSide) {
+            setEnergy(getEnergy() + amount);
+        }
     }
 
     public boolean hasCargo() {
@@ -192,7 +227,36 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack held = player.getItemInHand(hand);
 
-        // 1. Repair Vehicle Hull
+        // 1. Refuel Vehicle Engine with Titan Battery / Heavy Battery / Fusion Battery
+        if (held.getItem() instanceof com.titancombat.item.TitanBatteryItem) {
+            int batteryEnergy = com.titancombat.item.TitanBatteryItem.getEnergy(held);
+            if (batteryEnergy <= 0) {
+                if (!this.level().isClientSide) {
+                    player.sendSystemMessage(Component.literal("§c[LOGISTICS] Battery is completely depleted! Charge it in a Battery Charger."));
+                }
+                return InteractionResult.sidedSuccess(this.level().isClientSide);
+            }
+            if (getEnergy() >= getMaxEnergy()) {
+                if (!this.level().isClientSide) {
+                    player.sendSystemMessage(Component.literal("§e[LOGISTICS] Vehicle fuel cell is already at 100% capacity (" + String.format("%,d", getMaxEnergy()) + " FE)!"));
+                }
+                return InteractionResult.sidedSuccess(this.level().isClientSide);
+            }
+            int needed = getMaxEnergy() - getEnergy();
+            int transfer = Math.min(needed, batteryEnergy);
+            addEnergy(transfer);
+            com.titancombat.item.TitanBatteryItem.setEnergy(held, batteryEnergy - transfer);
+
+            this.level().playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.2F, 1.4F);
+            this.level().playSound(null, this.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 0.8F, 1.8F);
+            if (!this.level().isClientSide) {
+                player.sendSystemMessage(Component.literal(String.format("§a[LOGISTICS] Vehicle Engine Refueled: +%,d FE (%,d / %,d FE | %d%%)",
+                        transfer, getEnergy(), getMaxEnergy(), Math.round((float) getEnergy() * 100.0F / (float) getMaxEnergy()))));
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
+        // 2. Repair Vehicle Hull
         if (held.is(Items.IRON_INGOT) || held.is(Items.IRON_BLOCK)) {
             if (this.getHealth() < this.getMaxHealth()) {
                 if (!this.level().isClientSide) {
@@ -231,9 +295,22 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
 
     @Override
     public void tick() {
+        this.yawDelta = 0.0F;
         super.tick();
+        // A vehicle hull points where it drives, never where a mob body would turn to look
+        this.yBodyRot = this.getYRot();
+        this.yHeadRot = this.getYRot();
 
-        // Sync cargo state
+        if (this.level().isClientSide) {
+            double yawRad = Math.toRadians(this.getYRot());
+            float forward = (float) ((this.getX() - this.xo) * -Math.sin(yawRad) + (this.getZ() - this.zo) * Math.cos(yawRad));
+            this.visSpeed += (forward - this.visSpeed) * 0.3F;
+            this.visYawRate += (Mth.wrapDegrees(this.getYRot() - this.yRotO) - this.visYawRate) * 0.3F;
+            this.wheelRotO = this.wheelRot;
+            this.wheelRot += forward / 0.875F; // radians rolled by the truck's 14px-radius wheel
+        }
+
+        // Sync cargo state & lock docked Mechs into static weight
         boolean hasTitan = false;
         for (Entity p : this.getPassengers()) {
             if (p instanceof BaseTitanEntity titan) {
@@ -251,9 +328,23 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
                         titan.setSitting(false);
                     }
                 }
-                titan.fallDistance = 0.0F;
+            }
+            if (p instanceof BaseMechEntity mech) {
+                // Freeze AI navigation and velocity so docked Mechs act purely as static transport weight
+                mech.getNavigation().stop();
+                mech.setDeltaMovement(Vec3.ZERO);
+                mech.setTarget(null);
+                mech.fallDistance = 0.0F;
             }
         }
+        // Drain energy when vehicle is manned
+        LivingEntity driver = this.getControllingPassenger();
+        if (driver != null && !this.level().isClientSide) {
+            boolean moving = Math.abs(this.currentSpeed) > 0.05F || Math.abs(driver.zza) > 0.01F || Math.abs(driver.xxa) > 0.01F;
+            int drain = moving ? 4 : 1;
+            consumeEnergy(drain);
+        }
+
         if (this.hasCargo() != hasTitan && !this.level().isClientSide) {
             setHasCargo(hasTitan);
         }
@@ -273,12 +364,19 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         if (this.isAlive()) {
             LivingEntity driver = this.getControllingPassenger();
             if (this.isVehicle() && driver != null) {
-                this.setYRot(driver.getYRot());
-                this.yRotO = this.getYRot();
-                this.setXRot(driver.getXRot() * 0.5F);
-                this.setRot(this.getYRot(), this.getXRot());
-                this.yBodyRot = this.getYRot();
-                this.yHeadRot = this.yBodyRot;
+                // Energy Stall Check: If fuel/energy is 0, engine cuts out
+                if (getEnergy() <= 0) {
+                    this.currentSpeed = 0.0F;
+                    this.setSpeed(0.0F);
+                    if (this.tickCount % 40 == 0) {
+                        if (driver instanceof Player p && !this.level().isClientSide) {
+                            p.displayClientMessage(Component.literal("§c[WARNING] Vehicle Engine Stalled: 0 FE! Insert Titan Battery to refuel."), true);
+                            this.level().playSound(null, this.blockPosition(), SoundEvents.FLINTANDSTEEL_USE, SoundSource.PLAYERS, 1.2F, 0.6F);
+                        }
+                    }
+                    super.travel(new Vec3(0, travelVector.y, 0));
+                    return;
+                }
 
                 if (this.isControlledByLocalInstance()) {
                     travelTransport(driver, travelVector);
@@ -291,9 +389,41 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         super.travel(travelVector);
     }
 
-    /** Moves the vehicle using Minecraft's underlying entity physics without re-triggering driver control loop. */
-    protected void applyBaseTravel(Vec3 movement) {
-        super.travel(movement);
+    /** W/S drives toward the target speed, braking first when pushed against the current direction; coasting rolls to a stop. */
+    protected void updateThrottle(LivingEntity driver, float maxForward, float maxReverse, float accel, float brake, float drag) {
+        float throttle = driver.zza;
+        if (throttle != 0.0F && Math.abs(this.currentSpeed) > 0.02F && Math.signum(throttle) != Math.signum(this.currentSpeed)) {
+            this.currentSpeed = approach(this.currentSpeed, 0.0F, brake);
+        } else if (throttle > 0.0F) {
+            this.currentSpeed = approach(this.currentSpeed, maxForward, accel);
+        } else if (throttle < 0.0F) {
+            this.currentSpeed = approach(this.currentSpeed, -maxReverse, accel);
+        } else {
+            this.currentSpeed = approach(this.currentSpeed, 0.0F, drag);
+        }
+    }
+
+    /** Turns the hull by yawDelta, then moves along the heading. grip 1 = tyres hold the line, lower = the hull slides like a boat. */
+    protected void moveAlongHeading(float grip, double verticalMotion) {
+        this.setYRot(this.getYRot() + this.yawDelta);
+        double yawRad = Math.toRadians(this.getYRot());
+        Vec3 old = this.getDeltaMovement();
+        double vx = Mth.lerp(grip, old.x, -Math.sin(yawRad) * this.currentSpeed);
+        double vz = Mth.lerp(grip, old.z, Math.cos(yawRad) * this.currentSpeed);
+        this.setDeltaMovement(vx, verticalMotion, vz);
+        this.move(net.minecraft.world.entity.MoverType.SELF, this.getDeltaMovement());
+        if (this.horizontalCollision) {
+            this.currentSpeed *= 0.5F; // ran into a wall
+        }
+    }
+
+    /** Falling speed for a vehicle that is not floating or flying. */
+    protected double gravityMotion() {
+        return this.onGround() ? -0.04D : Math.max(-3.0D, (this.getDeltaMovement().y - 0.08D) * 0.98D);
+    }
+
+    protected static float approach(float value, float target, float step) {
+        return value < target ? Math.min(value + step, target) : Math.max(value - step, target);
     }
 
     /** Subclasses implement custom driving/sailing/flight physics. */
@@ -306,39 +436,114 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
     protected abstract Vec3 getTitanCargoOffset(int slotIndex);
 
     @Override
+    public double getPassengersRidingOffset() {
+        // Fix vanilla AABB forcing riders onto the roof: set Y-offset strictly inside the cockpit visual model
+        return getDriverSeatOffset().y;
+    }
+
+    // A machine, not a creature: no footsteps, no "ouch", no fall damage, no lead.
+    @Override
+    protected void playStepSound(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+    }
+
+    @Override
+    protected net.minecraft.sounds.SoundEvent getHurtSound(DamageSource source) {
+        return SoundEvents.IRON_GOLEM_DAMAGE;
+    }
+
+    @Override
+    protected net.minecraft.sounds.SoundEvent getDeathSound() {
+        return SoundEvents.GENERIC_EXPLODE;
+    }
+
+    @Override
+    public boolean causeFallDamage(float distance, float multiplier, DamageSource source) {
+        return false;
+    }
+
+    @Override
+    public boolean canBeLeashed(Player player) {
+        return false;
+    }
+
+    @Override
+    public boolean isPushable() {
+        // Heavy military vehicles cannot be pushed by other entities
+        return false;
+    }
+
+    @Override
+    public boolean canCollideWith(Entity other) {
+        // Prevent collision with passengers inside the vehicle bounding box
+        if (this.hasPassenger(other)) return false;
+        return super.canCollideWith(other);
+    }
+
+    @Override
+    protected boolean canAddPassenger(Entity passenger) {
+        if (passenger instanceof Player) {
+            return getDriver() == null;
+        }
+        if (passenger instanceof BaseMechEntity) {
+            int mechCount = 0;
+            for (Entity p : this.getPassengers()) {
+                if (p instanceof BaseMechEntity) mechCount++;
+            }
+            return mechCount < getCargoCapacity();
+        }
+        return this.getPassengers().size() < (1 + getCargoCapacity());
+    }
+
+    @Override
     protected void positionRider(Entity passenger, Entity.MoveFunction moveFunction) {
         if (!this.hasPassenger(passenger)) return;
 
         Vec3 localOffset;
         if (passenger instanceof Player) {
+            // Front Driver's Seat: inside the 3D cabin
             localOffset = getDriverSeatOffset();
-        } else if (passenger instanceof BaseTitanEntity) {
+        } else if (passenger instanceof BaseMechEntity) {
+            // Rear Cargo Bed: anchor positions for heavy mechs
             int cargoIndex = 0;
             for (Entity p : this.getPassengers()) {
                 if (p == passenger) break;
-                if (p instanceof BaseTitanEntity) cargoIndex++;
+                if (p instanceof BaseMechEntity) cargoIndex++;
             }
             localOffset = getTitanCargoOffset(cargoIndex);
         } else {
             localOffset = Vec3.ZERO;
         }
 
+        // Standard Minecraft entity local-to-world rotation:
+        // localOffset: +X = Left, +Y = Up, +Z = Forward (model +X is also left: GeckoLib mirrors X)
         float yawRad = this.getYRot() * ((float) Math.PI / 180.0F);
         double cos = Math.cos(yawRad);
         double sin = Math.sin(yawRad);
 
-        // Transform local (X=strafe, Y=height, Z=forward) to world coordinates
+        // Transform local (X=right, Y=height, Z=forward) to world coordinates:
+        // Forward unit vector = (-sin(yaw), cos(yaw))
+        // Left unit vector    = (cos(yaw), sin(yaw))
         double worldX = this.getX() + (localOffset.x * cos - localOffset.z * sin);
         double worldY = this.getY() + localOffset.y;
         double worldZ = this.getZ() + (localOffset.x * sin + localOffset.z * cos);
 
         moveFunction.accept(passenger, worldX, worldY, worldZ);
 
-        if (passenger instanceof BaseTitanEntity titan) {
-            titan.setYRot(this.getYRot());
-            titan.yRotO = this.getYRot();
-            titan.yBodyRot = this.getYRot();
-            titan.yHeadRot = this.getYRot();
+        if (passenger instanceof Player player) {
+            // Turn the driver's view with the hull but leave mouse-look free, like a boat or minecart
+            player.setYRot(player.getYRot() + this.yawDelta);
+            player.setYHeadRot(player.getYHeadRot() + this.yawDelta);
+            player.yBodyRot = this.getYRot();
+        } else if (passenger instanceof LivingEntity living) {
+            living.setYRot(this.getYRot());
+            living.yRotO = this.getYRot();
+            living.yBodyRot = this.getYRot();
+            living.yHeadRot = this.getYRot();
+            if (living instanceof BaseMechEntity mech) {
+                // Completely zero out momentum so docked mechs are purely static cargo weight
+                mech.setDeltaMovement(Vec3.ZERO);
+                mech.fallDistance = 0.0F;
+            }
         }
     }
 
@@ -354,6 +559,7 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         tag.putBoolean("HasCargo", hasCargo());
         tag.putBoolean("RampOpen", isRampOpen());
         tag.putBoolean("Headlights", hasHeadlights());
+        tag.putInt("Energy", getEnergy());
     }
 
     @Override
@@ -362,6 +568,7 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         if (tag.contains("HasCargo")) setHasCargo(tag.getBoolean("HasCargo"));
         if (tag.contains("RampOpen")) setRampOpen(tag.getBoolean("RampOpen"));
         if (tag.contains("Headlights")) setHeadlights(tag.getBoolean("Headlights"));
+        if (tag.contains("Energy")) setEnergy(tag.getInt("Energy"));
     }
 
     @Override

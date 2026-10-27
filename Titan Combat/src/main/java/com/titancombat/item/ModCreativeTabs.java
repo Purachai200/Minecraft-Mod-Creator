@@ -32,6 +32,8 @@ public class ModCreativeTabs {
 
                         // Maintenance & Weaponry
                         output.accept(ModItems.TITAN_BATTERY.get());
+                        output.accept(ModItems.HEAVY_TITAN_BATTERY.get());
+                        output.accept(ModItems.DENSE_FUSION_BATTERY.get());
                         output.accept(ModItems.EMPTY_BATTERY.get());
                         output.accept(ModBlocks.BATTERY_CHARGER.get());
                         output.accept(ModItems.BLOWTORCH.get());

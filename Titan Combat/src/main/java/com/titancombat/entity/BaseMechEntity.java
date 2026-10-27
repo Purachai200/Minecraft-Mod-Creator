@@ -48,6 +48,11 @@ public abstract class BaseMechEntity extends PathfinderMob {
             SynchedEntityData.defineId(BaseMechEntity.class, EntityDataSerializers.INT);
     public static final EntityDataAccessor<Boolean> DATA_DEFENSE_ACTIVE =
             SynchedEntityData.defineId(BaseMechEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final int DEFAULT_MAX_ENERGY = 50000;
+    public static final EntityDataAccessor<Integer> DATA_ENERGY =
+            SynchedEntityData.defineId(BaseMechEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> DATA_MAX_ENERGY =
+            SynchedEntityData.defineId(BaseMechEntity.class, EntityDataSerializers.INT);
 
     // Timers & internal mechanics
     protected int shieldRegenCooldown = 0;
@@ -84,6 +89,8 @@ public abstract class BaseMechEntity extends PathfinderMob {
         this.entityData.define(DATA_CORE_CHARGE, 0.0F);
         this.entityData.define(DATA_OVERDRIVE_TICKS, 0);
         this.entityData.define(DATA_DEFENSE_ACTIVE, false);
+        this.entityData.define(DATA_ENERGY, 0);
+        this.entityData.define(DATA_MAX_ENERGY, DEFAULT_MAX_ENERGY);
     }
 
     public MechState getMechState() {
@@ -166,6 +173,35 @@ public abstract class BaseMechEntity extends PathfinderMob {
 
     public void setDefenseActive(boolean active) {
         this.entityData.set(DATA_DEFENSE_ACTIVE, active);
+    }
+
+    public int getEnergy() {
+        return this.entityData.get(DATA_ENERGY);
+    }
+
+    public void setEnergy(int energy) {
+        this.entityData.set(DATA_ENERGY, Mth.clamp(energy, 0, getMaxEnergy()));
+    }
+
+    public int getMaxEnergy() {
+        return this.entityData.get(DATA_MAX_ENERGY);
+    }
+
+    public void setMaxEnergy(int maxEnergy) {
+        this.entityData.set(DATA_MAX_ENERGY, Math.max(1, maxEnergy));
+    }
+
+    public void addEnergy(int amount) {
+        setEnergy(getEnergy() + amount);
+    }
+
+    public boolean consumeEnergy(int amount) {
+        int cur = getEnergy();
+        if (cur >= amount) {
+            setEnergy(cur - amount);
+            return true;
+        }
+        return false;
     }
 
     public int getWarpDefenseTicks() {
@@ -318,7 +354,9 @@ public abstract class BaseMechEntity extends PathfinderMob {
                 if (shieldRegenCooldown > 0) {
                     shieldRegenCooldown = Math.max(0, shieldRegenCooldown - 4);
                 } else if (getShield() < getMaxShield() && !isDefenseActive()) {
-                    setShield(getShield() + 2.0F); // 10 shield per second
+                    if (consumeEnergy(5)) {
+                        setShield(getShield() + 2.0F); // 10 shield per second, drains 25 FE/s
+                    }
                 }
 
                 if (getDashCharge() < 100.0F) {
@@ -459,7 +497,14 @@ public abstract class BaseMechEntity extends PathfinderMob {
 
     public void performDash(float forward, float strafe) {
         if (getDashCharge() < DASH_COST - 0.01F) return;
+        if (getEnergy() < 250) {
+            if (this.getFirstPassenger() instanceof Player p && !this.level().isClientSide) {
+                p.displayClientMessage(Component.translatable("message.titancombat.reactor_depleted_warning"), true);
+            }
+            return;
+        }
         setDashCharge(Math.max(0.0F, getDashCharge() - DASH_COST));
+        consumeEnergy(250);
 
         float yaw = this.getYRot() * (float) (Math.PI / 180.0);
         Vec3 direction = new Vec3(
@@ -555,6 +600,10 @@ public abstract class BaseMechEntity extends PathfinderMob {
                     this.setDeltaMovement(Vec3.ZERO);
                 }
                 return;
+            } else if (!this.isVehicle() && getEnergy() <= 0) {
+                this.setSpeed(0.0F);
+                super.travel(new Vec3(0, travelVector.y, 0));
+                return;
             }
         }
         super.travel(travelVector);
@@ -565,8 +614,30 @@ public abstract class BaseMechEntity extends PathfinderMob {
         float forward = rider.zza;
         float strafe = rider.xxa * 0.7F;
 
+        if (getEnergy() <= 0) {
+            this.setSpeed(0.0F);
+            if (Math.abs(forward) > 0.01F || Math.abs(strafe) > 0.01F) {
+                if (rider instanceof Player p && this.tickCount % 40 == 0) {
+                    p.displayClientMessage(Component.translatable("message.titancombat.reactor_depleted_warning"), true);
+                    this.level().playSound(null, this.blockPosition(), SoundEvents.FLINTANDSTEEL_USE, SoundSource.PLAYERS, 1.2F, 0.6F);
+                }
+            }
+            super.travel(new Vec3(0, travelVector.y, 0));
+            return;
+        }
+
         if (forward <= 0.0F) {
             forward *= 0.5F; // Slower reverse
+        }
+
+        if (!this.level().isClientSide) {
+            boolean moving = Math.abs(forward) > 0.01F || Math.abs(strafe) > 0.01F;
+            if (moving) {
+                int drain = rider.isSprinting() ? 8 : 4;
+                consumeEnergy(drain);
+            } else if (this.tickCount % 2 == 0) {
+                consumeEnergy(1); // Idle consumption: 10 FE/s
+            }
         }
 
         this.setSpeed((float) this.getAttributeValue(Attributes.MOVEMENT_SPEED));
@@ -601,6 +672,8 @@ public abstract class BaseMechEntity extends PathfinderMob {
         tag.putInt("OverdriveTicks", getOverdriveTicks());
         tag.putBoolean("DefenseActive", isDefenseActive());
         tag.putInt("WarpDefenseTicks", getWarpDefenseTicks());
+        tag.putInt("Energy", getEnergy());
+        tag.putInt("MaxEnergy", getMaxEnergy());
     }
 
     @Override
@@ -616,5 +689,7 @@ public abstract class BaseMechEntity extends PathfinderMob {
         if (tag.contains("OverdriveTicks")) setOverdriveTicks(tag.getInt("OverdriveTicks"));
         if (tag.contains("DefenseActive")) setDefenseActive(tag.getBoolean("DefenseActive"));
         if (tag.contains("WarpDefenseTicks")) setWarpDefenseTicks(tag.getInt("WarpDefenseTicks"));
+        if (tag.contains("Energy")) setEnergy(tag.getInt("Energy"));
+        if (tag.contains("MaxEnergy")) setMaxEnergy(tag.getInt("MaxEnergy"));
     }
 }

@@ -315,6 +315,11 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         this.entityData.set(DATA_OWNER_NAME, player.getName().getString());
     }
 
+    public void clearOwner() {
+        this.entityData.set(DATA_OWNER_UUID, "");
+        this.entityData.set(DATA_OWNER_NAME, "");
+    }
+
     public SimpleContainer getTitanInventory() {
         return this.titanInventory;
     }
@@ -1137,18 +1142,26 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
                 }
             }
 
-            // 1. Core Battery Bay Auto-Charge: checks Slot 0 for swappable titan battery
-            if (this.tickCount % 20 == 0) {
+            // 1. Core Battery Bay Continuous Transfer: transfers FE from battery slot 0 into reactor
+            if (this.tickCount % 10 == 0) {
                 ItemStack batteryStack = this.titanInventory.getItem(TitanMenu.BATTERY_SLOT);
-                if (!batteryStack.isEmpty() && batteryStack.getItem() instanceof com.titancombat.item.TitanBatteryItem
-                        && !batteryStack.is(com.titancombat.item.ModItems.EMPTY_BATTERY.get())) {
-                    if (this.getShield() < this.getMaxShield() || this.getCoreCharge() < 100.0F) {
-                        this.setShield(this.getMaxShield());
-                        this.addCoreCharge(30.0F);
-                        this.titanInventory.setItem(TitanMenu.BATTERY_SLOT, new ItemStack(com.titancombat.item.ModItems.EMPTY_BATTERY.get(), batteryStack.getCount()));
-                        this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_GET_BATTERY.get(), SoundSource.PLAYERS, 1.5F, 1.0F);
-                        if (this.getFirstPassenger() instanceof Player p) {
-                            p.sendSystemMessage(Component.translatable("message.titancombat.battery_recharged", getTitanClass().getDisplayName()));
+                if (!batteryStack.isEmpty() && batteryStack.getItem() instanceof com.titancombat.item.TitanBatteryItem) {
+                    int batEnergy = com.titancombat.item.TitanBatteryItem.getEnergy(batteryStack);
+                    if (batEnergy > 0 && getEnergy() < getMaxEnergy()) {
+                        int needed = getMaxEnergy() - getEnergy();
+                        int transfer = Math.min(batEnergy, Math.min(500, needed));
+                        addEnergy(transfer);
+                        int remaining = batEnergy - transfer;
+                        if (remaining <= 0) {
+                            ItemStack empty = new ItemStack(com.titancombat.item.ModItems.EMPTY_BATTERY.get());
+                            com.titancombat.item.TitanBatteryItem.setEnergy(empty, 0);
+                            this.titanInventory.setItem(TitanMenu.BATTERY_SLOT, empty);
+                            this.level().playSound(null, this.blockPosition(), SoundEvents.ITEM_BREAK, SoundSource.PLAYERS, 0.8F, 1.2F);
+                            if (this.getFirstPassenger() instanceof Player p) {
+                                p.sendSystemMessage(Component.translatable("message.titancombat.battery_bay_depleted"));
+                            }
+                        } else {
+                            com.titancombat.item.TitanBatteryItem.setEnergy(batteryStack, remaining);
                         }
                     }
                 }
@@ -1435,7 +1448,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     public boolean hasInstalledBattery() {
         ItemStack batteryStack = this.titanInventory.getItem(TitanMenu.BATTERY_SLOT);
         return !batteryStack.isEmpty() && batteryStack.getItem() instanceof com.titancombat.item.TitanBatteryItem
-                && !batteryStack.is(com.titancombat.item.ModItems.EMPTY_BATTERY.get());
+                && com.titancombat.item.TitanBatteryItem.getEnergy(batteryStack) > 0;
     }
 
     /** Holster / draw toggle. A lowered gun rides on the back and the arms relax. */
@@ -1522,6 +1535,13 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
             return false;
         }
         if (firingCooldown > 0) return false;
+        if (getEnergy() <= 0) {
+            if (this.tickCount % 20 == 0) {
+                pilot.displayClientMessage(Component.translatable("message.titancombat.weapon_no_energy"), true);
+                this.level().playSound(null, this.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.8F, 1.8F);
+            }
+            return false;
+        }
 
         boolean isOverdrive = isOverdriveActive();
         boolean isUtilityTool = (weapon == TitanWeapon.MINING_DRILL || weapon == TitanWeapon.CHAINSAW);
@@ -1544,6 +1564,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         }
 
         executeWeaponShot(pilot, weapon);
+        consumeEnergy(15);
         firingCooldown = isOverdrive ? Math.max(1, Math.round(weapon.getCooldownTicks() * 0.4F)) : weapon.getCooldownTicks();
         if (!isOverdrive) addCoreCharge(2.5F);
 
@@ -1735,10 +1756,11 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack held = player.getItemInHand(hand);
 
-        // License / transponder bind in their own interactLivingEntity, which only runs if the titan passes.
+        // License / transponder / battery interact in their own interactLivingEntity
         if (held.getItem() instanceof com.titancombat.item.PilotLicenseItem
-                || held.getItem() instanceof com.titancombat.item.HangarTransponderItem) {
-            return InteractionResult.PASS;
+                || held.getItem() instanceof com.titancombat.item.HangarTransponderItem
+                || held.getItem() instanceof com.titancombat.item.TitanBatteryItem) {
+            return held.getItem().interactLivingEntity(held, player, this, hand);
         }
 
         // 1. Repair with Iron Ingot (Heals 25 HP)
@@ -1897,6 +1919,13 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
                 }
 
                 if (owner.isEmpty()) {
+                    BaseTitanEntity existing = com.titancombat.util.TitanWarpHelper.findCurrentTitanOfPlayer(player.getServer(), player);
+                    if (existing != null && existing != this) {
+                        player.sendSystemMessage(Component.translatable("message.titancombat.single_titan_limit", existing.getTitanClass().getDisplayName()));
+                        this.level().playSound(null, this.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.5F, 0.6F);
+                        return InteractionResult.FAIL;
+                    }
+
                     setOwner(player);
                     player.sendSystemMessage(Component.translatable("message.titancombat.neural_link_claimed", player.getName().getString(), getTitanClass().getDisplayName()));
                 }
@@ -2061,6 +2090,12 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.cache;
+    }
+
+    @Override
+    public void die(DamageSource cause) {
+        clearOwner();
+        super.die(cause);
     }
 
     @Override

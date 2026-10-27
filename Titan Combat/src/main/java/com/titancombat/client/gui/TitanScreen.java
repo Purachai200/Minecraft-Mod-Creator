@@ -85,6 +85,21 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
         this.renderBackground(guiGraphics);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         this.renderTooltip(guiGraphics, mouseX, mouseY);
+        BaseTitanEntity titan = this.menu.getTitan();
+        if (this.hoveredSlot == null && titan != null) {
+            int relX = mouseX - this.leftPos;
+            int relY = mouseY - this.topPos;
+            if (relX >= REACTOR_X0 && relX <= REACTOR_X0 + 54 && relY >= REACTOR_Y0 && relY <= REACTOR_Y1) {
+                int curE = titan.getEnergy();
+                int maxE = Math.max(1, titan.getMaxEnergy());
+                int pct = Math.round((float) curE * 100.0F / (float) maxE);
+                guiGraphics.renderTooltip(this.font, java.util.List.of(
+                        Component.literal("§6[TITAN FUSION REACTOR]"),
+                        Component.literal("§7Core Energy: §b" + String.format("%,d", curE) + " §7/ §b" + String.format("%,d", maxE) + " FE §7(" + pct + "%)"),
+                        Component.literal(curE <= 0 ? "§c[DEPLETED] Insert battery to restore power" : "§a[ONLINE] Power distribution normal")
+                ), java.util.Optional.empty(), mouseX, mouseY);
+            }
+        }
     }
 
     @Override
@@ -140,6 +155,20 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
 
         // ---------------------------------------------------------------- group boxes
         groupBox(g, x + REACTOR_X0, y + REACTOR_Y0, x + REACTOR_X1, y + REACTOR_Y1, AMBER);
+
+        // Reactor energy mini-meter
+        if (titan != null) {
+            int curE = titan.getEnergy();
+            int maxE = Math.max(1, titan.getMaxEnergy());
+            float eFrac = clamp01((float) curE / (float) maxE);
+            int barColor = curE <= 0 ? RED : (eFrac < 0.25F ? AMBER : CYAN);
+            rect(g, x + REACTOR_X0 + 5, y + REACTOR_Y0 + 12, x + REACTOR_X0 + 53, y + REACTOR_Y0 + 16, 0x060A0F, 1.0F);
+            frame(g, x + REACTOR_X0 + 5, y + REACTOR_Y0 + 12, x + REACTOR_X0 + 53, y + REACTOR_Y0 + 16, 0x1E3A46, 1.0F);
+            int fill = Math.round(46.0F * eFrac);
+            if (fill > 0) {
+                rect(g, x + REACTOR_X0 + 6, y + REACTOR_Y0 + 13, x + REACTOR_X0 + 6 + fill, y + REACTOR_Y0 + 15, barColor, 0.95F);
+            }
+        }
         groupBox(g, x + MUNI_X0, y + MUNI_Y0, x + MUNI_X1, y + MUNI_Y1, CYAN);
         groupBox(g, x + CARGO_X0, y + CARGO_Y0, x + CARGO_X1, y + CARGO_Y1, DIM);
         groupBox(g, x + WEAPON_X0, y + WEAPON_Y0, x + WEAPON_X1, y + WEAPON_Y1, GOLD);
@@ -253,10 +282,17 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
         }
 
         // reactor group
-        g.drawString(this.font, lblReactor, REACTOR_X0 + 5, REACTOR_Y0 + 4, 0xFFFFB300, false);
+        g.drawString(this.font, lblReactor, REACTOR_X0 + 5, REACTOR_Y0 + 3, 0xFFFFB300, false);
+        if (titan != null) {
+            int curE = titan.getEnergy();
+            int maxE = Math.max(1, titan.getMaxEnergy());
+            int pct = Math.round((float) curE * 100.0F / (float) maxE);
+            int pwrColor = curE <= 0 ? 0xFFFF2A44 : (pct < 30 ? 0xFFFFB300 : 0xFF00E5FF);
+            rightText(g, pct + "%", REACTOR_X0 + 53, REACTOR_Y0 + 3, pwrColor);
+        }
         boolean hasCell = this.menu.slots.get(TitanMenu.BATTERY_SLOT).hasItem();
         boolean blink = ((int) (this.openTicks / 8.0F)) % 2 == 0;
-        g.drawString(this.font, hasCell ? lblOnline : lblNoCell, REACTOR_X0 + 5, REACTOR_Y0 + 15,
+        g.drawString(this.font, hasCell ? lblOnline : lblNoCell, REACTOR_X0 + 5, REACTOR_Y0 + 17,
                 hasCell ? 0xFF00E676 : (blink ? 0xFFFFB300 : 0x88FFB300), false);
 
         // munitions group

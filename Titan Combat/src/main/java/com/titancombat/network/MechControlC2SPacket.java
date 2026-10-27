@@ -67,24 +67,30 @@ public class MechControlC2SPacket {
         NetworkEvent.Context context = supplier.get();
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
-            if (player != null && player.getVehicle() instanceof BaseMechEntity mech) {
-                if (this.dashing) {
-                    mech.performDash(this.forward, this.strafe);
-                }
-                if (this.defense) {
-                    mech.toggleDefenseMatrix(player);
-                }
-                if (this.core) {
-                    mech.activateCoreOverdrive(player);
-                }
-                if (this.firing && mech instanceof BaseTitanEntity titan) {
-                    titan.firePrimaryWeapon(player);
-                }
-                if (this.melee && mech instanceof BaseTitanEntity titan) {
-                    titan.performMeleeAttack(player);
-                }
-                if (this.kneel && mech instanceof BaseTitanEntity titan) {
-                    titan.toggleKneel();
+            if (player != null) {
+                if (player.getVehicle() instanceof BaseMechEntity mech) {
+                    if (this.dashing) {
+                        mech.performDash(this.forward, this.strafe);
+                    }
+                    if (this.defense) {
+                        mech.toggleDefenseMatrix(player);
+                    }
+                    if (this.core) {
+                        mech.activateCoreOverdrive(player);
+                    }
+                    if (this.firing && mech instanceof BaseTitanEntity titan) {
+                        titan.firePrimaryWeapon(player);
+                    }
+                    if (this.melee && mech instanceof BaseTitanEntity titan) {
+                        titan.performMeleeAttack(player);
+                    }
+                    if (this.kneel && mech instanceof BaseTitanEntity titan) {
+                        titan.toggleKneel();
+                    }
+                } else if (player.getVehicle() instanceof com.titancombat.entity.transport.TitanSkyCraneDroneEntity drone) {
+                    if (this.firing) {
+                        drone.performAirborneHotDrop(player);
+                    }
                 }
             }
         });

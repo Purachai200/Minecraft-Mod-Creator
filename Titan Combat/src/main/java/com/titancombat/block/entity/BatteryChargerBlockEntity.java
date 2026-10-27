@@ -1,9 +1,13 @@
 package com.titancombat.block.entity;
 
 import com.titancombat.item.ModItems;
+import com.titancombat.item.TitanBatteryItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
@@ -19,9 +23,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class BatteryChargerBlockEntity extends BlockEntity {
-    public static final int MAX_ENERGY = 20000;
-    public static final int MAX_RECEIVE = 1000;
-    public static final int CHARGE_PER_BATTERY = 10000;
+    public static final int MAX_ENERGY = 500000;
+    public static final int MAX_RECEIVE = 10000;
 
     private ItemStack batterySlot = ItemStack.EMPTY;
     private int batteryProgress = 0;
@@ -34,20 +37,22 @@ public class BatteryChargerBlockEntity extends BlockEntity {
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, BatteryChargerBlockEntity entity) {
-        if (!entity.batterySlot.isEmpty() && entity.batterySlot.is(ModItems.EMPTY_BATTERY.get())) {
-            if (entity.energyStorage.getEnergyStored() > 0 && entity.batteryProgress < CHARGE_PER_BATTERY) {
-                int needed = CHARGE_PER_BATTERY - entity.batteryProgress;
-                int toTransfer = Math.min(50, Math.min(entity.energyStorage.getEnergyStored(), needed));
+        if (!entity.batterySlot.isEmpty() && entity.batterySlot.getItem() instanceof TitanBatteryItem) {
+            int currentEnergy = TitanBatteryItem.getEnergy(entity.batterySlot);
+            int batCapacity = TitanBatteryItem.getCapacity(entity.batterySlot);
+            if (currentEnergy < batCapacity && entity.energyStorage.getEnergyStored() > 0) {
+                int needed = batCapacity - currentEnergy;
+                int toTransfer = Math.min(500, Math.min(entity.energyStorage.getEnergyStored(), needed));
                 entity.energyStorage.consumeEnergy(toTransfer);
-                entity.batteryProgress += toTransfer;
-                entity.setChanged();
-            }
+                int newEnergy = currentEnergy + toTransfer;
+                entity.batteryProgress = newEnergy;
 
-            if (entity.batteryProgress >= CHARGE_PER_BATTERY) {
-                entity.batterySlot = new ItemStack(ModItems.TITAN_BATTERY.get());
-                entity.batteryProgress = 0;
+                TitanBatteryItem.setEnergy(entity.batterySlot, newEnergy);
+                if (newEnergy >= batCapacity) {
+                    level.playSound(null, pos, SoundEvents.PLAYER_LEVELUP, SoundSource.BLOCKS, 1.0F, 1.2F);
+                }
                 entity.setChanged();
-                level.playSound(null, pos, SoundEvents.PLAYER_LEVELUP, SoundSource.BLOCKS, 1.0F, 1.2F);
+                level.sendBlockUpdated(pos, state, state, 3);
             }
         }
     }
@@ -58,8 +63,11 @@ public class BatteryChargerBlockEntity extends BlockEntity {
 
     public void setBatterySlot(ItemStack stack) {
         this.batterySlot = stack;
-        this.batteryProgress = 0;
+        this.batteryProgress = stack.isEmpty() ? 0 : TitanBatteryItem.getEnergy(stack);
         setChanged();
+        if (this.level != null && !this.level.isClientSide) {
+            this.level.sendBlockUpdated(this.worldPosition, getBlockState(), getBlockState(), 3);
+        }
     }
 
     public int getBatteryProgress() {
@@ -77,6 +85,9 @@ public class BatteryChargerBlockEntity extends BlockEntity {
     public void addEnergy(int amount) {
         energyStorage.addEnergy(amount);
         setChanged();
+        if (this.level != null && !this.level.isClientSide) {
+            this.level.sendBlockUpdated(this.worldPosition, getBlockState(), getBlockState(), 3);
+        }
     }
 
     @Override
@@ -115,6 +126,19 @@ public class BatteryChargerBlockEntity extends BlockEntity {
         } else {
             this.batterySlot = ItemStack.EMPTY;
         }
+    }
+
+    @Override
+    public CompoundTag getUpdateTag() {
+        CompoundTag tag = super.getUpdateTag();
+        saveAdditional(tag);
+        return tag;
+    }
+
+    @Nullable
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
     }
 
     public static class CustomEnergyStorage extends EnergyStorage {

@@ -56,6 +56,7 @@ public class ClientSetup {
     @SubscribeEvent
     public static void registerGuiOverlays(RegisterGuiOverlaysEvent event) {
         event.registerAboveAll("mech_cockpit_hud", MechCockpitHudOverlay.HUD_COCKPIT);
+        event.registerAboveAll("transport_vehicle_hud", com.titancombat.client.gui.TransportVehicleHudOverlay.HUD_TRANSPORT);
     }
 
     @SubscribeEvent

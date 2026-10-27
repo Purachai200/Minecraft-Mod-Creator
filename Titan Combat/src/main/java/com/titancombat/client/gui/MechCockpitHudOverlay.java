@@ -108,6 +108,7 @@ public class MechCockpitHudOverlay {
             power = 0.4F + 0.6F * smooth(sinceSit / 10.0F);
         }
         if (sinceSit < 14.0F && noise((int) (now * 1.7F)) > 0.6F) power *= 0.35F; // power-state flicker
+        if (mech.getEnergy() <= 0) power *= 0.4F; // Dims cockpit HUD when power is depleted
 
         alpha = 1.0F;
 
@@ -151,6 +152,7 @@ public class MechCockpitHudOverlay {
         alpha = 1.0F;
         if (critical) drawCritical(g, font, cx, cy, now, doomed);
         if (sitting || sinceSit < 14.0F) drawParked(g, font, cx, cy, now, sitting, sinceSit, critical);
+        if (mech.getEnergy() <= 0) drawReactorDepletedWarning(g, font, cx, cy, now);
 
         if (firstPerson) drawHints(g, font, W, H, t);
         if (boot) drawBoot(g, font, W, H, t);
@@ -348,13 +350,29 @@ public class MechCockpitHudOverlay {
         int ty = base - 17;
         text(g, font, "HULL", x0, ty, CYAN, 0.6F, false);
         text(g, font, PCT[Math.round(hp * 100.0F)], x0 + 26, ty, hullColor, 0.95F, false);
+
+        int curEnergy = mech.getEnergy();
+        int maxEnergy = Math.max(1, mech.getMaxEnergy());
+        float ep = clamp01((float) curEnergy / (float) maxEnergy);
+        int epPct = Math.min(100, Math.round(ep * 100.0F));
+        boolean lowEnergy = curEnergy <= 0 || ep < 0.20F;
+        int energyColor = curEnergy <= 0 ? RED : (ep < 0.25F ? ((int) (now / 4.0F) % 2 == 0 ? RED : AMBER) : (ep < 0.50F ? AMBER : CYAN));
+
         if (mech.isDefenseActive()) {
             int chipX = x0 + 58;
             float pulse = 0.65F + 0.35F * Mth.sin(now * 0.4F);
             rect(g, chipX - 3, ty - 2, chipX + 83, ty + 9, CYAN, 0.16F);
             frame(g, chipX - 3, ty - 2, chipX + 83, ty + 9, CYAN, 0.6F * pulse);
             text(g, font, "DEFENSE MATRIX", chipX, ty, CYAN, pulse, false);
+        } else {
+            text(g, font, "PWR", x0 + 58, ty, CYAN, 0.6F, false);
+            text(g, font, curEnergy <= 0 ? "OFFLINE" : PCT[epPct], x0 + 78, ty, energyColor, 0.95F, false);
         }
+
+        // Reactor Energy slim bar (ey = base - 7, barW = 131)
+        int ey = base - 7;
+        slant(g, x0, ey, barW, 4, 0.6F, lowEnergy ? RED : CYAN, curEnergy <= 0 ? 0.3F : 0.16F);
+        if (ep > 0) slant(g, x0, ey, barW * ep, 4, 0.6F, energyColor, 0.95F);
     }
 
     // =================================================================== core + dash (bottom centre)
@@ -557,6 +575,16 @@ public class MechCockpitHudOverlay {
         rect(g, bx, by, bx + w + 12, by + 13, RED, 0.22F);
         frame(g, bx, by, bx + w + 12, by + 13, RED, 0.85F);
         text(g, font, ejectPrompt, cx - w / 2, by + 3, WHITE, 1.0F, false);
+    }
+
+    private static void drawReactorDepletedWarning(GuiGraphics g, Font font, int cx, int cy, float now) {
+        float pulse = 0.6F + 0.4F * Mth.sin(now * 0.35F);
+        int y = cy + 42;
+        String warn = "⚡ REACTOR DEPLETED - INSERT BATTERY ⚡";
+        int w = font.width(warn);
+        rect(g, cx - w / 2 - 8, y - 3, cx + w / 2 + 8, y + 12, BLACK, 0.65F);
+        frame(g, cx - w / 2 - 8, y - 3, cx + w / 2 + 8, y + 12, RED, pulse);
+        textCenter(g, font, warn, cx, y, RED, pulse, true);
     }
 
     private static void drawParked(GuiGraphics g, Font font, int cx, int cy, float now, boolean sitting,

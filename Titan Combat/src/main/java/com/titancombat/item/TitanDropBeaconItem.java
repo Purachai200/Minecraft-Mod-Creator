@@ -102,6 +102,7 @@ public class TitanDropBeaconItem extends Item {
                     titan.setOwner(player);
                 }
                 titan.setFaction(MechFaction.APEX_VANGUARD);
+                titan.setEnergy(titan.getMaxEnergy());
                 level.addFreshEntity(titan);
 
                 level.playSound(null, pos, com.titancombat.sound.ModSounds.TITAN_STEP.get(), SoundSource.PLAYERS, 2.0F, 0.8F);

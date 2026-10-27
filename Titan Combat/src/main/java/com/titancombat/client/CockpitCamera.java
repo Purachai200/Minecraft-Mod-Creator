@@ -65,10 +65,14 @@ public final class CockpitCamera {
             event.setRoll(event.getRoll() + shake * 3.0F * noise(time * 2.3F, 3.7F));
         }
 
-        if (!(player.getVehicle() instanceof BaseTitanEntity)) return;
+        boolean inTitan = player.getVehicle() instanceof BaseTitanEntity;
+        boolean inTransport = player.getVehicle() instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity;
+        if (!inTitan && !inTransport) return;
 
-        float kick = recoilPrev + (recoil - recoilPrev) * (float) event.getPartialTick();
-        event.setPitch(event.getPitch() - kick);
+        if (inTitan) {
+            float kick = recoilPrev + (recoil - recoilPrev) * (float) event.getPartialTick();
+            event.setPitch(event.getPitch() - kick);
+        }
 
         if (mc.options.getCameraType() != CameraType.FIRST_PERSON) {
             pullBack(event.getCamera(), mc.options.getCameraType() == CameraType.THIRD_PERSON_FRONT);

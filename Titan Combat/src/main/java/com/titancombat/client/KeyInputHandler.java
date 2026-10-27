@@ -227,12 +227,21 @@ public class KeyInputHandler {
     @SubscribeEvent
     public static void onInteraction(InputEvent.InteractionKeyMappingTriggered event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null && mc.player.getVehicle() instanceof BaseMechEntity) {
+        if (mc.player == null) return;
+
+        if (mc.player.getVehicle() instanceof BaseMechEntity) {
             // Left click naturally fires the heavy titan weapon when in cockpit!
             if (event.isAttack()) {
                 // Firing is handled every tick in onClientTick while the button is held.
                 event.setCanceled(true);
                 event.setSwingHand(false);
+            }
+        } else if (mc.player.getVehicle() instanceof com.titancombat.entity.transport.TitanSkyCraneDroneEntity) {
+            if (event.isAttack()) {
+                // Left click performs Combat Hot-Drop from the Sky-Crane Drone
+                event.setCanceled(true);
+                event.setSwingHand(false);
+                ModNetworking.sendToServer(new MechControlC2SPacket(0, 0, false, true));
             }
         }
     }
@@ -240,7 +249,7 @@ public class KeyInputHandler {
     @SubscribeEvent
     public static void onRenderGuiOverlayPre(RenderGuiOverlayEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null && mc.player.getVehicle() instanceof BaseMechEntity) {
+        if (mc.player != null && (mc.player.getVehicle() instanceof BaseMechEntity || mc.player.getVehicle() instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity)) {
             ResourceLocation id = event.getOverlay().id();
             String path = id.getPath();
 
