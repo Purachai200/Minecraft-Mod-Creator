@@ -45,6 +45,8 @@ public class ModCreativeTabs {
                         for (RegistryObject<net.minecraft.world.item.Item> f : ModItems.FLIGHT_MODULES.values()) {
                             output.accept(f.get());
                         }
+                        output.accept(ModItems.HOWITZER_MODULE.get());
+                        output.accept(ModItems.HOWITZER_SHELLS.get());
                         output.accept(ModItems.PAINT_SPRAY_CAN.get());
 
                         // Modular Assembly Components

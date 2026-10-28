@@ -4,6 +4,27 @@ All notable changes to the **Titan Combat** mod will be documented in this file.
 
 ---
 
+## [2.1.0] - 2026-10-28 (Mass-Production Redesign & M-120 Howitzer)
+
+### Mass-production titans
+- **Trooper rebuilt in the Letheus style**: helmet with visor slit, amber chest cylinders and belt pouches, digital camo, boxy pauldrons with grab handles, tall knee guards.
+- **Scout rebuilt as a 30MM-style light frame**: ball joints everywhere, segmented plates, small sensor head, back plate packs, three-toed feet.
+- **Shade rebuilt as a boxy heavy walker** under a torn camouflage cloak with ghillie tufts; roof-mounted gun.
+- Joint hubs, hydraulic rams and hoses on all three; loaded stance (bent knees, torso hunched over the hips) on every titan.
+- Light Recon SMG redesigned (top tube, carry loop, long straight magazine, ribbed foregrip).
+
+### M-120 back howitzer (new)
+- Skill module for the back equipment slot: the titan keeps its hand weapon.
+- **[K] tactical map**: blue top-down map of loaded terrain with range rings; left-click designates, right-click designates and fires on lock. Also **[N]** rangefinder mark, typed coordinates, and **Up/Down** range corrections.
+- **[L] fire**. The gun traverses and elevates onto the target before it can fire (LAYING / LOCKED on the HUD), recoils, and the titan braces in a firing stance.
+- Range 24-160 m, loaded terrain only; the server re-checks every target. Shells come in 4-round racks loaded automatically.
+
+### Fixes
+- Unarmed titans no longer flail their arms: the swing follows the leg stride.
+- Salute raised the hand behind the head; it now comes up to the visor.
+- Transports: **[B]** releases / hot-drops the carried titan and **[Left Alt]** descends the drone; Shift is only for getting out.
+- Generators borrow texture patches by material, so model changes no longer recolour the SMG or cockpit arms.
+
 ## [1.6.2] - 2026-10-24 (Flight Module Fixes)
 
 ### Flight modules

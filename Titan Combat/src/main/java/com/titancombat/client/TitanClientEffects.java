@@ -65,6 +65,19 @@ public final class TitanClientEffects {
         shakeNearby(titan, base, 18.0D);
     }
 
+    /** Howitzer shot: muzzle flash and a cloud of smoke around the back mount, and a camera kick for the pilot. */
+    public static void onHowitzerFired(BaseTitanEntity titan) {
+        Level level = titan.level();
+        RandomSource r = titan.getRandom();
+        Vec3 m = titan.getArtilleryMuzzle();
+        level.addParticle(ParticleTypes.FLASH, m.x, m.y + 1.0D, m.z, 0, 0, 0);
+        for (int i = 0; i < 14; i++) {
+            level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, m.x, m.y, m.z,
+                    (r.nextDouble() - 0.5D) * 0.15D, 0.05D + r.nextDouble() * 0.08D, (r.nextDouble() - 0.5D) * 0.15D);
+        }
+        if (isPilot(titan)) CockpitCamera.addRecoil(3.0F);
+    }
+
     public static void onEntityEvent(BaseTitanEntity titan, byte id) {
         Level level = titan.level();
         RandomSource r = titan.getRandom();

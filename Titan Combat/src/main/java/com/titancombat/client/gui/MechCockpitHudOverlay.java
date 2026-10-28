@@ -437,6 +437,10 @@ public class MechCockpitHudOverlay {
         rect(g, xr + 2, base - 50, xr + 6, base - 49, CYAN, 0.35F);
 
         textRight(g, font, weaponName, xr, base - 52, WHITE, 0.7F, false);
+        if (net.minecraft.client.Minecraft.getInstance().player.getVehicle() instanceof com.titancombat.entity.BaseTitanEntity titan
+                && titan.hasHowitzer()) {
+            drawHowitzer(g, font, titan, xr, base - 62);
+        }
 
         boolean reloading = reloadTicksLeft > 0;
         float dim = weaponLowered ? 0.45F : 1.0F;
@@ -481,6 +485,35 @@ public class MechCockpitHudOverlay {
         } else if (activeWeapon != null && !ammoInfinite) {
             textRight(g, font, reserveText, xr, sy, reserveMags > 0 ? DIM : AMBER, 0.85F, false);
         }
+    }
+
+    /** Howitzer back module: rounds and gun state, then the target and the solved firing data. */
+    private static void drawHowitzer(GuiGraphics g, Font font, com.titancombat.entity.BaseTitanEntity titan, int xr, int y) {
+        String fireKey = com.titancombat.client.KeyInputHandler.KEY_FIRE_HOWITZER.getTranslatedKeyMessage().getString().toUpperCase();
+        String mapKey = com.titancombat.client.KeyInputHandler.KEY_TACTICAL_MAP.getTranslatedKeyMessage().getString().toUpperCase();
+        net.minecraft.core.BlockPos t = titan.getArtilleryTarget();
+        net.minecraft.world.phys.Vec3 v = titan.artillerySolution();
+        String state = titan.getHowitzerReload() > 0 ? "hud.titancombat.howitzer_reloading"
+                : titan.getHowitzerRounds() <= 0 ? "hud.titancombat.howitzer_empty"
+                : t == null ? "hud.titancombat.howitzer_ready"
+                : titan.getArtilleryLaying() > 0 ? "hud.titancombat.howitzer_laying" : "hud.titancombat.howitzer_locked";
+        textRight(g, font, net.minecraft.client.resources.language.I18n.get(state, titan.getHowitzerRounds(),
+                com.titancombat.entity.Howitzer.ROUNDS_PER_RACK, fireKey), xr, y, AMBER, 0.95F, false);
+        if (t == null || v == null) {
+            textRight(g, font, net.minecraft.client.resources.language.I18n.get("hud.titancombat.artillery_no_target", mapKey,
+                    com.titancombat.client.KeyInputHandler.KEY_MARK_TARGET.getTranslatedKeyMessage().getString().toUpperCase()),
+                    xr, y - 10, AMBER, 0.75F, false);
+            return;
+        }
+        double dx = t.getX() + 0.5D - titan.getX(), dz = t.getZ() + 0.5D - titan.getZ();
+        double range = Math.sqrt(dx * dx + dz * dz);
+        int bearing = Math.floorMod((int) Math.round(Math.toDegrees(Math.atan2(-dx, dz))) + 180, 360);  // compass heading
+        int elevation = (int) Math.round(Math.toDegrees(Math.atan2(v.y, v.horizontalDistance())));
+        float tof = com.titancombat.entity.BaseTitanEntity.shellFlightTicks(range) / 20.0F;
+        textRight(g, font, net.minecraft.client.resources.language.I18n.get("hud.titancombat.artillery_solution",
+                (int) range, bearing, elevation, String.format("%.1f", tof)), xr, y - 10, AMBER, 0.9F, false);
+        textRight(g, font, net.minecraft.client.resources.language.I18n.get("hud.titancombat.artillery_target", t.getX(), t.getY(), t.getZ()),
+                xr, y - 20, AMBER, 0.9F, false);
     }
 
     // =================================================================== reticle

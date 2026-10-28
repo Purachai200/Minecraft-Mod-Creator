@@ -6,68 +6,93 @@ tools/build_cockpit_assets.py copies the hand version into the first-person rig.
 Run from the repo root:  python3 tools/build_scout_smg.py && python3 tools/build_cockpit_assets.py
 """
 import json
+import os
+import sys
 
 from build_cockpit_assets import box_to_face_uv
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scratch'))
+import build_scout_assets as SCOUT  # noqa: E402  (sets up the Scout bone list on the shared Trooper builder)
+
 GEO = 'Titan Combat/src/main/resources/assets/titancombat/geo/scout_titan.geo.json'
 
-# Existing material patches in the scout atlas: (uv, size of the cube that owns the patch).
+# Material patches in the scout atlas, borrowed from the largest Scout cube of each material
+# (build_trooper_assets.swatch), so redesigning the Scout never leaves the SMG pointing at stale pixels.
 # Faces are mapped per face into these, so any cube size reads only its own material.
-MAT = {
-    'paint': ([174, 48], [10, 18, 11]),   # chassis colour
-    'accent': ([284, 48], [18, 8, 7]),    # scheme accent (orange on Recon)
-    'dark': ([140, 48], [8, 6, 8]),       # gunmetal
-    'metal': ([100, 48], [6, 13, 7]),
-    'steel': ([238, 48], [2, 13, 2]),
-    'hazard': ([336, 48], [3, 2, 8]),
-    'vent': ([156, 2], [10, 10, 2]),
-    'lens': ([824, 2], [16, 2, 1]),       # visor glow
+MAT_SOURCE = {
+    'paint': 'paint',      # chassis colour
+    'accent': 'paint2',    # scheme accent (orange on Recon)
+    'dark': 'dark',        # gunmetal
+    'metal': 'metal',
+    'steel': 'steel',
+    'hazard': 'hazard',
+    'vent': 'vent',
+    'lens': 'visor',       # visor glow
 }
+
+
+def _patches():
+    SCOUT.T.pack()
+    return {k: SCOUT.T.swatch(m) for k, m in MAT_SOURCE.items()}
+
+
+MAT = _patches()
 
 # Parts in the gun's own frame, relative to the grip: x along the barrel, y up (optic side), z across.
 # (x0, x1, y0, y1, z0, z1, material)
+def _both_sides(x0, x1, y0, y1, z0, z1, mat):
+    """A side detail and its mirror on the other side of the gun."""
+    return [(x0, x1, y0, y1, z0, z1, mat), (x0, x1, y0, y1, -z1, -z0, mat)]
+
+
+# Stockless bullpup-style SMG: a full-length upper tube over a slotted lower receiver, a U-shaped
+# carry loop over the magazine well, a long straight magazine, ribbed foregrip and an angled grip.
 PARTS = [
-    # Receiver: chassis-coloured lower, gunmetal upper, accent side plates, ejection port, charging handle
-    (-4, 10, -3, 3, -3, 3, 'paint'),
-    (-6, 14, 3, 6, -2.5, 2.5, 'dark'),
-    (0, 8, -2, 2, 3, 3.5, 'accent'),
-    (0, 8, -2, 2, -3.5, -3, 'accent'),
-    (4, 8, 3.5, 5.5, -3, -2.5, 'metal'),
-    (9, 11, 3, 4, 2.5, 4.5, 'metal'),
-    (-1, 1, -3.2, 3.2, -3.2, 3.2, 'hazard'),
-    (-3, 1, 0, 2, 3.5, 3.8, 'lens'),                 # side ammo counter
-    # Picatinny rail with teeth, holographic optic
-    (-4, 12, 6, 7, -1.5, 1.5, 'metal'),
-    *[(x, x + 1.5, 7, 7.8, -1.5, 1.5, 'dark') for x in (-3, 0, 3, 9)],
-    (2, 4, 7, 11, -2, 2, 'dark'),
-    (6, 8, 7, 11, -2, 2, 'dark'),
-    (2, 8, 11, 11.6, -2, 2, 'dark'),
-    (6.4, 6.9, 8, 10.6, -1.5, 1.5, 'lens'),
-    # Vented handguard, barrel, muzzle brake
-    (14, 24, -2, 3, -2.5, 2.5, 'dark'),
-    (15, 23, -1, 2, 2.5, 2.8, 'vent'),
-    (15, 23, -1, 2, -2.8, -2.5, 'vent'),
-    *[(x, x + 1.5, 3, 3.5, -1.5, 1.5, 'metal') for x in (15, 18, 21)],
-    (24, 30, -0.5, 1.5, -1, 1, 'steel'),
-    (30, 34, -1.5, 2.5, -2, 2, 'dark'),
-    (31, 32, -1.8, 2.8, -2.2, 2.2, 'metal'),
-    (32.8, 33.4, -1.8, 2.8, -2.2, 2.2, 'metal'),
-    # Under-barrel light and vertical foregrip
-    (20, 24, -2.5, -0.5, 2.5, 4, 'dark'),
-    (24, 24.3, -2.2, -0.8, 2.8, 3.7, 'lens'),
-    (16, 19, -9, -2, -1.5, 1.5, 'dark'),
-    # Pistol grip, trigger guard, curved magazine with base plate
-    (-4, -1, -9, -3, -2, 2, 'dark'),
-    (-1, 3, -5, -4.4, -0.5, 0.5, 'metal'),
-    (2, 7, -10, -3, -2, 2, 'dark'),
-    (3, 8, -14, -10, -2, 2, 'dark'),
-    (4, 9, -17, -14, -2, 2, 'dark'),
-    (3.5, 9.5, -18, -17, -2.4, 2.4, 'accent'),
-    # Buffer tube and stock with cheek rest and butt pad
-    (-14, -6, 0, 3, -1.5, 1.5, 'metal'),
-    (-18, -12, -3, 4, -2, 2, 'paint'),
-    (-16, -10, 4, 5, -1.5, 1.5, 'dark'),
-    (-19, -18, -4, 5, -2.5, 2.5, 'dark'),
+    # Upper tube (octagonal section), front cap with green sight lens
+    (-2, 30, 3.5, 7.5, -2.5, 2.5, 'metal'),
+    (-2, 30, 3, 8, -2, 2, 'metal'),
+    (29.6, 30.4, 3.6, 7.4, -1.8, 1.8, 'metal'),
+    (30.4, 30.8, 4.6, 6.4, -1, 1, 'lens'),
+    # Rounded rear housing with a slotted take-down knob on each side
+    (-6, -2, -1, 8, -2.8, 2.8, 'paint'),
+    (-5.6, -2, 8, 9, -2.4, 2.4, 'paint'),
+    (-4.8, -2, 9, 9.5, -1.8, 1.8, 'paint'),
+    *_both_sides(-5, -2.6, 4.2, 6.6, 2.8, 3.4, 'dark'),
+    *_both_sides(-4, -3.6, 4.4, 6.4, 3.4, 3.6, 'metal'),
+    # Lower receiver with long side slots, bolt slot and charging knob, stepped nose
+    (-2, 26, -2, 3, -2.5, 2.5, 'paint'),
+    (26, 29, -1, 3, -2, 2, 'paint'),
+    *_both_sides(14, 25, 0.4, 1.2, 2.5, 2.7, 'dark'),
+    *_both_sides(15, 28, 5, 5.6, 2.5, 2.7, 'dark'),
+    (-1, 9, 1.4, 2.2, 2.5, 2.7, 'dark'),
+    (2, 4, 0.8, 2.8, 2.7, 4, 'metal'),
+    (0, 2, 3, 3.6, 1.5, 2.6, 'metal'),                    # sight notch
+    # U-shaped carry loop over the magazine well
+    *_both_sides(9.5, 14, 0, 10.8, 3.2, 3.8, 'metal'),
+    (9.5, 14, 10.2, 10.8, -3.8, 3.8, 'metal'),
+    # Magazine well with three grooves, long straight magazine with a spine groove and base plate
+    (10, 15, -7, -2, -2.8, 2.8, 'paint'),
+    *[p for y in (-3, -4.5, -6) for p in _both_sides(10.6, 14.4, y, y + 0.6, 2.8, 3, 'dark')],
+    (11, 14, -19, -7, -2, 2, 'dark'),
+    *_both_sides(12.2, 12.8, -18, -8, 2, 2.2, 'metal'),
+    (10.6, 14.4, -20, -19, -2.3, 2.3, 'accent'),
+    # Under-rail with teeth, sling loop, ribbed vertical foregrip
+    (17, 28, -3, -2, -1.8, 1.8, 'metal'),
+    *[(x, x + 1, -3.6, -3, -1.5, 1.5, 'dark') for x in (18, 20.5, 23, 25.5)],
+    (19.5, 23.5, -2.6, -1.6, 2, 2.3, 'metal'),
+    (20.5, 22.5, -12, -3.6, -1.8, 1.8, 'dark'),
+    *[(20, 23, y, y + 0.6, -2, 2, 'metal') for y in (-11.6, -10.4, -9.2)],
+    # Barrel under the tube, muzzle ring with a side port
+    (26, 33, 0, 2.5, -1.2, 1.2, 'steel'),
+    (32, 34, -0.3, 2.8, -1.6, 1.6, 'dark'),
+    (32.4, 33.4, 1, 1.5, 1.6, 1.7, 'metal'),
+    # Trigger guard and trigger
+    (2, 8, -4, -3.4, -0.5, 0.5, 'metal'),
+    (7.4, 8, -4, -2, -0.5, 0.5, 'metal'),
+    (4.5, 5.2, -3.6, -2, -0.3, 0.3, 'metal'),
+    # Faceted pistol grip raked back, flared heel
+    *[(-2.4 - 0.7 * i, 1 - 0.7 * i, -4 - 2 * i, -2 - 2 * i, -2, 2, 'dark') for i in range(5)],
+    (-6.5, -1.5, -12.6, -11.6, -2.3, 2.3, 'dark'),
 ]
 MUZZLE_X = 34
 

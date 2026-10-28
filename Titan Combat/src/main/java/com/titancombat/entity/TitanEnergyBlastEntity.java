@@ -1,6 +1,9 @@
 package com.titancombat.entity;
 
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
@@ -16,6 +19,9 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 
 public class TitanEnergyBlastEntity extends ThrowableItemProjectile {
+    // Synced so the client predicts the same arc the server flies.
+    private static final EntityDataAccessor<Boolean> DATA_LOBBED =
+            SynchedEntityData.defineId(TitanEnergyBlastEntity.class, EntityDataSerializers.BOOLEAN);
 
     public TitanEnergyBlastEntity(EntityType<? extends ThrowableItemProjectile> type, Level level) {
         super(type, level);
@@ -43,6 +49,29 @@ public class TitanEnergyBlastEntity extends ThrowableItemProjectile {
         return this;
     }
 
+    /** Configure this round directly (the howitzer isn't a TitanWeapon). */
+    public TitanEnergyBlastEntity withStats(float damage, float explosionPower) {
+        this.damage = damage;
+        this.explosionPower = explosionPower;
+        return this;
+    }
+
+    /** Artillery shell: falls under gravity (BaseTitanEntity.SHELL_GRAVITY) instead of flying flat. */
+    public TitanEnergyBlastEntity lobbed() {
+        this.entityData.set(DATA_LOBBED, true);
+        return this;
+    }
+
+    public boolean isLobbed() {
+        return this.entityData.get(DATA_LOBBED);
+    }
+
+    @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(DATA_LOBBED, false);
+    }
+
     @Override
     protected Item getDefaultItem() {
         return Items.IRON_NUGGET;
@@ -51,13 +80,13 @@ public class TitanEnergyBlastEntity extends ThrowableItemProjectile {
     /** Titan rounds fly flat: with vanilla throwable gravity they dropped 3+ blocks at range and missed the reticle. */
     @Override
     protected float getGravity() {
-        return 0.0F;
+        return isLobbed() ? (float) BaseTitanEntity.SHELL_GRAVITY : 0.0F;
     }
 
     @Override
     public void tick() {
         super.tick();
-        if (!this.level().isClientSide && this.tickCount > 100) {
+        if (!this.level().isClientSide && this.tickCount > (isLobbed() ? 300 : 100)) {
             this.discard(); // ~250 blocks of travel; don't let misses fly forever
             return;
         }

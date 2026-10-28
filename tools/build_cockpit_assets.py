@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Builds cockpit 1st-person models for Trooper Titan (Mining Drill & Chainsaw)
-and Scout Titan (Light SMG), properly transformed from 3rd-person geometry and
+"""Builds cockpit 1st-person models for Trooper Titan (Mining Drill & Chainsaw),
+Scout Titan (Light SMG) and Shade Titan, properly transformed from 3rd-person geometry and
 mapped to each titan's 1024x1024 texture atlas.
 """
 import json
@@ -47,21 +47,43 @@ def transform_cube(c, p3=P3, p1=P1, scale=SCALE):
         res['pivot'] = [round(p1[i] + (piv3[i] - p3[i]) * scale, 4) for i in range(3)]
     return res
 
-def map_arm_cubes(cubes, paint_uv, dark_uv, steel_uv):
-    """Replaces per-face UV maps on arm/finger cubes with appropriate box UVs."""
+def material_patches(module):
+    """(uv, size) of the largest cube of each material in a titan generator's atlas, so the cockpit arms
+    wear the same paint as the titan outside however its model is laid out."""
+    import importlib
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'scratch'))
+    T = importlib.reload(importlib.import_module('build_trooper_assets'))
+    if module != 'build_trooper_assets':  # the Scout/Shade builders swap their bones into the Trooper module
+        importlib.reload(importlib.import_module(module))
+    T.pack()
+    return {m: T.swatch(m) for m in ('paint', 'dark', 'steel', 'metal')}
+
+def map_arm_cubes(cubes, patches):
+    """Gives Ion-shaped arm/finger cubes per-face UVs inside one of the titan's material patches."""
     out = []
     for i, c in enumerate(cubes):
         c_copy = dict(c)
-        # Classify cube based on function
         # Pistons / hydraulic rods
         if c.get('size', [0,0,0])[0] < 2.0 or c.get('size', [0,0,0])[2] < 2.0:
-            c_copy['uv'] = steel_uv
+            mat = 'steel'
         elif i in [0, 1, 4, 5]:
-            c_copy['uv'] = paint_uv
+            mat = 'paint'
         else:
-            c_copy['uv'] = dark_uv
+            mat = 'dark'
+        c_copy['uv'] = box_to_face_uv(*patches[mat])
         out.append(c_copy)
     return out
+
+def remap_arm_bone(b, patches):
+    """Arm, hand and finger bones of the Ion first-person rig, repainted from the titan's atlas."""
+    name = b['name']
+    hand = box_to_face_uv(*patches['metal'])
+    if name in ('rightArm2', 'leftArm1', 'leftShoulderArmor', 'leftElbowArmor', 'leftArm2'):
+        return map_arm_cubes(b['cubes'], patches)
+    if name in ('rightHand', 'leftHand') or 'Finger' in name:
+        return [{'origin': c['origin'], 'size': c['size'], 'uv': hand} for c in b['cubes']]
+    return None
 
 def build_trooper_cockpit():
     base_path = 'Titan Combat/src/main/resources/assets/titancombat/geo/cockpit/ion_titan_1st.geo.json'
@@ -75,12 +97,7 @@ def build_trooper_cockpit():
     drill_cubes = [transform_cube(c) for c in tb['drill']['cubes']]
     saw_cubes = [transform_cube(c) for c in tb['chainsaw']['cubes']]
     
-    # Trooper UVs in trooper_titan.png:
-    # Paint armor: [324, 105], Dark joint: [282, 105], Steel piston: [462, 105], Hand: [494, 105]
-    PAINT_UV = [324, 105]
-    DARK_UV = [282, 105]
-    STEEL_UV = [462, 105]
-    HAND_UV = [494, 105]
+    patches = material_patches('build_trooper_assets')
     
     laser_bones = {'laser1', 'laser2', 'laser3', 'laserHead', 'laserExpand1', 'laserExpand2', 'laser_locator'}
     weapon_parts = {'rotate', 'clip', 'weaponTopOpen', 'weaponRightOpen', 'weaponLeftOpen'}
@@ -97,16 +114,8 @@ def build_trooper_cockpit():
             b_copy['cubes'] = [] # empty weapon parent bone
         elif name == 'locator_fire_1st':
             b_copy['pivot'] = [38.0, -48.33493, 57.2958]
-        elif name == 'rightArm2':
-            b_copy['cubes'] = map_arm_cubes(b['cubes'], PAINT_UV, DARK_UV, STEEL_UV)
-        elif name == 'rightHand':
-            b_copy['cubes'] = [{'origin': c['origin'], 'size': c['size'], 'uv': HAND_UV} for c in b['cubes']]
-        elif 'right' in name and 'Finger' in name:
-            b_copy['cubes'] = [{'origin': c['origin'], 'size': c['size'], 'uv': HAND_UV} for c in b['cubes']]
-        elif name in ('leftArm1', 'leftShoulderArmor', 'leftElbowArmor', 'leftArm2'):
-            b_copy['cubes'] = map_arm_cubes(b['cubes'], PAINT_UV, DARK_UV, STEEL_UV)
-        elif name == 'leftHand' or ('left' in name and 'Finger' in name):
-            b_copy['cubes'] = [{'origin': c['origin'], 'size': c['size'], 'uv': HAND_UV} for c in b['cubes']]
+        elif remap_arm_bone(b, patches) is not None:
+            b_copy['cubes'] = remap_arm_bone(b, patches)
             
         new_bones.append(b_copy)
         
@@ -148,23 +157,19 @@ def build_trooper_cockpit():
         json.dump(geo, f, indent=2)
     print(f'Wrote {out_path} ({len(new_bones)} bones)')
 
-def build_scout_cockpit():
+def build_light_cockpit(titan='scout'):
+    """Scout (Light SMG in hand) or Shade (no factory gun) cockpit arms on the Ion rig."""
     base_path = 'Titan Combat/src/main/resources/assets/titancombat/geo/cockpit/ion_titan_1st.geo.json'
     with open(base_path) as f:
         ion_1st = json.load(f)
     
-    with open('Titan Combat/src/main/resources/assets/titancombat/geo/scout_titan.geo.json') as f:
-        scout_3rd = json.load(f)
-    sb = {b['name']: b for b in scout_3rd['minecraft:geometry'][0]['bones']}
+    with open(f'Titan Combat/src/main/resources/assets/titancombat/geo/{titan}_titan.geo.json') as f:
+        third = json.load(f)
+    sb = {b['name']: b for b in third['minecraft:geometry'][0]['bones']}
+
+    smg_cubes = [transform_cube(c) for c in sb['weapon'].get('cubes', [])]
     
-    smg_cubes = [transform_cube(c) for c in sb['weapon']['cubes']]
-    
-    # Scout UVs in scout_titan.png:
-    # Paint armor: [182, 48], Dark joint: [140, 48], Steel piston: [236, 48], Hand: [248, 48]
-    PAINT_UV = [182, 48]
-    DARK_UV = [140, 48]
-    STEEL_UV = [236, 48]
-    HAND_UV = [248, 48]
+    patches = material_patches(f'build_{titan}_assets')
     
     laser_bones = {'laser1', 'laser2', 'laser3', 'laserHead', 'laserExpand1', 'laserExpand2', 'laser_locator'}
     weapon_parts = {'rotate', 'clip', 'weaponTopOpen', 'weaponRightOpen', 'weaponLeftOpen'}
@@ -181,16 +186,8 @@ def build_scout_cockpit():
             b_copy['cubes'] = smg_cubes # SMG cubes directly on weapon bone
         elif name == 'locator_fire_1st':
             b_copy['pivot'] = [round(P1[0] + 34 * SCALE, 4), -48.33493, 57.2958]  # SMG muzzle (build_scout_smg.MUZZLE_X)
-        elif name == 'rightArm2':
-            b_copy['cubes'] = map_arm_cubes(b['cubes'], PAINT_UV, DARK_UV, STEEL_UV)
-        elif name == 'rightHand':
-            b_copy['cubes'] = [{'origin': c['origin'], 'size': c['size'], 'uv': HAND_UV} for c in b['cubes']]
-        elif 'right' in name and 'Finger' in name:
-            b_copy['cubes'] = [{'origin': c['origin'], 'size': c['size'], 'uv': HAND_UV} for c in b['cubes']]
-        elif name in ('leftArm1', 'leftShoulderArmor', 'leftElbowArmor', 'leftArm2'):
-            b_copy['cubes'] = map_arm_cubes(b['cubes'], PAINT_UV, DARK_UV, STEEL_UV)
-        elif name == 'leftHand' or ('left' in name and 'Finger' in name):
-            b_copy['cubes'] = [{'origin': c['origin'], 'size': c['size'], 'uv': HAND_UV} for c in b['cubes']]
+        elif remap_arm_bone(b, patches) is not None:
+            b_copy['cubes'] = remap_arm_bone(b, patches)
             
         new_bones.append(b_copy)
     
@@ -198,7 +195,7 @@ def build_scout_cockpit():
         'format_version': '1.12.0',
         'minecraft:geometry': [{
             'description': {
-                'identifier': 'geometry.scout_titan.1st',
+                'identifier': f'geometry.{titan}_titan.1st',
                 'texture_width': 1024,
                 'texture_height': 1024,
                 'visible_bounds_width': 7,
@@ -209,7 +206,7 @@ def build_scout_cockpit():
         }]
     }
     
-    out_path = 'Titan Combat/src/main/resources/assets/titancombat/geo/cockpit/scout_titan_1st.geo.json'
+    out_path = f'Titan Combat/src/main/resources/assets/titancombat/geo/cockpit/{titan}_titan_1st.geo.json'
     with open(out_path, 'w') as f:
         json.dump(geo, f, indent=2)
     print(f'Wrote {out_path} ({len(new_bones)} bones)')
@@ -217,4 +214,5 @@ def build_scout_cockpit():
 if __name__ == '__main__':
     _uv_selfcheck()
     build_trooper_cockpit()
-    build_scout_cockpit()
+    build_light_cockpit('scout')
+    build_light_cockpit('shade')

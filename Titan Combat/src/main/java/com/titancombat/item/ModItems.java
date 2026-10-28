@@ -78,6 +78,12 @@ public class ModItems {
             () -> new Item(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
 
     // Titan weapon modules (any chassis) and their dedicated magazines
+    // Back-mounted howitzer (a skill module for the back equipment slot) and its shell racks.
+    public static final RegistryObject<Item> HOWITZER_MODULE = ITEMS.register("howitzer_module",
+            () -> new HowitzerModuleItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> HOWITZER_SHELLS = ITEMS.register("ammo_artillery",
+            () -> new Item(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
+
     public static final Map<TitanWeapon, RegistryObject<Item>> WEAPON_MODULES = new EnumMap<>(TitanWeapon.class);
     public static final Map<TitanWeapon, RegistryObject<Item>> WEAPON_MAGAZINES = new EnumMap<>(TitanWeapon.class);
     public static final Map<com.titancombat.entity.TitanFlightModule, RegistryObject<Item>> FLIGHT_MODULES =

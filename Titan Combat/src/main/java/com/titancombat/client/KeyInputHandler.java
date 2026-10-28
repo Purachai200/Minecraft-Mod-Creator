@@ -91,6 +91,56 @@ public class KeyInputHandler {
             KEY_CATEGORY_TITAN
     );
 
+    public static final KeyMapping KEY_RANGE_UP = new KeyMapping(
+            "key.titancombat.range_up",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_UP,
+            KEY_CATEGORY_TITAN
+    );
+
+    public static final KeyMapping KEY_RANGE_DOWN = new KeyMapping(
+            "key.titancombat.range_down",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_DOWN,
+            KEY_CATEGORY_TITAN
+    );
+
+    public static final KeyMapping KEY_RELEASE_CARGO = new KeyMapping(
+            "key.titancombat.release_cargo",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_B,
+            KEY_CATEGORY_TITAN
+    );
+
+    public static final KeyMapping KEY_DESCEND = new KeyMapping(
+            "key.titancombat.descend",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_LEFT_ALT,
+            KEY_CATEGORY_TITAN
+    );
+
+    public static final KeyMapping KEY_MARK_TARGET = new KeyMapping(
+            "key.titancombat.mark_target",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_N,
+            KEY_CATEGORY_TITAN
+    );
+
+    // The howitzer is a back skill module (the titan keeps its hand weapon), so it has its own keys.
+    public static final KeyMapping KEY_TACTICAL_MAP = new KeyMapping(
+            "key.titancombat.tactical_map",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_K,
+            KEY_CATEGORY_TITAN
+    );
+
+    public static final KeyMapping KEY_FIRE_HOWITZER = new KeyMapping(
+            "key.titancombat.fire_howitzer",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_L,
+            KEY_CATEGORY_TITAN
+    );
+
     private static final long KNEEL_DEBOUNCE_MS = 1500L; // stand-up / kneel clip length
     private static long lastKneelPressMs = 0L;
     private static long lastEjectPressMs = 0L;
@@ -133,6 +183,13 @@ public class KeyInputHandler {
 
         if (KEY_RELOAD.consumeClick()) {
             ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.RELOAD));
+        }
+
+        while (KEY_RANGE_UP.consumeClick()) {
+            ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.RANGE_UP));
+        }
+        while (KEY_RANGE_DOWN.consumeClick()) {
+            ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.RANGE_DOWN));
         }
 
         if (KEY_HOLSTER.consumeClick()) {
@@ -192,7 +249,43 @@ public class KeyInputHandler {
                     flightThrust ? TitanWeaponActionC2SPacket.FLIGHT_START : TitanWeaponActionC2SPacket.FLIGHT_STOP));
         }
 
+        com.titancombat.entity.transport.TitanSkyCraneDroneEntity.clientDescendHeld = KEY_DESCEND.isDown();
+
+        // Transport drivers: release / hot-drop the carried titan.
+        if (mc.player != null && mc.player.getVehicle() instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity) {
+            while (KEY_RELEASE_CARGO.consumeClick()) {
+                ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.RELEASE_CARGO));
+            }
+        }
+
         if (!piloting || mc.screen != null) return;
+
+        // Artillery fire control: rangefinder mark, coordinate entry, and a marker ring on the target.
+        if (mc.player.getVehicle() instanceof BaseTitanEntity t && t.hasHowitzer()) {
+            while (KEY_MARK_TARGET.consumeClick()) {
+                net.minecraft.world.phys.Vec3 p = crosshairTarget(mc, 320.0D);
+                ModNetworking.sendToServer(new com.titancombat.network.ArtilleryTargetC2SPacket(
+                        net.minecraft.util.Mth.floor(p.x), true, net.minecraft.util.Mth.floor(p.y), net.minecraft.util.Mth.floor(p.z)));
+            }
+            while (KEY_FIRE_HOWITZER.consumeClick()) {
+                ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.FIRE_HOWITZER));
+            }
+            if (KEY_TACTICAL_MAP.consumeClick()) {
+                mc.setScreen(new com.titancombat.client.gui.ArtilleryMapScreen(t));
+                return;
+            }
+        }
+        net.minecraft.core.BlockPos target = mc.player.getVehicle() instanceof BaseTitanEntity t2
+                && t2.hasHowitzer() ? t2.getArtilleryTarget() : null;
+        if (target != null && mc.level.getGameTime() % 3 == 0) {
+            net.minecraft.world.phys.Vec3 hit = net.minecraft.world.phys.Vec3.atBottomCenterOf(target).add(0.0D, 1.0D, 0.0D);
+            for (int i = 0; i < 8; i++) {
+                double a = i * Math.PI / 4;
+                mc.level.addParticle(net.minecraft.core.particles.ParticleTypes.END_ROD,
+                        hit.x + Math.cos(a) * 3.0D, hit.y + 0.2D, hit.z + Math.sin(a) * 3.0D, 0, 0.02D, 0);
+            }
+            mc.level.addParticle(net.minecraft.core.particles.ParticleTypes.FLAME, hit.x, hit.y + 0.3D, hit.z, 0, 0.05D, 0);
+        }
 
         if (mc.options.keyAttack.isDown() || KEY_FIRE.isDown()) {
             ModNetworking.sendToServer(new TitanFireC2SPacket(crosshairTarget(mc)));
@@ -204,7 +297,10 @@ public class KeyInputHandler {
      * and recoiling/shaking cameras aim exactly where the reticle is, not where the pilot's entity eyes point).
      */
     private static net.minecraft.world.phys.Vec3 crosshairTarget(Minecraft mc) {
-        double range = 160.0D;
+        return crosshairTarget(mc, 160.0D);
+    }
+
+    private static net.minecraft.world.phys.Vec3 crosshairTarget(Minecraft mc, double range) {
         org.joml.Vector3f look = mc.gameRenderer.getMainCamera().getLookVector();
         net.minecraft.world.phys.Vec3 dir = new net.minecraft.world.phys.Vec3(look.x(), look.y(), look.z());
         net.minecraft.world.phys.Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
@@ -271,5 +367,12 @@ public class KeyInputHandler {
         event.register(KEY_RELOAD);
         event.register(KEY_HOLSTER);
         event.register(KEY_SALUTE);
+        event.register(KEY_RANGE_UP);
+        event.register(KEY_RANGE_DOWN);
+        event.register(KEY_RELEASE_CARGO);
+        event.register(KEY_DESCEND);
+        event.register(KEY_MARK_TARGET);
+        event.register(KEY_TACTICAL_MAP);
+        event.register(KEY_FIRE_HOWITZER);
     }
 }

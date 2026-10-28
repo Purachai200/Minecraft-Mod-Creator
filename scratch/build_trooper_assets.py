@@ -9,6 +9,7 @@ import json, os, random, struct, zlib
 ROOT = "Titan Combat/src/main/resources/assets/titancombat"
 TEX = 1024
 ID = "trooper"  # build_scout_assets.py reuses this module with its own ID, BONES and SCHEMES
+CAMO = True     # digital camo on "paint" (the Letheus look); the Scout and Shade turn it off
 
 # ---------------------------------------------------------------- model
 
@@ -76,130 +77,203 @@ def chainsaw(cx, cz, y0):
             out.append(C([x, GRIP_Y + dy, cz - 1], [2, 2, 2], "rust"))
     return out
 
-def claw(cx, cz, top):
-    """3-finger hydraulic claw: two front fingers and a rear thumb, each curling inward."""
-    out = [C([cx - 6, top - 7, cz - 7], [12, 7, 14], "metal"),
-           C([cx - 4, top - 9, cz - 5], [8, 2, 10], "dark")]
-    y = top - 9
-    for fx, fz, curl in ((cx - 4.5, cz - 6, -18), (cx + 1.5, cz - 6, -18), (cx - 1.5, cz + 3, 18)):
-        out.append(C([fx, y - 10, fz], [3, 10, 3], "metal", rot=[curl, 0, 0], piv=[fx + 1.5, y, fz + 1.5]))
-        tip_z = fz + (3 if curl < 0 else -3)
-        out.append(C([fx, y - 17, tip_z], [3, 8, 3], "rust", rot=[-curl * 2.2, 0, 0], piv=[fx + 1.5, y - 9, tip_z + 1.5]))
-    out.append(C([cx - 1, y - 6, cz - 3], [2, 6, 2], "steel"))  # center piston
+def B(x0, x1, y0, y1, z0, z1, m, **kw):
+    """Cube from its min/max corners."""
+    return C([x0, y0, z0], [x1 - x0, y1 - y0, z1 - z0], m, **kw)
+
+def ball(cx, cy, cz, d, m="dark"):
+    """Ball joint: a cube plus copies turned 45 degrees about x and about z read as a sphere."""
+    o, s = [cx - d / 2, cy - d / 2, cz - d / 2], [d, d, d]
+    return late([C(o, s, m), C(o, s, m, rot=[45, 0, 0], piv=[cx, cy, cz]), C(o, s, m, rot=[0, 0, 45], piv=[cx, cy, cz])])
+
+def fist(x0, top, z0, m="dark"):
+    """Blocky mech fist under the wrist: palm, knuckle guard, four fingers and a thumb."""
+    out = [B(x0, x0 + 10, top - 7, top, z0, z0 + 11, m),
+           B(x0 - 0.5, x0 + 10.5, top - 4, top, z0 - 0.5, z0 + 11.5, "metal")]
+    for i in range(4):
+        out.append(B(x0 + 0.3 + i * 2.45, x0 + 2.4 + i * 2.45, top - 12, top - 7, z0 + 7, z0 + 10.5, m))
+    out.append(B(x0 - 1.5, x0 + 0.5, top - 10, top - 3, z0 + 1, z0 + 4.5, "metal"))
     return out
 
-RIGHT_ARM1 = [
-    C([-41, 88, -4], [19, 19, 26], "paint", decal={"west": "mp01"}),           # shoulder pad
-    C([-42, 86, -5], [20, 3, 28], "hazard"),                                    # hazard lip
-    C([-38, 107, -1], [14, 2, 20], "paint2"),                                    # pad cap
-    C([-31, 82, 5], [9, 10, 11], "dark"),                                       # shoulder joint
-    C([-30, 70, 6], [9, 14, 10], "metal"),                                      # upper arm frame
-    C([-31, 73, 4], [4, 9, 3], "paint2"),                                       # bicep plate
-    C([-22, 71, 9], [3, 13, 3], "steel"),                                       # bicep piston
-]
-RIGHT_ARM2 = [
-    C([-29, 67, 6], [10, 7, 10], "dark"),                                       # elbow
-    C([-32, 48, 1], [16, 20, 18], "paint", decal={"west": "hazard_bottom"}),   # forearm armor
-    C([-34, 53, 3], [2, 12, 14], "paint2"),                                     # outer plate
-    C([-31, 59, -1], [14, 8, 2], "metal"),                                       # front guard
-    C([-19, 51, 7], [4, 15, 4], "dark"),                                        # piston housing
-    C([-18.5, 47, 7.5], [3, 6, 3], "steel"),                                    # piston rod
-]
-RIGHT_HAND = [C([-28, 43, 6], [10, 5, 11], "dark")]
+def late(cubes):
+    """Packed after every other cube, so adding detail never moves existing atlas patches (the cockpit
+    arms and the Scout SMG borrow those by position)."""
+    for c in cubes:
+        c["late"] = True
+    return cubes
 
-RIGHT_LEG3 = [
-    C([-19, 53, 2], [9, 11, 10], "dark"),
-    C([-22, 49, -1], [4, 13, 15], "paint2"),                                    # hip armor
-    C([-22, 48, -1], [4, 2, 15], "hazard"),
-]
-RIGHT_LEG2 = [
-    C([-20, 27, -4], [12, 21, 13], "paint"),                                    # thigh armor
-    C([-21, 31, -3], [2, 13, 11], "paint2"),
-    C([-18, 23, -1], [8, 6, 8], "metal"),
-    C([-16, 29, 9], [4, 18, 3], "steel"),                                       # rear piston
-]
-RIGHT_LEG1 = [
-    C([-19, 21, -2], [9, 8, 9], "dark"),                                        # knee joint
-    C([-20, 19, -9], [11, 11, 5], "paint", decal={"north": "x"}),               # knee plate
-    C([-20, 8, -5], [11, 13, 12], "paint", decal={"north": "hazard_bottom"}),   # shin
-    C([-18, 9, 7], [7, 13, 4], "metal"),                                        # calf
-    C([-17, 10, 11], [4, 10, 2], "steel"),
-]
+def hub(cx, cy, cz, length, diam, m="dark"):
+    """Round joint hub on an X hinge axis: a square plus a 45-degree-turned square read as an octagonal
+    drum, with a steel bolt cap on the outer (-x) end."""
+    x0 = cx - length / 2
+    piv = [cx, cy, cz]
+    return late([C([x0, cy - diam / 2, cz - diam / 2], [length, diam, diam], m),
+            C([x0, cy - diam / 2, cz - diam / 2], [length, diam, diam], m, rot=[45, 0, 0], piv=piv),
+            C([x0 - 0.6, cy - diam / 4, cz - diam / 4], [0.6, diam / 2, diam / 2], "steel")])
+
+def piston(x, top, bot, z, w=3):
+    """Hydraulic ram inside one bone: clevis, sleeve over the upper 60%, chrome rod, clevis."""
+    split = top - (top - bot) * 0.6
+    r = w * 0.55
+    return late([C([x - w / 2 - 0.5, top - 2, z - w / 2 - 0.5], [w + 1, 2, w + 1], "dark"),
+            C([x - w / 2, split, z - w / 2], [w, top - 2 - split, w], "metal"),
+            C([x - r / 2, bot + 2, z - r / 2], [r, split - bot - 2, r], "steel"),
+            C([x - w / 2 - 0.5, bot, z - w / 2 - 0.5], [w + 1, 2, w + 1], "dark")])
+
+def hose(x, top, bot, z, sag, segs=3):
+    """Rubber hose hanging in an arc away from the body (+z by `sag` at its middle)."""
+    h = (top - bot) / segs
+    out = []
+    for k in range(segs):
+        t = (k + 0.5) / segs
+        out.append(C([x - 0.6, top - (k + 1) * h, z + sag * 4 * t * (1 - t) - 0.6], [1.2, h + 0.4, 1.2], "dark"))
+    return late(out)
+
+# ---- UAF-X101 "Letheus" style mass-production frame (reference: the Letheus ground-type sheet).
+# Raw frame: limbs hang straight down through their joint pivots (see REST below).
+
+RIGHT_ARM1 = [                                                                  # shoulder + upper arm
+    B(-41, -22, 88, 104, -5, 24, "paint", decal={"west": "mp01"}),            # boxy pauldron
+    B(-39, -24, 104, 106, -3, 22, "paint2"),                                  # pauldron cap
+    B(-41.5, -21.5, 86.5, 88.5, -5.5, 24.5, "hazard"),                         # trim
+    B(-42, -38, 92, 100, -7, -3, "dark"),                                      # sensor pod
+    B(-41.5, -38.5, 95, 97, -7.4, -7, "glow"),
+    B(-34, -32, 106, 110, 2, 4, "steel"),                                      # grab handle
+    B(-34, -32, 106, 110, 16, 18, "steel"),
+    B(-34, -32, 109, 111, 2, 18, "steel"),
+    B(-29, -20, 72, 88, 6, 15, "dark"),                                        # upper arm frame
+    B(-31, -29, 74, 86, 5, 16, "paint"),                                       # outer bicep plate
+    B(-28, -22, 76, 86, 4, 6, "paint2"),                                       # front plate
+] + hub(-24, 90, 10.5, 10, 11) + piston(-20.5, 87, 73, 13, w=2.4) + hose(-30.5, 86, 74, 17, 2)
+
+RIGHT_ARM2 = [                                                                  # forearm
+    B(-33, -15, 49, 68, 1, 20, "paint", decal={"west": "hazard_bottom"}),     # heavy forearm armor
+    B(-34, -33, 54, 65, 5, 15, "paint2"),                                      # outer plate
+    B(-34.6, -34, 57, 63, 7.5, 12.5, "dark"),                                  # port ring
+    B(-35, -34.6, 58.5, 61.5, 9, 11, "steel"),
+    B(-32, -16, 66, 69, 2, 19, "metal"),                                       # elbow cuff
+    B(-31, -17, 52, 66, -0.5, 1, "paint2"),                                    # front guard
+    B(-31, -17, 46, 50, 3, 18, "dark"),                                        # wrist band
+] + hub(-24, 70.5, 10.7, 12, 9)
+
+RIGHT_HAND = fist(-28.3, 46.8, 6) + hub(-23.3, 46.8, 11.5, 10, 5)
+
+RIGHT_LEG3 = [                                                                  # hip
+    B(-25, -21, 48, 62, -2, 14, "paint", decal={"west": "hazard_bottom"}),    # hip side armor
+    B(-19, -10, 52, 64, 2, 12, "dark"),
+] + hub(-14.5, 57, 7, 18, 12)
+
+RIGHT_LEG2 = [                                                                  # thigh
+    B(-21, -8, 28, 48, -5, 10, "paint"),
+    B(-20, -9, 32, 46, -7, -5, "paint2"),                                      # front plate
+    B(-19, -10, 24, 30, -2, 8, "dark"),                                        # knee frame
+    B(-22, -21, 31, 45, -3, 8, "paint2"),                                      # outer plate
+] + piston(-14.5, 46, 30, -8.5) + hose(-19, 46, 30, 12, 2.5)
+
+RIGHT_LEG1 = [                                                                  # knee + shin
+    B(-22, -7, 16, 32, -12, -6, "paint"),                                      # tall knee guard
+    B(-16, -13, 18, 30, -12.6, -12, "dark"),                                   # guard slot
+    B(-21, -19, 30, 33, -14, -12, "steel"),                                    # white U-handle
+    B(-10, -8, 30, 33, -14, -12, "steel"),
+    B(-21, -8, 32, 34, -15, -13, "steel"),
+    B(-21, -8, 6, 20, -6, 8, "paint"),                                         # shin
+    B(-20, -9, 8, 18, -7, -6, "paint2"),
+    B(-19, -10, 8, 18, 8, 12, "dark"),                                         # calf
+] + hub(-14.5, 23, 2, 15, 10) + piston(-22, 19, 8, 1, w=2.4)
+
 RIGHT_FOOT = [
-    C([-18, 4, -3], [8, 5, 8], "dark"),                                         # ankle
-    C([-22, 0, -11], [15, 5, 19], "metal"),                                     # sole
-    C([-22, 0, -18], [7, 4, 8], "paint", decal={"north": "hazard"}),            # toe A
-    C([-14, 0, -18], [7, 4, 8], "paint", decal={"north": "hazard"}),            # toe B
-    C([-21, 5, -12], [13, 2, 10], "paint2"),                                    # instep armor
-    C([-20, 0, 8], [11, 4, 6], "dark"),                                         # heel
-]
+    B(-23, -6, 0, 4, -18, 10, "dark"),                                         # sole
+    B(-22, -7, 0, 6, -20, -10, "paint"),                                       # toe cap
+    B(-22.5, -6.5, 0, 1.5, -20.5, -18, "hazard"),
+    B(-21, -8, 4, 8, -12, 2, "paint2"),                                        # instep armor
+    B(-21, -8, 0, 6, 6, 12, "metal"),                                          # heel
+] + hub(-14.5, 7, -1, 12, 7)
 
-def cage():
-    bar = "dark"
-    out = []
-    for x in (-15, 13):
-        out.append(C([x, 105, -12], [2, 9, 2], bar))                            # front posts
-        out.append(C([x, 105, 8], [2, 7, 2], bar))                              # rear posts
-        out.append(C([x, 113, -12], [2, 2, 22], bar))                           # side rails
-    out.append(C([-15, 113, -12], [30, 2, 2], bar))
-    out.append(C([-15, 111, 8], [30, 2, 2], bar))
-    out.append(C([-1, 113, -10], [2, 2, 18], bar))                              # spine rail
-    return out
+WAIST = piston(-11.5, 80, 64, 9) + hose(-5, 79, 65, 14, 2)
 
-def exhausts():
-    out = []
-    for x in (-13, 7):
-        out.append(C([x, 88, 18], [6, 26, 6], "metal"))
-        out.append(C([x - 0.5, 114, 17.5], [7, 8, 7], "vent"))                  # perforated tip
-        out.append(C([x - 1, 122, 17], [8, 2, 8], "rust"))                      # cap
-        out.append(C([x - 1, 96, 17], [8, 2, 8], "dark"))                       # clamp band
-    return out
+ARTILLERY_ELEVATION = 35  # resting barrel elevation in degrees; TitanModel turns it to the firing solution
+ARTILLERY_TRUNNION = [0, 110, 22]
+
+# Back-mounted howitzer for the Artillery weapon, in three bones so TitanModel can aim it:
+# artillery (fixed pedestal) > artilleryTurret (traverses about y) > artilleryBarrel (elevates about the
+# trunnion). The barrel is modelled level along -z; its rest rotation lifts it to ARTILLERY_ELEVATION.
+# All late-packed so the existing atlas keeps its layout.
+def artillery_base():
+    return late([C([-5, 88, 19], [10, 16, 6], "metal"),                          # pedestal
+                 C([-6, 104, 17], [12, 3, 10], "dark")])                         # traverse ring
+
+def artillery_turret():
+    return late([C([-6.5, 105, 18], [1.5, 9, 8], "paint2"),                      # trunnion cheeks
+                 C([5, 105, 18], [1.5, 9, 8], "paint2")]) + hub(0, 110, 22, 15, 5)
+
+def artillery_barrel():
+    return late([C([-4.5, 105.5, 18], [9, 9, 12], "paint"),                     # breech
+                 C([-3.5, 106.5, 0], [7, 7, 18], "metal"),                       # recoil sleeve
+                 C([-2, 108, -26], [4, 4, 26], "steel"),                         # barrel
+                 C([-3, 107, -30], [6, 6, 4], "dark"),                           # muzzle brake
+                 C([-3.2, 108.5, -29], [6.4, 1, 2], "vent"),
+                 C([-1.5, 103.5, 4], [3, 3, 12], "dark"),                        # recuperator
+                 C([-1, 104, -6], [2, 2, 10], "steel"),
+                 C([4.5, 104, 20], [4, 8, 8], "hazard")])                       # shell feed box
+
+def backpack():
+    """Letheus back unit: ribbed power pack, side handles and a tall whip antenna."""
+    return [B(-14, 14, 82, 106, 17, 26, "metal"),
+            B(-10, 10, 86, 100, 26, 27, "vent"),
+            B(-15, -14, 88, 102, 19, 24, "steel"), B(14, 15, 88, 102, 19, 24, "steel"),
+            B(8, 12, 104, 108, 18, 22, "dark"),
+            B(9.5, 10.5, 108, 132, 19.5, 20.5, "dark")]
 
 BONES = [
     ("bb_main", None, [0, 0, 0], []),
     ("skill_locator", None, [0, 0, 0], []),
     ("titan", None, [0, 0, 0], []),
     ("body1", "titan", [0, 61.0, 7.0], [
-        C([-11, 55, -3], [22, 10, 16], "dark"),
-        C([-10, 52, -6], [9, 9, 4], "paint2"),                                  # groin plates
-        C([1, 52, -6], [9, 9, 4], "paint2"),
-        C([-6, 61, 12], [12, 6, 4], "metal"),
+        B(-11, 11, 54, 66, -4, 16, "dark"),                                    # pelvis block
+        B(-5, 5, 50, 62, -7, -4, "paint"),                                     # groin plate
+        B(-11, -5.5, 52, 64, -6, -4, "paint"), B(5.5, 11, 52, 64, -6, -4, "paint"),
+        B(-10, -6, 60, 67, -9, -6, "amber"), B(6, 10, 60, 67, -9, -6, "amber"),  # belt pouches
+        B(-14, -11, 58, 66, 0, 8, "amber"), B(11, 14, 58, 66, 0, 8, "amber"),
+        B(-8, 8, 54, 64, 16, 18, "paint"),                                     # rear plate
     ]),
     ("body2", "body1", [0, 74.9, 8.8], [
-        C([-10, 65, -2], [20, 14, 15], "metal"),
-        C([-8, 66, -4], [16, 4, 2], "paint2"),                                  # ab plates
-        C([-8, 71, -4], [16, 4, 2], "paint2"),
-        C([-13, 68, 0], [3, 8, 10], "vent"),
-        C([10, 68, 0], [3, 8, 10], "vent"),
-    ]),
+        B(-9, 9, 66, 79, -2, 14, "dark"),                                      # waist core
+        B(-11, 11, 66, 70, -4, 16, "metal"),                                   # belt
+        B(-7, 7, 71, 78, -4, -2, "paint2"),                                    # ab plates
+        B(-12, -9, 70, 78, 0, 12, "vent"), B(9, 12, 70, 78, 0, 12, "vent"),
+    ] + WAIST + mirror(WAIST)),
     ("body3", "body2", [0.5, 78.7, 17.8], [
-        C([-17, 79, -9], [34, 27, 27], "paint"),                                # hull
-        C([-19, 83, -7], [2, 20, 22], "paint2"),                                # side armor
-        C([17, 83, -7], [2, 20, 22], "paint2"),
-        C([-14, 106, -10], [28, 3, 20], "metal"),                               # top deck
-        C([-13, 82, 16], [26, 20, 3], "metal"),                                 # reactor back
-        C([-10, 85, 19], [20, 12, 2], "vent"),
-        C([-20, 98, -6], [4, 8, 14], "dark"),                                   # shoulder sockets
-        C([16, 98, -6], [4, 8, 14], "dark"),
-        C([-15, 76, -12], [30, 6, 8], "paint2", rot=[-25, 0, 0], piv=[0, 79, -9]),  # lower chest slope
-        C([12, 109, 10], [1, 14, 1], "dark"),                                   # antenna
-        C([-14, 94, -11], [5, 3, 2], "glow"),                                   # running lights
-        C([9, 94, -11], [5, 3, 2], "glow"),
-    ] + cage() + exhausts()),
+        B(-16, 16, 80, 106, -8, 17, "paint"),                                  # chest core
+        B(-19, -16, 82, 96, -6, 14, "paint2"), B(16, 19, 82, 96, -6, 14, "paint2"),  # side armor
+        B(-20, -16, 96, 106, -4, 14, "dark"), B(16, 20, 96, 106, -4, 14, "dark"),    # shoulder sockets
+        B(-12, 12, 106, 108, -6, 14, "dark"),                                  # collar
+        B(-17, 17, 104, 107, -8, 6, "paint2"),                                 # chest top lip
+    ] + backpack()),
+    # The hatch is the whole upper chest plus the helmet: it lifts open like a canopy.
     ("doorUp", "body3", [0, 107, -8], [
-        C([-13, 95, -15], [26, 11, 6], "paint", decal={"north": "visor_frame"}),
-        C([-14, 104, -16], [28, 3, 8], "paint2"),                               # brow
-        C([-15, 96, -14], [2, 9, 5], "metal"),                                  # cheeks
-        C([13, 96, -14], [2, 9, 5], "metal"),
+        B(-15, 15, 95, 107, -15, -8, "paint"),                                 # upper chest plate
+        B(-16, -2, 99, 107, -16, -14, "paint2"), B(2, 16, 99, 107, -16, -14, "paint2"),
+        B(-8, 8, 108, 120, -11, 3, "dark"),                                    # helmet
+        B(-8.5, 8.5, 116, 121, -11.5, 3.5, "paint"),                           # helmet crown
+        B(-6, 6, 109, 116, -13, -11, "steel"),                                 # face plate
+        B(-5, 5, 107, 109, -12, -6, "dark"),                                   # neck
+        B(5, 6, 118, 128, -2, -1, "dark"),                                     # helmet antenna
+    ] + hub(-9, 97, -16.5, 8, 4, "amber") + hub(9, 97, -16.5, 8, 4, "amber") + [
+        B(-3, 3, 95, 100, -17, -15, "steel"),                                  # chest cylinder block
     ]),
     ("eye", "doorUp", [0, 107.0, -17.0], [
-        C([-9, 99, -16], [18, 2, 1], "visor"),
+        B(-4.5, 4.5, 112.5, 114.5, -13.6, -13, "visor"),                       # visor slit
+        B(-7, -6, 115, 119, -11.6, -11, "visor"),                              # side sensor light
     ]),
     ("doorDown", "body3", [0, 82.7, -5.9], [
-        C([-12, 81, -14], [24, 14, 5], "paint", decal={"north": "number"}),
-        C([-9, 83, -15], [6, 6, 1], "vent"),
-        C([3, 83, -15], [6, 6, 1], "vent"),
+        B(-13, 13, 81, 95, -14, -8, "paint", decal={"north": "number"}),
+        B(-10, -4, 83, 89, -15, -14, "vent"), B(4, 10, 83, 89, -15, -14, "vent"),
+        B(-13.5, 13.5, 80, 81.5, -14.5, -8, "hazard"),
     ]),
+    # Pivot matches weaponBack: TitanWeaponSwapLayer anchors it at other chassis' weaponBack pivot.
+    ("artillery", "body3", [-24.0, 78.0, 26.0], artillery_base()),
+    ("artilleryTurret", "artillery", [0, 105, 22], artillery_turret()),
+    ("artilleryBarrel", "artilleryTurret", ARTILLERY_TRUNNION, artillery_barrel()),
     ("weaponBack", "body3", [-24.0, 78.0, 26.0], [
         C([-28, 72, 22], [8, 16, 8], "metal"),                                  # stowed tool clamp
         C([-29, 80, 21], [10, 2, 10], "hazard"),
@@ -212,7 +286,7 @@ BONES = [
     ("chainsaw", "weapon", [-19.8, 39.8, 10.3], chainsaw(None, 10.3, -19.8)),
     ("leftArm1", "body3", [24.4, 94.8, 10.7], mirror(RIGHT_ARM1)),
     ("leftArm2", "leftArm1", [23.4, 72.5, 10.7], mirror(RIGHT_ARM2)),
-    ("leftHand", "leftArm2", [23.3, 46.8, 11.5], mirror(RIGHT_HAND) + claw(23, 11.5, 43)),
+    ("leftHand", "leftArm2", [23.3, 46.8, 11.5], mirror(RIGHT_HAND)),
     ("rightLeg3", "titan", [-14.5, 61.1, 7.1], RIGHT_LEG3),
     ("rightLeg2", "rightLeg3", [-14.5, 43.5, 2.7], RIGHT_LEG2),
     ("rightLeg1", "rightLeg2", [-14.5, 22.8, 3.4], RIGHT_LEG1),
@@ -228,18 +302,26 @@ BONES = [
 def pack():
     x, y, row = 2, 2, 0
     placed = []
-    for name, parent, piv, cubes in BONES:
-        for c in cubes:
-            w, h, d = (max(1, int(round(v))) for v in c["s"])
-            need_w, need_h = 2 * (d + w) + 2, d + h + 2
-            if x + need_w > TEX:
-                x, y, row = 2, y + row, 0
-            c["uv"], c["dims"] = [x, y], (w, h, d)
-            x += need_w
-            row = max(row, need_h)
-            placed.append(c)
+    ordered = [c for _, _, _, cubes in BONES for c in cubes if not c.get("late")]
+    ordered += [c for _, _, _, cubes in BONES for c in cubes if c.get("late")]
+    for c in ordered:
+        w, h, d = (max(1, int(round(v))) for v in c["s"])
+        need_w, need_h = 2 * (d + w) + 2, d + h + 2
+        if x + need_w > TEX:
+            x, y, row = 2, y + row, 0
+        c["uv"], c["dims"] = [x, y], (w, h, d)
+        x += need_w
+        row = max(row, need_h)
+        placed.append(c)
     assert y + row <= TEX, "texture atlas overflow"
     return placed
+
+def swatch(m):
+    """(uv, size) of the largest packed cube of material m: a patch other builders (SMG, cockpit arms)
+    can map faces into. Call pack() first."""
+    cubes = [c for _, _, _, cs in BONES for c in cs if c["m"] == m and "dims" in c]
+    c = max(cubes, key=lambda c: c["dims"][0] * c["dims"][1] * c["dims"][2])
+    return c["uv"], list(c["dims"])
 
 def faces(c):
     u, v = c["uv"]
@@ -251,7 +333,8 @@ def faces(c):
 # Rest rotations of the Ion rig. trooper_titan.animation.json was cloned from Ion and its keyframes
 # are offsets on top of these. (Not the hatch: it is modelled closed and hinged at its own top-back edge.) Like Ion, cubes are authored "raw" (limbs hanging straight down
 # through the joint pivots); the rest rotation is never seen because an animation always plays.
-REST = {"rightArm1": [0, -180, 30], "rightHand": [0, -180, 0],
+REST = {"artilleryBarrel": [-ARTILLERY_ELEVATION, 0, 0],  # negative x tips the -z end up
+        "rightArm1": [0, -180, 30], "rightHand": [0, -180, 0],
         "weapon": [90, 0, 90], "leftArm1": [0, 180, -30], "leftHand": [0, 180, 0],
         "rightLeg3": [-15, 0, 0], "rightLeg2": [37.5, 0, 0], "rightLeg1": [-15, 0, 0], "rightFoot": [-7.5, 0, 0],
         "leftLeg3": [-15, 0, 0], "leftLeg2": [37.5, 0, 0], "leftLeg1": [-15, 0, 0], "leftFoot": [-7.5, 0, 0]}
@@ -293,7 +376,8 @@ SCHEMES = [
     ("jungle",    (58, 92, 56),   (96, 78, 52),   (255, 190, 60)),
 ]
 FIXED = {"metal": (78, 82, 86), "dark": (40, 42, 45), "steel": (158, 162, 166), "rust": (126, 70, 40),
-         "vent": (58, 60, 63), "glow": (255, 214, 120)}
+         "vent": (58, 60, 63), "glow": (255, 214, 120),
+         "amber": (206, 146, 46)}
 YELLOW, BLACK, WHITE = (228, 182, 32), (30, 30, 30), (226, 228, 222)
 
 FONT = {"M": ["10001", "11011", "10101", "10001", "10001"], "P": ["110", "101", "110", "100", "100"],
@@ -362,6 +446,12 @@ def render(cubes, scheme):
                         col = base(mat)
                         if mat in ("paint", "paint2"):
                             col = mul(col, 0.9 + 0.2 * vnoise(gx, gy, 9, 2))  # faded mottling
+                        if mat == "paint" and CAMO:  # 2-px digital camo in three tones of the scheme
+                            v = vnoise(gx // 2, gy // 2, 3, 21)
+                            if v > 0.62:
+                                col = mix(col, paint2, 0.75)
+                            elif v < 0.34:
+                                col = mul(col, 0.7)
                         elif mat == "cloth":  # worn woven fabric (paint2): weave, fold streaks, stains, frayed hem
                             if side and j >= fh - 3 and h2(gx, gy, 12) < 0.18 + 0.12 * (j - (fh - 3)):
                                 continue  # hole in the hem: left transparent (cutout)

@@ -112,7 +112,7 @@ public class TitanMenu extends AbstractContainerMenu {
         this.addSlot(new Slot(this.container, FLIGHT_SLOT, FLIGHT_X, FLIGHT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.getItem() instanceof com.titancombat.item.TitanFlightModuleItem;
+                return isBackModule(stack);
             }
 
             @Override
@@ -135,7 +135,14 @@ public class TitanMenu extends AbstractContainerMenu {
     }
 
     public static boolean isMunition(ItemStack stack) {
-        return stack.getItem() instanceof TitanAmmoItem || stack.getItem() instanceof TitanMagazineItem;
+        return stack.getItem() instanceof TitanAmmoItem || stack.getItem() instanceof TitanMagazineItem
+                || stack.is(com.titancombat.item.ModItems.HOWITZER_SHELLS.get());
+    }
+
+    /** Back equipment slot: a flight module or the howitzer (both ride on the back, so one at a time). */
+    public static boolean isBackModule(ItemStack stack) {
+        return stack.getItem() instanceof com.titancombat.item.TitanFlightModuleItem
+                || stack.getItem() instanceof com.titancombat.item.HowitzerModuleItem;
     }
 
     public BaseTitanEntity getTitan() {
@@ -181,7 +188,7 @@ public class TitanMenu extends AbstractContainerMenu {
                             return ItemStack.EMPTY;
                         }
                     }
-                } else if (slotStack.getItem() instanceof com.titancombat.item.TitanFlightModuleItem) {
+                } else if (isBackModule(slotStack)) {
                     if (!this.moveItemStackTo(slotStack, FLIGHT_SLOT, FLIGHT_SLOT + 1, false)) {
                         if (!this.moveItemStackTo(slotStack, CARGO_START, CARGO_END + 1, false)) {
                             return ItemStack.EMPTY;

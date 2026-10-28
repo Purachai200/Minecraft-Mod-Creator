@@ -14,6 +14,10 @@ public class TitanWeaponActionC2SPacket {
     public static final byte SALUTE = 2;
     public static final byte FLIGHT_START = 3;
     public static final byte FLIGHT_STOP = 4;
+    public static final byte RANGE_UP = 5;
+    public static final byte RANGE_DOWN = 6;
+    public static final byte RELEASE_CARGO = 7;
+    public static final byte FIRE_HOWITZER = 8;
 
     private final byte action;
 
@@ -40,7 +44,19 @@ public class TitanWeaponActionC2SPacket {
                     case SALUTE -> titan.triggerSalute(player);
                     case FLIGHT_START -> titan.setFlightThrust(true);
                     case FLIGHT_STOP -> titan.setFlightThrust(false);
+                    case RANGE_UP -> { if (titan.hasHowitzer()) titan.nudgeArtilleryTarget(player, 1); }
+                    case RANGE_DOWN -> { if (titan.hasHowitzer()) titan.nudgeArtilleryTarget(player, -1); }
+                    case FIRE_HOWITZER -> titan.requestHowitzerFire(player, false);
                     default -> {}
+                }
+            } else if (player != null && this.action == RELEASE_CARGO
+                    && player.getVehicle() instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity transport
+                    && transport.getDriver() == player) {
+                // Own key, not Shift: Shift is the vanilla dismount and would throw the driver out too.
+                if (transport instanceof com.titancombat.entity.transport.TitanSkyCraneDroneEntity drone && !drone.onGround()) {
+                    drone.performAirborneHotDrop(player);
+                } else {
+                    transport.releaseMountedTitans(player);
                 }
             }
         });

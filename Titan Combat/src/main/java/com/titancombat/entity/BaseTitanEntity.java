@@ -85,6 +85,18 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
             SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Boolean> DATA_IS_SITTING =
             SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.BOOLEAN);
+    /** Howitzer back module installed (back equipment slot). */
+    public static final EntityDataAccessor<Boolean> DATA_HOWITZER =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Integer> DATA_HOWITZER_ROUNDS =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> DATA_HOWITZER_RELOAD =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
+    /** Ticks left until the howitzer is laid on a new target (turret slewing); it can't fire before. */
+    public static final EntityDataAccessor<Integer> DATA_ARTILLERY_LAYING =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<java.util.Optional<BlockPos>> DATA_ARTILLERY_TARGET =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
     public static final EntityDataAccessor<Integer> DATA_SALUTE_TICKS =
             SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
     public static final EntityDataAccessor<Integer> DATA_FLIGHT_MODULE =
@@ -99,6 +111,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     public static final byte EVENT_EMBARK = 73;
     public static final byte EVENT_MELEE_SWING = 74;
     public static final byte EVENT_JUMP = 75;
+    public static final byte EVENT_HOWITZER_FIRE = 77;
 
     /** Thruster fuel for a jump-jet hop. */
     public static final float JUMP_COST = 25.0F;
@@ -107,6 +120,12 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     private static final int BOARDING_TICKS = 60;
 
     /** Set by the client input handler; only meaningful on the client that is piloting. */
+    /** Client: tickCount of the last howitzer shot (EVENT_HOWITZER_FIRE). */
+    public int clientFireTick = -100;
+    /** Client: howitzer laying as drawn (radians; traverse relative to the hull), slewed toward the solution by TitanModel. */
+    public float clientHowitzerTraverse = 0.0F, clientHowitzerElevation = 35.0F * Mth.DEG_TO_RAD, clientHowitzerClock = -1.0F;
+    /** Client: 0..1 blend into the howitzer firing stance (TitanModel), and the time it was last updated. */
+    public float clientBrace = 0.0F, clientBraceClock = -1.0F;
     public static boolean clientSprintHeld = false;
     public static boolean clientJumpHeld = false;
 
@@ -192,6 +211,11 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         this.entityData.define(DATA_RELOAD_TICKS, 0);
         this.entityData.define(DATA_WEAPON_LOWERED, false);
         this.entityData.define(DATA_SALUTE_TICKS, 0);
+        this.entityData.define(DATA_ARTILLERY_TARGET, java.util.Optional.empty());
+        this.entityData.define(DATA_ARTILLERY_LAYING, 0);
+        this.entityData.define(DATA_HOWITZER, false);
+        this.entityData.define(DATA_HOWITZER_ROUNDS, 0);
+        this.entityData.define(DATA_HOWITZER_RELOAD, 0);
         this.entityData.define(DATA_FLIGHT_MODULE, -1);
         this.entityData.define(DATA_IS_FLYING, false);
     }
@@ -1037,6 +1061,12 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
 
     @Override
     public void handleEntityEvent(byte id) {
+        if (id == EVENT_HOWITZER_FIRE) {
+            this.clientFireTick = this.tickCount;  // drives the howitzer recoil in TitanModel
+            net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT,
+                    () -> () -> com.titancombat.client.TitanClientEffects.onHowitzerFired(this));
+            return;
+        }
         if (id == EVENT_DASH) {
             this.dashAnimTicks = 14;
         } else if (id == EVENT_EMBARK) {
@@ -1083,6 +1113,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
             }
             tickWeaponSystems();
             tickFlightSystems();
+            tickHowitzer();
             tickEjectSequence();
             // Pilot boarded a parked titan: the hatch seals, then the chassis rises on its own.
             if (this.boardingTicks == this.standUpAtTick) {
@@ -1375,6 +1406,210 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
 
     public boolean hasWeapon() {
         return this.entityData.get(DATA_WEAPON) >= 0;
+    }
+
+    // ==========================================
+    // Artillery fire control: the pilot sets target coordinates (rangefinder mark, typed coordinates or
+    // +/- range corrections) and the computer solves the lob onto them.
+    // ==========================================
+    /** Per-tick gravity of a lobbed shell (TitanEnergyBlastEntity); the launch solve below must match it. */
+    public static final double SHELL_GRAVITY = 0.05D;
+
+    @Nullable
+    public BlockPos getArtilleryTarget() {
+        return this.entityData.get(DATA_ARTILLERY_TARGET).orElse(null);
+    }
+
+    /**
+     * Sets the fire mission target from pilot input (trust boundary: coordinates come from the client).
+     * A null y means "on the ground there". Rejected if outside the howitzer's range from where the titan stands.
+     */
+    public boolean setArtilleryTarget(Player pilot, int x, @Nullable Integer y, int z) {
+        double range = Math.sqrt(Mth.square(x + 0.5D - this.getX()) + Mth.square(z + 0.5D - this.getZ()));
+        if (range < Howitzer.MIN_RANGE || range > Howitzer.MAX_RANGE) {
+            pilot.displayClientMessage(Component.translatable("message.titancombat.artillery_out_of_range", (int) range,
+                    Howitzer.MIN_RANGE, Howitzer.MAX_RANGE), true);
+            this.level().playSound(null, this.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 1.4F);
+            return false;
+        }
+        // Only ground the world has generated and loaded: no blind fire into terrain that doesn't exist yet
+        // (and Level.getHeight would answer "bottom of the world" there).
+        if (!this.level().hasChunk(x >> 4, z >> 4)) {
+            pilot.displayClientMessage(Component.translatable("message.titancombat.artillery_not_loaded"), true);
+            this.level().playSound(null, this.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 1.4F);
+            return false;
+        }
+        int ty = y != null ? y : this.level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        ty = Mth.clamp(ty, this.level().getMinBuildHeight(), this.level().getMaxBuildHeight());
+        this.entityData.set(DATA_ARTILLERY_TARGET, java.util.Optional.of(new BlockPos(x, ty, z)));
+        this.entityData.set(DATA_ARTILLERY_LAYING, Howitzer.LAYING_TICKS);
+        pilot.displayClientMessage(Component.translatable("message.titancombat.artillery_target_set", x, ty, z, (int) range), true);
+        this.level().playSound(null, this.blockPosition(), SoundEvents.NOTE_BLOCK_PLING.get(), SoundSource.PLAYERS, 1.0F, 1.6F);
+        return true;
+    }
+
+    /** Range correction: walk the target `steps` x 8 blocks further from / closer to the titan on its bearing. */
+    public void nudgeArtilleryTarget(Player pilot, int steps) {
+        BlockPos t = getArtilleryTarget();
+        double bx, bz, range;
+        if (t == null) {  // no mission yet: start one 64 blocks ahead of the pilot
+            float rad = pilot.getYRot() * Mth.DEG_TO_RAD;
+            bx = -Math.sin(rad);
+            bz = Math.cos(rad);
+            range = 64.0D;
+        } else {
+            double dx = t.getX() + 0.5D - this.getX(), dz = t.getZ() + 0.5D - this.getZ();
+            range = Math.max(1.0D, Math.sqrt(dx * dx + dz * dz));
+            bx = dx / range;
+            bz = dz / range;
+            range += steps * Howitzer.RANGE_STEP;
+        }
+        range = Mth.clamp(range, Howitzer.MIN_RANGE, Howitzer.MAX_RANGE);
+        setArtilleryTarget(pilot, Mth.floor(this.getX() + bx * range), null, Mth.floor(this.getZ() + bz * range));
+    }
+
+    public int getArtilleryLaying() {
+        return this.entityData.get(DATA_ARTILLERY_LAYING);
+    }
+
+    /** Where shells leave the titan: just above its back. */
+    public Vec3 getArtilleryMuzzle() {
+        return this.position().add(0.0D, this.getBbHeight() + 0.5D, 0.0D);
+    }
+
+    /**
+     * Launch velocity that lands on `to` after `ticks` ticks, solved for vanilla throwable motion:
+     * each tick the shell moves by its velocity, then the velocity is scaled by 0.99 and loses SHELL_GRAVITY.
+     */
+    public static Vec3 shellVelocity(Vec3 from, Vec3 to, int ticks) {
+        double s = (1.0D - Math.pow(0.99D, ticks)) / 0.01D;  // sum of 0.99^k for k < ticks
+        Vec3 d = to.subtract(from);
+        double vy = (d.y + SHELL_GRAVITY / 0.01D * (ticks - s)) / s;
+        return new Vec3(d.x / s, vy, d.z / s);
+    }
+
+    /** Longer shots fly higher arcs: about 1.5 s at minimum range, 5.5 s at maximum. */
+    public static int shellFlightTicks(double range) {
+        return 30 + (int) (range / 2.0D);
+    }
+
+    /** Firing solution for the current target: launch velocity, or null with no target. */
+    @Nullable
+    public Vec3 artillerySolution() {
+        BlockPos t = getArtilleryTarget();
+        if (t == null) return null;
+        Vec3 from = getArtilleryMuzzle(), to = Vec3.atBottomCenterOf(t).add(0.0D, 1.0D, 0.0D);
+        return shellVelocity(from, to, shellFlightTicks(to.subtract(from).horizontalDistance()));
+    }
+
+    public boolean hasHowitzer() {
+        return this.entityData.get(DATA_HOWITZER);
+    }
+
+    public int getHowitzerRounds() {
+        return this.entityData.get(DATA_HOWITZER_ROUNDS);
+    }
+
+    public int getHowitzerReload() {
+        return this.entityData.get(DATA_HOWITZER_RELOAD);
+    }
+
+    private int howitzerCooldown = 0;
+    /** Fire on lock: a target picked with "fire" on the map fires by itself once the gun is laid. */
+    private boolean fireMissionPending = false;
+
+    /** Server tick: install/removal from the back slot, laying countdown, auto-reload, pending fire mission. */
+    private void tickHowitzer() {
+        boolean installed = this.titanInventory.getItem(TitanMenu.FLIGHT_SLOT).getItem() instanceof com.titancombat.item.HowitzerModuleItem;
+        if (installed != hasHowitzer()) {
+            this.entityData.set(DATA_HOWITZER, installed);
+            if (!installed) {
+                this.entityData.set(DATA_HOWITZER_ROUNDS, 0);
+                this.entityData.set(DATA_HOWITZER_RELOAD, 0);
+                this.fireMissionPending = false;
+            }
+        }
+        if (getArtilleryLaying() > 0) this.entityData.set(DATA_ARTILLERY_LAYING, getArtilleryLaying() - 1);
+        if (howitzerCooldown > 0) howitzerCooldown--;
+        if (!installed) return;
+
+        int reload = getHowitzerReload();
+        if (reload > 0) {
+            this.entityData.set(DATA_HOWITZER_RELOAD, reload - 1);
+            if (reload == 1) {
+                this.entityData.set(DATA_HOWITZER_ROUNDS, Howitzer.ROUNDS_PER_RACK);
+                this.level().playSound(null, this.blockPosition(), SoundEvents.IRON_TRAPDOOR_CLOSE, SoundSource.PLAYERS, 1.8F, 0.5F);
+            }
+        } else if (getHowitzerRounds() <= 0 && takeShellRack(getControllingPassenger() instanceof Player p ? p : null)) {
+            this.entityData.set(DATA_HOWITZER_RELOAD, Howitzer.RELOAD_TICKS);  // auto-loads the next rack
+            this.level().playSound(null, this.blockPosition(), SoundEvents.PISTON_CONTRACT, SoundSource.PLAYERS, 1.6F, 0.6F);
+        }
+        if (fireMissionPending && getArtilleryLaying() == 0 && getHowitzerReload() == 0 && howitzerCooldown == 0
+                && getControllingPassenger() instanceof Player pilot) {
+            fireMissionPending = false;
+            fireHowitzer(pilot);
+        }
+    }
+
+    /** One shell rack from the titan bay, else from the pilot (creative pilots load for free). */
+    private boolean takeShellRack(@Nullable Player pilot) {
+        if (pilot != null && pilot.getAbilities().instabuild) return true;
+        net.minecraft.world.item.Item rack = com.titancombat.item.ModItems.HOWITZER_SHELLS.get();
+        for (int i = 0; i < this.titanInventory.getContainerSize(); i++) {
+            ItemStack st = this.titanInventory.getItem(i);
+            if (st.is(rack)) { st.shrink(1); return true; }
+        }
+        if (pilot != null) {
+            for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
+                ItemStack st = pilot.getInventory().getItem(i);
+                if (st.is(rack)) { st.shrink(1); return true; }
+            }
+        }
+        return false;
+    }
+
+    /** Fire request from the pilot (howitzer key or map). With `onLock`, waits for the gun to be laid. */
+    public void requestHowitzerFire(Player pilot, boolean onLock) {
+        if (!hasHowitzer()) return;
+        if (onLock && getArtilleryLaying() > 0) {
+            this.fireMissionPending = true;
+            return;
+        }
+        fireHowitzer(pilot);
+    }
+
+    /** Fires one shell onto the target, if there is one in range, the gun is laid and a round is loaded. */
+    public boolean fireHowitzer(Player pilot) {
+        if (!hasHowitzer() || this.isSitting() || this.isBoarding() || howitzerCooldown > 0) return false;
+        BlockPos t = getArtilleryTarget();
+        double range = t == null ? 0 : Math.sqrt(Mth.square(t.getX() + 0.5D - getX()) + Mth.square(t.getZ() + 0.5D - getZ()));
+        String problem = t == null ? "message.titancombat.artillery_no_target"
+                : range < Howitzer.MIN_RANGE || range > Howitzer.MAX_RANGE ? "message.titancombat.artillery_out_of_range"
+                : getArtilleryLaying() > 0 ? "message.titancombat.artillery_laying"
+                : getHowitzerReload() > 0 ? "message.titancombat.howitzer_reloading"
+                : getHowitzerRounds() <= 0 ? "message.titancombat.howitzer_no_shells"
+                : null;
+        if (problem != null) {
+            pilot.displayClientMessage(Component.translatable(problem, (int) range, Howitzer.MIN_RANGE, Howitzer.MAX_RANGE), true);
+            this.level().playSound(null, this.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.8F, 1.4F);
+            return false;
+        }
+        Vec3 velocity = artillerySolution();
+        if (velocity == null) return false;
+        Vec3 from = getArtilleryMuzzle();
+        TitanEnergyBlastEntity shell = new TitanEnergyBlastEntity(ModEntities.ENERGY_BLAST.get(), pilot, this.level())
+                .withStats(Howitzer.DAMAGE, Howitzer.EXPLOSION).lobbed();
+        shell.setPos(from.x, from.y, from.z);
+        shell.setDeltaMovement(velocity);
+        this.level().addFreshEntity(shell);
+        this.entityData.set(DATA_HOWITZER_ROUNDS, getHowitzerRounds() - 1);
+        howitzerCooldown = Howitzer.COOLDOWN_TICKS;
+        this.level().playSound(null, this.blockPosition(), ModSounds.SCORCH_FIRE.get(), SoundSource.PLAYERS, 3.0F, 0.6F);
+        this.level().broadcastEntityEvent(this, EVENT_HOWITZER_FIRE);
+        if (!System.getProperty("titancombat.autotest", "").isEmpty()) {
+            com.titancombat.TitanCombatMod.LOGGER.info("[autotest] howitzer fired at target {} ({} m)", t, (int) range);
+        }
+        return true;
     }
 
     public int getMagazine() {
@@ -2062,7 +2297,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
             return play(event, "fire", RawAnimation.begin().thenLoop(p + "fire"));
         }
 
-        // Unarmed titans: stop rifle holding animation to let arms hang and swing naturally.
+        // Unarmed titans (or artillery on the back): stop rifle holding animation to let arms hang and swing naturally.
         if (!hasWeapon()) {
             return stop(event);
         }
@@ -2118,6 +2353,8 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         tag.putString("OwnerUUID", getOwnerUUID());
         tag.putString("OwnerName", getOwnerName());
         tag.putInt("Magazine", getMagazine());
+        if (getArtilleryTarget() != null) tag.putLong("ArtilleryTarget", getArtilleryTarget().asLong());
+        tag.putInt("HowitzerRounds", getHowitzerRounds());
         tag.putBoolean("WeaponLowered", isWeaponLowered());
         tag.putString("FlightModule", getFlightModule().getId());
 
@@ -2164,5 +2401,9 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         TitanWeapon weapon = installedWeapon();
         this.entityData.set(DATA_WEAPON, weapon == null ? -1 : weapon.ordinal());
         this.entityData.set(DATA_MAGAZINE, weapon == null ? 0 : Math.min(tag.getInt("Magazine"), weapon.getMagazineSize()));
+        this.entityData.set(DATA_HOWITZER_ROUNDS, Math.min(tag.getInt("HowitzerRounds"), Howitzer.ROUNDS_PER_RACK));
+        if (tag.contains("ArtilleryTarget")) {
+            this.entityData.set(DATA_ARTILLERY_TARGET, java.util.Optional.of(BlockPos.of(tag.getLong("ArtilleryTarget"))));
+        }
     }
 }

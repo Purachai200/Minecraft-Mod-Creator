@@ -18,87 +18,92 @@ def smg(cz, x0):
             C([x0 + 1, GY + 4, cz - 1], [6, 2, 2], "glow"),                     # red-dot sight
             C([x0 - 12, GY - 2, cz - 2], [6, 5, 4], "metal")]                   # stock
 
-RIGHT_ARM1 = [
-    C([-33, 90, 1], [11, 12, 17], "paint", decal={"west": "stripe"}),           # angled shoulder pad
-    C([-34, 88, 0], [12, 2, 19], "paint2"),
-    C([-29, 82, 6], [7, 9, 9], "dark"),
-    C([-28, 71, 7], [6, 13, 7], "metal"),
-    C([-29, 74, 5], [3, 7, 2], "paint2"),
-]
-RIGHT_ARM2 = [
-    C([-27, 67, 7], [8, 6, 8], "dark"),
-    C([-28, 50, 5], [10, 18, 11], "paint"),
-    C([-29, 55, 6], [1, 9, 8], "paint2"),
-    C([-20, 52, 8], [2, 13, 2], "steel"),
-]
-RIGHT_HAND = [C([-27, 43, 7], [8, 5, 9], "dark")]
-LEFT_FINGERS = [C([20, 36, 7], [6, 7, 9], "metal"), C([20, 31, 8], [2, 5, 2], "dark"),
-                C([23.5, 31, 8], [2, 5, 2], "dark"), C([21.5, 31, 13], [2, 5, 2], "dark")]
+B, ball, fist = T.B, T.ball, T.fist
 
-RIGHT_LEG3 = [C([-18, 54, 3], [7, 9, 8], "dark"), C([-20, 51, 1], [3, 10, 11], "paint2")]
+# ---- 30MM-style light frame (reference: the Bandai 30 Minutes Missions grey kit): slim segmented
+# limbs, ball joints everywhere, small sensor head, plate packs on the back.
+
+RIGHT_ARM1 = ball(-24.4, 92, 10.7, 9) + [
+    B(-33, -22, 92, 102, 0, 20, "paint", decal={"west": "stripe"}),          # angled pauldron
+    B(-33.5, -21.5, 90, 92, -0.5, 20.5, "paint2"),
+    B(-27, -21, 74, 90, 7.5, 13.5, "dark"),                                   # upper arm frame
+    B(-28.5, -27, 76, 88, 7, 14, "paint"),                                    # outer plate
+    B(-27, -21, 80, 88, 6, 7.5, "paint2"), B(-27, -21, 75, 79, 6, 7.5, "paint2"),  # segment plates
+    B(-28.9, -28.5, 82, 84, 9.5, 11.5, "dark"),                               # panel hole
+]
+RIGHT_ARM2 = ball(-24, 71, 10.7, 7) + [
+    B(-29, -18, 50, 68, 5, 16, "paint"),                                      # forearm
+    B(-30, -29, 60, 67, 6, 15, "paint2"), B(-30, -29, 51, 59, 6, 15, "paint2"),
+    B(-30.4, -30, 62, 64, 9.5, 11.5, "dark"), B(-30.4, -30, 54, 56, 9.5, 11.5, "dark"),
+    B(-28, -19, 67, 69, 6, 15, "metal"),                                      # elbow cuff
+    B(-27, -19, 46, 50, 7, 15, "dark"),                                       # wrist
+]
+RIGHT_HAND = fist(-27.8, 46.8, 6.5)
+
+RIGHT_LEG3 = ball(-14.5, 57, 7, 10) + [B(-22, -19, 50, 62, 0, 13, "paint")]   # hip + side skirt
 RIGHT_LEG2 = [
-    C([-19, 29, -2], [9, 19, 10], "paint"),
-    C([-18, 24, 0], [7, 6, 6], "metal"),
-    C([-16, 30, 8], [3, 16, 3], "steel"),
+    B(-18, -11, 28, 48, 0, 8, "dark"),                                        # thigh frame
+    B(-19.5, -9.5, 30, 46, -2.5, 0, "paint"),                                 # front armor
+    B(-21, -18, 30, 46, -1, 8, "paint2"),                                     # outer armor
+    B(-21.4, -21, 40, 42, 2, 4, "dark"),
+] + T.piston(-14.5, 46, 30, 10, w=2.2)
+RIGHT_LEG1 = ball(-14.5, 23, 3, 8) + [
+    B(-20, -9, 18, 31, -8, -3, "paint", decal={"north": "stripe"}),          # knee pad
+    B(-18, -11, 6, 20, -2, 6, "dark"),                                        # shin frame
+    B(-19.5, -9.5, 8, 20, -4, -2, "paint"),                                   # shin armor
+    B(-20, -9, 9, 19, 6, 11, "paint2"),                                       # calf thruster pod
+    B(-19, -10, 7, 9, 6.5, 10.5, "vent"),
 ]
-RIGHT_LEG1 = [
-    C([-18, 21, -1], [7, 7, 7], "dark"),
-    C([-19, 19, -7], [9, 10, 4], "paint", decal={"north": "stripe"}),           # knee guard
-    C([-18, 8, -3], [7, 13, 8], "metal"),
-    C([-20, 9, 5], [11, 10, 7], "paint2"),                                       # calf thruster pod
-    C([-19, 7, 6], [9, 2, 5], "vent"),                                           # nozzle
-]
-RIGHT_FOOT = [
-    C([-17, 4, -2], [6, 4, 6], "dark"),
-    C([-19, 0, -9], [10, 4, 14], "metal"),
-    C([-20, 0, -17], [3, 3, 9], "paint"),                                        # three pointed toes
-    C([-16, 0, -18], [3, 3, 10], "paint"),
-    C([-12, 0, -17], [3, 3, 9], "paint"),
-    C([-17, 0, 5], [6, 3, 6], "dark"),                                           # heel spur
+RIGHT_FOOT = ball(-14.5, 7, 0, 6) + [
+    B(-19, -10, 0, 4, -10, 6, "dark"),
+    B(-20, -17, 0, 3, -18, -9, "paint"), B(-16, -13, 0, 3, -19, -9, "paint"), B(-12, -9, 0, 3, -18, -9, "paint"),
+    B(-17, -12, 0, 3, 5, 11, "metal"),                                        # heel spur
+    B(-19, -10, 4, 7, -6, 2, "paint2"),                                       # ankle guard
 ]
 
 T.ID = "scout"
+T.CAMO = False
 T.BONES = [
     ("bb_main", None, [0, 0, 0], []),
     ("skill_locator", None, [0, 0, 0], []),
     ("titan", None, [0, 0, 0], []),
     ("body1", "titan", [0, 61.0, 7.0], [
-        C([-9, 56, -1], [18, 8, 13], "dark"),
-        C([-7, 53, -4], [14, 7, 4], "paint2"),
+        B(-9, 9, 55, 65, -1, 13, "dark"),
+        B(-6, 6, 51, 63, -4, -1, "paint"),                                    # front skirt
+        B(-13, -9, 53, 63, 0, 12, "paint2"), B(9, 13, 53, 63, 0, 12, "paint2"),
     ]),
     ("body2", "body1", [0, 74.9, 8.8], [
-        C([-7, 64, 1], [14, 16, 11], "metal"),
-        C([-5, 66, -1], [10, 10, 2], "vent"),
+        B(-5, 5, 64, 80, 2, 12, "dark"),                                      # segmented spine
+        B(-7, 7, 72, 78, 0, 2, "paint2"), B(-6, 6, 66, 71, 0.5, 2, "paint2"),
+        B(-8, -5, 68, 76, 3, 11, "vent"), B(5, 8, 68, 76, 3, 11, "vent"),
     ]),
     ("body3", "body2", [0.5, 78.7, 17.8], [
-        C([-12, 80, -7], [24, 22, 22], "paint"),                                 # slim hull
-        C([-13, 84, -5], [1, 14, 16], "paint2", decal={"west": "stripe"}),
-        C([12, 84, -5], [1, 14, 16], "paint2", decal={"east": "stripe"}),
-        C([-10, 78, -12], [20, 8, 8], "paint2", rot=[-30, 0, 0], piv=[0, 82, -8]),  # wedge chin
-        C([-15, 92, -2], [3, 6, 14], "dark"),                                    # shoulder sockets
-        C([12, 92, -2], [3, 6, 14], "dark"),
-        C([-10, 86, 15], [20, 14, 4], "metal"),                                  # thruster pack
-        C([-9, 80, 16], [6, 6, 6], "vent", rot=[30, 0, 0], piv=[-6, 83, 19]),    # twin jump nozzles
-        C([3, 80, 16], [6, 6, 6], "vent", rot=[30, 0, 0], piv=[6, 83, 19]),
-        C([-3, 102, 2], [6, 4, 6], "dark"),                                      # radar mast base
-        C([-1, 106, 4], [2, 10, 2], "metal"),
-        C([-7, 115, 2], [14, 4, 2], "steel", rot=[0, 20, 0], piv=[0, 117, 3]),   # radar bar
-        C([8, 100, 8], [1, 16, 1], "dark"),                                      # whip antenna
-        C([-11, 90, -9], [3, 2, 2], "glow"),
-        C([8, 90, -9], [3, 2, 2], "glow"),
+        B(-13, 13, 81, 104, -6, 15, "paint"),                                 # chest
+        B(-14, -13, 84, 100, -4, 13, "paint2", decal={"west": "stripe"}),
+        B(13, 14, 84, 100, -4, 13, "paint2", decal={"east": "stripe"}),
+        B(-16, -13, 92, 100, 2, 12, "dark"), B(13, 16, 92, 100, 2, 12, "dark"),  # shoulder sockets
+        B(-7, 7, 104, 106, -3, 9, "dark"),                                    # collar
+        B(-11, 11, 84, 102, 15, 20, "metal"),                                 # backpack
+        B(-15, -11, 86, 100, 15, 22, "paint2"), B(11, 15, 86, 100, 15, 22, "paint2"),  # plate packs
+        B(-9, -4, 80, 85, 16, 20, "dark"), B(4, 9, 80, 85, 16, 20, "dark"),   # thrusters
+        B(8, 9, 100, 118, 16, 17, "dark"),                                    # whip antenna
     ]),
     ("doorUp", "body3", [0, 105, 3], [
-        C([-10, 94, -13], [20, 9, 6], "paint"),                                  # canopy
-        C([-9, 102, -11], [18, 3, 14], "paint2"),                                # canopy roof
-        C([-11, 95, -12], [1, 7, 4], "metal"),
-        C([10, 95, -12], [1, 7, 4], "metal"),
+        B(-5, 5, 104, 113, -7, 3, "paint"),                                   # sensor head
+        B(-5.5, 5.5, 113, 114.5, -7.5, 3.5, "paint2"),
+        B(-3, 3, 103, 105, -8, -4, "dark"),                                   # chin
+        B(-6, -5, 107, 111, -4, 0, "dark"), B(5, 6, 107, 111, -4, 0, "dark"),  # ear sensors
+        B(3.5, 4.5, 112, 120, -1, 0, "dark"),                                 # head antenna
+        B(-11, 11, 96, 104, -9, -6, "paint2"),                                # upper chest plate
     ]),
     ("eye", "doorUp", [0, 107.0, -17.0], [
-        C([-8, 97, -14], [16, 2, 1], "visor"),                                   # wide visor band
-        C([-3, 99.5, -14.5], [6, 2, 1], "visor"),                                # center optic
+        B(-4, 4, 108, 110, -7.6, -7, "visor"),
+        B(-1, 1, 110, 111.5, -7.8, -7.2, "visor"),
     ]),
     ("doorDown", "body3", [0, 82.7, -5.9], [
-        C([-9, 82, -11], [18, 11, 4], "paint", decal={"north": "hazard_bottom"}),
+        B(-10, 10, 82, 96, -9, -6, "paint"),                                  # lower chest
+        B(-2.5, 2.5, 88, 93, -9.6, -9, "dark"), B(-1, 1, 89.5, 91.5, -9.9, -9.6, "glow"),  # sensor port
+        B(-10.5, 10.5, 81, 82.5, -9.4, -6, "hazard"),
     ]),
     ("weaponBack", "body3", [-24.0, 78.0, 26.0], [
         C([-27, 74, 19], [6, 12, 6], "metal"),
@@ -109,7 +114,7 @@ T.BONES = [
     ("weapon", "rightHand", [-19.8, 39.8, 10.3], smg(10.3, -19.8)),
     ("leftArm1", "body3", [24.4, 94.8, 10.7], mirror(RIGHT_ARM1)),
     ("leftArm2", "leftArm1", [23.4, 72.5, 10.7], mirror(RIGHT_ARM2)),
-    ("leftHand", "leftArm2", [23.3, 46.8, 11.5], mirror(RIGHT_HAND) + LEFT_FINGERS),
+    ("leftHand", "leftArm2", [23.3, 46.8, 11.5], mirror(RIGHT_HAND)),
     ("rightLeg3", "titan", [-14.5, 61.1, 7.1], RIGHT_LEG3),
     ("rightLeg2", "rightLeg3", [-14.5, 43.5, 2.7], RIGHT_LEG2),
     ("rightLeg1", "rightLeg2", [-14.5, 22.8, 3.4], RIGHT_LEG1),

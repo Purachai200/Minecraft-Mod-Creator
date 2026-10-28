@@ -113,6 +113,137 @@ public final class ClientAutoTest {
     };
     private static int displayId = -1;
 
+    // Howitzer back module with a hand weapon: tactical map shot, a typed target fired with the fire key,
+    // a rejected 300 m target, a "designate + fire on lock" (map right-click) mission, aim views and a salute.
+    private static final Step[] ARTILLERY = {
+            // Back on the ground at world spawn (the saved test world may have left the player on a sky stage).
+            new Step(30, mc -> server2(mc, (p, level) -> {
+                if (p.getVehicle() instanceof BaseTitanEntity old) { old.setSitting(true); p.stopRiding(); }
+                var spawn = level.getSharedSpawnPos();
+                int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spawn.getX(), spawn.getZ());
+                p.teleportTo(level, spawn.getX() + 0.5D, y, spawn.getZ() + 0.5D, 90.0F, 0.0F);
+            })),
+            new Step(60, mc -> spawnAndBoard(mc)),
+            new Step(150, mc -> { mc.options.hideGui = false; mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+                server(mc, (p, t) -> {
+                    t.setEnergy(50000);
+                    t.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT, new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.LEADWALL).get()));
+                    t.getTitanInventory().setItem(TitanMenu.FLIGHT_SLOT, new ItemStack(ModItems.HOWITZER_MODULE.get()));
+                    t.getTitanInventory().setItem(TitanMenu.AMMO_SLOT_1, new ItemStack(ModItems.HOWITZER_SHELLS.get(), 3));
+                }); }),
+            // Steps are spaced out: the test server runs well under 20 TPS and loading a rack takes 90 ticks.
+            new Step(300, mc -> { if (mc.player.getVehicle() instanceof BaseTitanEntity t) mc.setScreen(new com.titancombat.client.gui.ArtilleryMapScreen(t)); }),
+            new Step(330, mc -> shot(mc, "a00_tactical_map")),
+            new Step(335, mc -> { if (mc.screen != null) mc.screen.onClose(); }),
+            new Step(380, mc -> setTargetWest(mc, 64)),
+            new Step(398, mc -> shot(mc, "a01_laying")),
+            new Step(440, mc -> fireHowitzer(mc)),
+            new Step(455, mc -> shot(mc, "a02_fired")),
+            new Step(490, mc -> setTargetWest(mc, 300)),
+            new Step(500, mc -> { for (int i = 0; i < 8; i++) ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.RANGE_UP)); }),
+            new Step(530, mc -> { mc.options.setCameraType(CameraType.FIRST_PERSON); mc.player.setXRot(8.0F); }),
+            new Step(560, mc -> shot(mc, "a03_cockpit_hud")),
+            new Step(600, mc -> fireHowitzer(mc)),
+            // Map right-click equivalent: designate north-west and fire once laid.
+            new Step(630, mc -> { mc.options.hideGui = true; mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); mc.player.setXRot(-20.0F); }),
+            new Step(632, mc -> shot(mc, "a03b_stand_front")),
+            new Step(640, mc -> { var t = mc.player.getVehicle();
+                ModNetworking.sendToServer(new com.titancombat.network.ArtilleryTargetC2SPacket(t.getBlockX() - 60, false, 0, t.getBlockZ() - 60, true)); }),
+            new Step(660, mc -> shot(mc, "a04_brace_front")),
+            new Step(675, mc -> mc.options.hideGui = false),
+            new Step(700, mc -> shot(mc, "a05_after_mission")),
+            // Salute: is the right hand raised to the visor in front, or swung behind?
+            new Step(800, mc -> ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.SALUTE))),
+            new Step(818, mc -> shot(mc, "a08_salute_front")),
+            new Step(900, mc -> { TitanCombatMod.LOGGER.info("[autotest] done"); mc.stop(); }),
+    };
+
+    private static void setTargetWest(Minecraft mc, int blocks) {
+        var t = mc.player.getVehicle();
+        ModNetworking.sendToServer(new com.titancombat.network.ArtilleryTargetC2SPacket(t.getBlockX() - blocks, false, 0, t.getBlockZ()));
+    }
+
+    private static void fireHowitzer(Minecraft mc) {
+        server(mc, (p, t) -> TitanCombatMod.LOGGER.info("[autotest] howitzer target={} rounds={} reload={} laying={} weapon={}",
+                t.getArtilleryTarget(), t.getHowitzerRounds(), t.getHowitzerReload(), t.getArtilleryLaying(), t.getActiveWeapon()));
+        ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.FIRE_HOWITZER));
+    }
+
+    // Side view of an unarmed titan standing, then walking past: stance and arm swing vs. leg stride.
+    private static final Step[] WALK_SIDE = buildWalkSide();
+
+    private static Step[] buildWalkSide() {
+        java.util.List<Step> steps = new java.util.ArrayList<>();
+        // Stone stage high in the sky: the world is random each run, so no terrain can block the view.
+        // Steps are spaced out because the server lags for a while after world load.
+        // A fresh spot each run (the autotest world is saved, so an old stage still holds earlier titans);
+        // the player goes there first so the chunks are loaded before the titan spawns.
+        steps.add(new Step(40, mc -> server2(mc, (player, level) -> {
+            if (player.getVehicle() instanceof BaseTitanEntity old) {  // saved world: still seated from a previous run
+                old.setSitting(true);
+                player.stopRiding();
+            }
+            level.setDayTime(6000L);
+            // Anchored to world spawn (always generated); relative to the player the saved world would drift
+            // into new terrain every run, and generating it stalls the server for hundreds of ticks.
+            var spawn = level.getSharedSpawnPos();
+            displayX = spawn.getX() + 0.5D + (System.currentTimeMillis() / 1000L % 5L) * 32.0D;
+            displayY = 200.0D;
+            displayZ = spawn.getZ() + 0.5D;
+            for (int dx = -6; dx <= 14; dx++) for (int dz = -36; dz <= 4; dz++) {
+                level.setBlockAndUpdate(net.minecraft.core.BlockPos.containing(displayX + dx, displayY - 1, displayZ + dz),
+                        net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+            }
+            // Camera east of the titan looking west: it walks north, so we see its right side.
+            player.teleportTo(level, displayX + 9.0D, displayY + 2.0D, displayZ - 17.0D, 90.0F, 6.0F);
+            level.getEntitiesOfClass(BaseTitanEntity.class, new AABB(displayX - 8, displayY - 2, displayZ - 38, displayX + 16, displayY + 8, displayZ + 6))
+                    .forEach(BaseTitanEntity::discard);
+        })));
+        steps.add(new Step(200, mc -> server2(mc, (player, level) -> {
+            if (!(typeFor(TITAN).create(level) instanceof BaseTitanEntity titan)) return;
+            titan.moveTo(displayX, displayY, displayZ - 17.0D, 180.0F, 0.0F);
+            titan.setYBodyRot(180.0F);
+            titan.setYHeadRot(180.0F);
+            titan.setStandbyMode(true); // no owner either: owned titans turn to face their owner
+            level.addFreshEntity(titan);
+            displayId = titan.getId();
+        })));
+        // Whichever way the titan ended up facing, put the camera off its right side, aimed at the middle
+        // of the stretch it is about to walk, and walk it along its own facing.
+        steps.add(new Step(280, mc -> display(mc, (p, t) -> {
+            Vec3 f = Vec3.directionFromRotation(0.0F, t.getYRot());
+            Vec3 mid = t.position().add(f.scale(6.0D));
+            Vec3 cam = mid.add(-f.z * 11.0D, 2.0D, f.x * 11.0D);
+            float yaw = (float) Math.toDegrees(Math.atan2(-(mid.x - cam.x), mid.z - cam.z));
+            p.teleportTo(p.serverLevel(), cam.x, cam.y, cam.z, yaw, 6.0F);
+        })));
+        steps.add(new Step(230, mc -> { mc.options.hideGui = true; mc.options.setCameraType(CameraType.FIRST_PERSON); }));
+        steps.add(new Step(300, mc -> shot(mc, "w00_stand")));
+        if (NAME.contains("brace")) {  // "walkside_brace": howitzer firing stance, side view
+            steps.add(new Step(250, mc -> display(mc, (p, t) -> {
+                t.setStandbyMode(false);
+                t.getTitanInventory().setItem(TitanMenu.FLIGHT_SLOT, new ItemStack(ModItems.HOWITZER_MODULE.get()));
+            })));
+            steps.add(new Step(310, mc -> display(mc, (p, t) -> t.setArtilleryTarget(p, t.getBlockX() - 70, null, t.getBlockZ()))));
+            steps.add(new Step(330, mc -> shot(mc, "w01_brace")));
+            steps.add(new Step(380, mc -> shot(mc, "w02_after")));
+            steps.add(new Step(385, mc -> { TitanCombatMod.LOGGER.info("[autotest] done"); mc.stop(); }));
+            return steps.toArray(new Step[0]);
+        }
+        for (int t = 305; t <= 360; t++) {
+            steps.add(new Step(t, mc -> display(mc, (p, titan) -> {
+                Vec3 at = titan.position().add(Vec3.directionFromRotation(0.0F, titan.getYRot()).scale(titan.getTitanClass().getWalkSpeed()));
+                titan.moveTo(at.x, at.y, at.z, titan.getYRot(), 0.0F);
+            })));
+        }
+        for (int t = 330; t <= 360; t += 6) {
+            final int tt = t;
+            steps.add(new Step(t, mc -> shot(mc, "w" + tt + "_walk")));
+        }
+        steps.add(new Step(365, mc -> { TitanCombatMod.LOGGER.info("[autotest] done"); mc.stop(); }));
+        return steps.toArray(new Step[0]);
+    }
+
     // ---------------------------------------------------------------- showcase (CurseForge screenshots)
     private static final String[] ROSTER = {"ion", "scorch", "ronin", "tone", "legion", "monarch", "northstar"};
     private static final int[] rosterIds = new int[ROSTER.length];
@@ -1169,11 +1300,14 @@ public final class ClientAutoTest {
         }
         tick++;
         if (tick == 1) {
+            // The test world is saved between runs: a script that ended in spectator would otherwise leave the
+            // next run without hands, so no cockpit arms or frame (they draw in the hand pass).
+            server2(mc, (p, level) -> p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL));
             mc.options.pauseOnLostFocus = false; // keep running when the window isn't focused
             mc.options.gamma().set(1.0D);
             if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen) mc.setScreen(null);
         }
-        Step[] script = NAME.startsWith("weapons_1st") ? COCKPIT_TOOLS : NAME.startsWith("energy") ? ENERGY : NAME.startsWith("transport") ? TRANSPORT : NAME.startsWith("bind") ? BIND : NAME.startsWith("cloak") ? CLOAK : NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
+        Step[] script = NAME.startsWith("artillery") ? ARTILLERY : NAME.startsWith("walkside") ? WALK_SIDE : NAME.startsWith("weapons_1st") ? COCKPIT_TOOLS : NAME.startsWith("energy") ? ENERGY : NAME.startsWith("transport") ? TRANSPORT : NAME.startsWith("bind") ? BIND : NAME.startsWith("cloak") ? CLOAK : NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
         for (Step step : script) {
             if (step.at() == tick) step.action().accept(mc);
         }

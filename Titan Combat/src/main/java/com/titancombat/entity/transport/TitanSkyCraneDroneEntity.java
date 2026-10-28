@@ -28,6 +28,9 @@ import software.bernie.geckolib.core.animation.RawAnimation;
  * Capable of VTOL hover, rapid 3D aerial transit (~1.10 blocks/tick), and airborne Combat Hot-Drop deployments.
  */
 public class TitanSkyCraneDroneEntity extends BaseTransportVehicleEntity {
+    /** Descend key held by the local pilot (set every client tick by KeyInputHandler; flight is client-driven). */
+    public static boolean clientDescendHeld = false;
+
     // Pilot seat in the nose pod: cushion top at model (x0, y24, z-55); -0.7 drops the riding player's hips onto it
     private static final Vec3 COCKPIT_OFFSET = new Vec3(0.0D, 24 / 16.0D - 0.7D, 55 / 16.0D);
     private static final Vec3 VENTRAL_MOUNT_OFFSET = new Vec3(0.0D, -9.4D, 0.0D); // Titan models are ~100u to the shoulder, so this hangs the shoulders at the Y=-48 clamp pads
@@ -92,7 +95,8 @@ public class TitanSkyCraneDroneEntity extends BaseTransportVehicleEntity {
 
         // Ascend / Descend / Hover controls
         boolean ascend = InputHelper.isJumping(driver);
-        boolean descend = driver.getXRot() > 25.0F || driver.isShiftKeyDown();
+        // Own descend key (not Shift: Shift is the vanilla dismount and throws the pilot out), or look steeply down.
+        boolean descend = driver.getXRot() > 25.0F || (this.level().isClientSide && clientDescendHeld);
 
         double vertical;
         if (ascend) {

@@ -252,7 +252,8 @@ public class TransportVehicleHudOverlay {
         }
 
         // Sub-hint
-        text(g, font, "[SHIFT+R-CLICK] Release", x0, base - 7, DIM, 0.65F, false);
+        text(g, font, "[" + com.titancombat.client.KeyInputHandler.KEY_RELEASE_CARGO.getTranslatedKeyMessage().getString().toUpperCase()
+                + "] Release", x0, base - 7, DIM, 0.65F, false);
     }
 
     // =========================================================================
@@ -309,7 +310,10 @@ public class TransportVehicleHudOverlay {
         textRight(g, font, "PWR: " + energyPct + "%", xr, base - 11, energyColor, 0.95F, true);
 
         // Control Hint
-        String hint = vehicle instanceof TitanSkyCraneDroneEntity ? "[SPACE] Climb  [L-CLICK] Drop" : "[W/A/S/D] Steer";
+        String hint = vehicle instanceof TitanSkyCraneDroneEntity
+                ? "[SPACE] Climb  [" + com.titancombat.client.KeyInputHandler.KEY_DESCEND.getTranslatedKeyMessage().getString().toUpperCase()
+                        + "] Descend  [L-CLICK] Drop"
+                : "[W/A/S/D] Steer";
         textRight(g, font, hint, xr, base - 2, DIM, 0.65F, false);
     }
 }

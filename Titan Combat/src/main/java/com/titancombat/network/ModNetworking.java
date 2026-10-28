@@ -35,6 +35,12 @@ public class ModNetworking {
                 .consumerMainThread(TitanWeaponActionC2SPacket::handle)
                 .add();
 
+        INSTANCE.messageBuilder(ArtilleryTargetC2SPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(ArtilleryTargetC2SPacket::new)
+                .encoder(ArtilleryTargetC2SPacket::toBytes)
+                .consumerMainThread(ArtilleryTargetC2SPacket::handle)
+                .add();
+
         INSTANCE.messageBuilder(TitanFireC2SPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
                 .decoder(TitanFireC2SPacket::new)
                 .encoder(TitanFireC2SPacket::toBytes)

@@ -12,6 +12,17 @@ import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.model.data.EntityModelData;
 
 public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
+    /** Standing crouch in blocks (1.5 px): loads the knees without moving the hitbox or cockpit eye noticeably. */
+    private static final float STANCE_CROUCH = 1.5F / 16.0F;
+    /** Barrel elevation baked into trooper_titan.geo.json (build_trooper_assets.ARTILLERY_ELEVATION). */
+    private static final float HOWITZER_REST_ELEVATION = 35.0F * Mth.DEG_TO_RAD;
+    /** Howitzer firing stance: extra squat (blocks), leg spread (radians), how long it holds after a shot and eases. */
+    private static final float BRACE_CROUCH = 7.0F / 16.0F;
+    private static final float BRACE_SPREAD = 0.20F;
+    private static final int BRACE_HOLD_TICKS = 40;
+    private static final float BRACE_EASE_TICKS = 10.0F;
+    /** Turret/barrel slew rate: ~105 degrees in Howitzer.LAYING_TICKS (30). */
+    private static final float HOWITZER_SLEW_PER_TICK = 3.5F * Mth.DEG_TO_RAD;
 
     @Override
     public ResourceLocation getModelResource(T animatable) {
@@ -50,6 +61,9 @@ public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
         boolean unarmed = !titan.hasWeapon();
         setHidden("weapon", stowed || swapped || unarmed);
         setHidden("weaponBack", !stowed || swapped || unarmed);
+        // Howitzer back module (Trooper model; TitanWeaponSwapLayer draws it on other chassis).
+        boolean artillery = titan.hasHowitzer();
+        setHidden("artillery", !artillery);
         if (titan.getTitanClass() == TitanClass.TROOPER) {
             // One weapon bone, two tool models: show only the currently mounted one.
             boolean saw = titan.getActiveWeapon() == com.titancombat.entity.TitanWeapon.CHAINSAW;
@@ -70,7 +84,61 @@ public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
             setHidden("swordBack", swordOut);
         }
 
-        applyFootPlacement(titan, state.getPartialTick());
+        BaseTitanEntity.Gait gait = titan.getGait();
+        // Not in the jump-jet/fall tuck (DASH), whose legs are posed apart on purpose.
+        boolean standing = !titan.isKneeling() && !titan.isSaluting() && gait != BaseTitanEntity.Gait.DASH;
+        // Unarmed: swing the arms off the legs' keyframed stride (right arm with left thigh), not vanilla
+        // limbSwing, whose player-sized cadence ran the arms 4-5x faster than a titan's gait.
+        // Read before foot placement bends the thighs.
+        if (unarmed && standing) {
+            // Hands free: arms hang in toward the hull (the rest pose splays them 30 degrees) with soft elbows.
+            addRotation("rightArm1", 0, 0, -0.38F);
+            addRotation("leftArm1", 0, 0, 0.38F);
+            float stride = gait == BaseTitanEntity.Gait.IDLE ? 0.0F : (boneRotX("leftLeg3") - boneRotX("rightLeg3")) * 0.5F;
+            addRotation("rightArm1", -0.35F * stride, 0, 0);
+            addRotation("leftArm1", 0.35F * stride, 0, 0);
+            // Elbows stay soft and bend further on the back-swing.
+            addRotation("rightArm2", 0.25F + 0.3F * Math.max(0.0F, stride), 0, 0);
+            addRotation("leftArm2", 0.25F + 0.3F * Math.max(0.0F, -stride), 0, 0);
+        }
+        // Loaded stance: torso hunched over the hips instead of standing straight-backed.
+        float torsoPitch = 0.0F;  // x rotation added on the body chain, which the howitzer barrel cancels out
+        float torsoYaw = 0.0F;
+        if (standing) {
+            addRotation("body2", -0.10F, 0, 0);
+            torsoPitch -= 0.10F;
+        }
+        if (artillery) {
+            // Howitzer recoil: the hull rocks back and the knees take the kick.
+            float kick = Math.max(0.0F, 1.0F - (titan.tickCount - titan.clientFireTick + state.getPartialTick()) / 10.0F);
+            if (kick > 0.0F) {
+                addRotation("body3", 0.09F * kick, 0, 0);
+                torsoPitch += 0.09F * kick;
+            }
+        }
+
+        // Howitzer firing stance: while the gun lays onto a target and for a moment after each shot the titan
+        // squats lower, plants its feet wide and leans into the recoil; it eases in and out (~0.5 s).
+        float brace = 0.0F;
+        if (artillery) {
+            boolean bracing = standing && gait == BaseTitanEntity.Gait.IDLE
+                    && (titan.getArtilleryLaying() > 0 || titan.tickCount - titan.clientFireTick < BRACE_HOLD_TICKS);
+            float now = titan.tickCount + state.getPartialTick();
+            float dt = titan.clientBraceClock < 0 ? 0.0F : Mth.clamp(now - titan.clientBraceClock, 0.0F, 10.0F);
+            titan.clientBraceClock = now;
+            titan.clientBrace = Mth.clamp(titan.clientBrace + (bracing ? dt : -dt) / BRACE_EASE_TICKS, 0.0F, 1.0F);
+            brace = titan.clientBrace * titan.clientBrace * (3.0F - 2.0F * titan.clientBrace);  // smoothstep
+        }
+        if (brace > 0.0F) {
+            addRotation("body2", -0.16F * brace, 0, 0);                     // lean into the gun
+            torsoPitch -= 0.16F * brace;
+            addRotation("rightLeg3", 0, 0, -BRACE_SPREAD * brace);           // feet planted wide...
+            addRotation("leftLeg3", 0, 0, BRACE_SPREAD * brace);
+            addRotation("rightFoot", 0, 0, BRACE_SPREAD * brace);            // ...soles kept flat
+            addRotation("leftFoot", 0, 0, -BRACE_SPREAD * brace);
+        }
+
+        applyFootPlacement(titan, state.getPartialTick(), (standing ? STANCE_CROUCH : 0.0F) + BRACE_CROUCH * brace);
 
         // Lowered weapon (H): natural low-ready hip carry with gun pointed down-forward.
         float lower = titan.getLowerBlend(state.getPartialTick());
@@ -81,13 +149,6 @@ public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
             addRotation("leftArm2", 0.85F * lower, 0, 0);
         }
 
-        // Unarmed locomotion: natural rhythmic arm swing at sides while walking/running
-        if (unarmed && !titan.isKneeling() && !titan.isSaluting()) {
-            float swing = Mth.cos(state.getLimbSwing() * 0.6662F) * 0.25F * state.getLimbSwingAmount();
-            addRotation("rightArm1", -swing, 0, 0);
-            addRotation("leftArm1", swing, 0, 0);
-        }
-
         // Titan military salute pose
         int saluteTicks = titan.getSaluteTicks();
         if (saluteTicks > 0) {
@@ -95,30 +156,79 @@ public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
             float blend = progress < 0.15F ? progress / 0.15F : (progress > 0.85F ? (1.0F - progress) / 0.15F : 1.0F);
             blend = Mth.clamp(blend, 0.0F, 1.0F);
 
+            // The arm bones rest turned 180 degrees about y, which mirrors their x axis: negative x raises an
+            // arm forward. (Positive x lifted the saluting hand up behind the head.)
             // Left arm stands firmly at crisp military attention along the side
             addRotation("leftArm1", 0.0F, 0.0F, -0.08F * blend);
-            addRotation("leftArm2", -0.12F * blend, 0, 0);
+            addRotation("leftArm2", 0.12F * blend, 0, 0);
 
             // Right arm raises smartly with elbow at shoulder height, hand touching visor edge
-            addRotation("rightArm1", 1.65F * blend, -0.42F * blend, 1.10F * blend);
-            addRotation("rightArm2", 1.60F * blend, 0.65F * blend, -0.25F * blend);
-            addRotation("rightHand", -0.20F * blend, 0.45F * blend, 0.25F * blend);
+            addRotation("rightArm1", -1.65F * blend, -0.42F * blend, 1.10F * blend);
+            addRotation("rightArm2", -1.60F * blend, 0.65F * blend, -0.25F * blend);
+            addRotation("rightHand", 0.20F * blend, 0.45F * blend, 0.25F * blend);
 
             // Torso stands tall and proud at military attention
             addRotation("body3", -0.06F * blend, 0, 0);
         }
 
         float weight = titan.getProceduralWeight(state.getPartialTick());
-        if (weight <= 0.001F) return;
-
-        EntityModelData data = state.getData(DataTickets.ENTITY_MODEL_DATA);
-        if (data != null) {
-            // Upper torso pitches with the aim; the waist twists toward where the pilot looks while the legs catch up.
-            addRotation("body3", Mth.clamp(data.headPitch(), -35.0F, 35.0F) * Mth.DEG_TO_RAD * weight, 0, 0);
-            addRotation("body2", 0, Mth.clamp(data.netHeadYaw(), -60.0F, 60.0F) * Mth.DEG_TO_RAD * weight, 0);
+        if (weight > 0.001F) {
+            EntityModelData data = state.getData(DataTickets.ENTITY_MODEL_DATA);
+            if (data != null) {
+                // Upper torso pitches with the aim; the waist twists toward where the pilot looks while the legs catch up.
+                float pitch = Mth.clamp(data.headPitch(), -35.0F, 35.0F) * Mth.DEG_TO_RAD * weight;
+                float twist = Mth.clamp(data.netHeadYaw(), -60.0F, 60.0F) * Mth.DEG_TO_RAD * weight;
+                addRotation("body3", pitch, 0, 0);
+                addRotation("body2", 0, twist, 0);
+                torsoPitch += pitch;
+                torsoYaw += twist;
+            }
+            float partial = state.getPartialTick();
+            float lean = -titan.getLeanForward(partial) * Mth.DEG_TO_RAD * weight;
+            addRotation("body1", lean, 0, titan.getLeanSide(partial) * Mth.DEG_TO_RAD * weight);
+            torsoPitch += lean;
         }
-        float partial = state.getPartialTick();
-        addRotation("body1", -titan.getLeanForward(partial) * Mth.DEG_TO_RAD * weight, 0, titan.getLeanSide(partial) * Mth.DEG_TO_RAD * weight);
+        if (artillery) aimHowitzer(titan, state.getPartialTick(), torsoPitch, torsoYaw);
+    }
+
+    /**
+     * Turns the howitzer onto the firing solution: the turret traverses to the target's bearing and the barrel
+     * elevates to the launch angle, both measured in the world and corrected for how far the torso is already
+     * pitched/twisted. Recoil slides the barrel back along its own axis.
+     */
+    private void aimHowitzer(T titan, float partial, float torsoPitch, float torsoYaw) {
+        float elevation = HOWITZER_REST_ELEVATION;
+        float bearingRel = 0.0F;  // target bearing relative to the hull, radians (Minecraft yaw sense)
+        net.minecraft.world.phys.Vec3 v = titan.artillerySolution();
+        net.minecraft.core.BlockPos t = titan.getArtilleryTarget();
+        if (v != null && t != null) {
+            elevation = (float) Math.atan2(v.y, v.horizontalDistance());
+            double dx = t.getX() + 0.5D - titan.getX(), dz = t.getZ() + 0.5D - titan.getZ();
+            float bearing = (float) Math.toDegrees(Math.atan2(-dx, dz));
+            float body = Mth.rotLerp(partial, titan.yBodyRotO, titan.yBodyRot);
+            bearingRel = Mth.wrapDegrees(bearing - body) * Mth.DEG_TO_RAD;
+        }
+        // Gun laying: the turret and barrel slew at a fixed rate instead of snapping, about as long as the
+        // server's Howitzer.LAYING_TICKS for a large swing.
+        float now = titan.tickCount + partial;
+        float dt = titan.clientHowitzerClock < 0 ? 0.0F : Mth.clamp(now - titan.clientHowitzerClock, 0.0F, 10.0F);
+        titan.clientHowitzerClock = now;
+        float step = HOWITZER_SLEW_PER_TICK * dt;
+        titan.clientHowitzerTraverse += Mth.clamp(Mth.wrapDegrees((bearingRel - titan.clientHowitzerTraverse) * Mth.RAD_TO_DEG) * Mth.DEG_TO_RAD, -step, step);
+        titan.clientHowitzerElevation += Mth.clamp(elevation - titan.clientHowitzerElevation, -step, step);
+        elevation = titan.clientHowitzerElevation;
+        // Model rotY runs opposite to Minecraft yaw (checked in game: + swung the gun to the titan's left).
+        addRotation("artilleryTurret", 0, -titan.clientHowitzerTraverse - torsoYaw, 0);
+        addRotation("artilleryBarrel", elevation - HOWITZER_REST_ELEVATION - torsoPitch, 0, 0);
+
+        float kick = Math.max(0.0F, 1.0F - (titan.tickCount - titan.clientFireTick + partial) / 8.0F);
+        CoreGeoBone barrel = getAnimationProcessor().getBone("artilleryBarrel");
+        if (barrel != null && kick > 0.0F) {
+            float slide = 3.0F * kick;  // pixels back along the barrel
+            barrel.setPosZ(barrel.getPosZ() + slide * Mth.cos(elevation));
+            barrel.setPosY(barrel.getPosY() - slide * Mth.sin(elevation));
+            barrel.resetStateChanges();
+        }
     }
 
     /**
@@ -126,17 +236,25 @@ public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
      * then bend the other leg (hip/knee/ankle) so its foot rests on the higher block instead of
      * sinking into it. Two-segment leg solved from the model's own joint pivots.
      */
-    private void applyFootPlacement(T titan, float partial) {
-        float drop = titan.getPelvisDrop(partial);
-        if (drop > -0.01F && titan.getLegLift(true, partial) < 0.01F && titan.getLegLift(false, partial) < 0.01F) return;
+    private void applyFootPlacement(T titan, float partial, float crouch) {
+        // crouch (blocks) sinks the pelvis and bends both legs by the same amount, feet staying flat.
+        float drop = titan.getPelvisDrop(partial) - crouch;
+        float leftLift = titan.getLegLift(true, partial) + crouch;
+        float rightLift = titan.getLegLift(false, partial) + crouch;
+        if (drop > -0.01F && leftLift < 0.01F && rightLift < 0.01F) return;
 
         CoreGeoBone pelvis = getAnimationProcessor().getBone("body1");
         if (pelvis != null) {
             pelvis.setPosY(pelvis.getPosY() + drop * 16.0F);
             pelvis.resetStateChanges();
         }
-        bendLeg("left", titan.getLegLift(true, partial) * 16.0F);
-        bendLeg("right", titan.getLegLift(false, partial) * 16.0F);
+        bendLeg("left", leftLift * 16.0F);
+        bendLeg("right", rightLift * 16.0F);
+    }
+
+    private float boneRotX(String name) {
+        CoreGeoBone bone = getAnimationProcessor().getBone(name);
+        return bone == null ? 0.0F : bone.getRotX();
     }
 
     private void bendLeg(String side, float liftPx) {

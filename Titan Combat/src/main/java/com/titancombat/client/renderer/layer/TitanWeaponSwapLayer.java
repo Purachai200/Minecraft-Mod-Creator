@@ -18,7 +18,8 @@ import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 import java.util.Optional;
 
 /**
- * Draws a weapon taken from another chassis' model when a titan mounts a non-factory weapon.
+ * Draws a weapon taken from another chassis' model when a titan mounts a non-factory weapon, and the
+ * Trooper's back howitzer on other chassis.
  * The donor gun geometry is attached where the titan's own gun would be: gripped in the right hand,
  * or on its back when stowed, aligned by the guns' grip/mount pivots. (TitanModel hides the titan's
  * own gun copies in that case.)
@@ -38,33 +39,50 @@ public class TitanWeaponSwapLayer<T extends BaseTitanEntity> extends GeoRenderLa
     @Override
     public void renderForBone(PoseStack poseStack, T titan, GeoBone bone, RenderType renderType, MultiBufferSource bufferSource,
                               VertexConsumer buffer, float partialTick, int packedLight, int packedOverlay) {
-        if (this.drawing || !isSwapped(titan) || titan.isInvisible()) return;
-
-        boolean stowed = titan.isWeaponStowed();
-        String ownPart = stowed ? "weaponBack" : "weapon";
+        if (this.drawing || titan.isInvisible()) return;
         BakedGeoModel own = getDefaultBakedModel(titan);
+
+        // Howitzer back module: only the Trooper model has it, so other chassis borrow it, mounted where
+        // they stow their gun (it rests at its modelled elevation; only the Trooper's lays onto targets).
+        if (titan.hasHowitzer() && titan.getTitanClass() != TitanClass.TROOPER) {
+            Optional<GeoBone> anchor = own.getBone("weaponBack");
+            if (anchor.isPresent() && anchor.get().getParent() == bone) {
+                drawDonorPart(poseStack, titan, TitanClass.TROOPER, "artillery", anchor.get(), null, renderType, bufferSource,
+                        partialTick, packedLight, packedOverlay);
+            }
+        }
+
+        if (!isSwapped(titan)) return;
+        String ownPart = titan.isWeaponStowed() ? "weaponBack" : "weapon";
         Optional<GeoBone> ownGun = own.getBone(ownPart);
         if (ownGun.isEmpty() || ownGun.get().getParent() == null || ownGun.get().getParent() != bone) return;
-
         TitanWeapon weapon = titan.getActiveWeapon();
-        TitanClass donor = weapon.getFactoryChassis();
+        drawDonorPart(poseStack, titan, weapon.getFactoryChassis(), ownPart, ownGun.get(), weapon, renderType, bufferSource,
+                partialTick, packedLight, packedOverlay);
+    }
+
+    /** Draws bone `donorPart` of the donor chassis' model with its pivot on `target` (a bone of this titan). */
+    private void drawDonorPart(PoseStack poseStack, T titan, TitanClass donor, String donorPart, GeoBone target,
+                               @org.jetbrains.annotations.Nullable TitanWeapon weapon, RenderType renderType,
+                               MultiBufferSource bufferSource, float partialTick, int packedLight, int packedOverlay) {
         BakedGeoModel donorModel = GeckoLibCache.getBakedModels().get(
                 new ResourceLocation(TitanCombatMod.MODID, "geo/" + donor.getId() + "_titan.geo.json"));
         if (donorModel == null) return;
-        Optional<GeoBone> donorGun = donorModel.getBone(ownPart);
+        Optional<GeoBone> donorGun = donorModel.getBone(donorPart);
         if (donorGun.isEmpty()) return;
 
         GeoBone gun = donorGun.get();
-        GeoBone target = ownGun.get();
         boolean wasHidden = gun.isHidden();
         boolean wasHidingChildren = gun.isHidingChildren();
         float sx = gun.getScaleX(), sy = gun.getScaleY(), sz = gun.getScaleZ();
 
         // The Trooper's weapon bone holds both tools; draw only the mounted one.
-        Optional<GeoBone> drill = donorModel.getBone("drill"), saw = donorModel.getBone("chainsaw");
-        boolean isSaw = weapon == TitanWeapon.CHAINSAW;
-        drill.ifPresent(b -> b.setHidden(isSaw));
-        saw.ifPresent(b -> b.setHidden(!isSaw));
+        if (weapon != null) {
+            Optional<GeoBone> drill = donorModel.getBone("drill"), saw = donorModel.getBone("chainsaw");
+            boolean isSaw = weapon == TitanWeapon.CHAINSAW;
+            drill.ifPresent(b -> b.setHidden(isSaw));
+            saw.ifPresent(b -> b.setHidden(!isSaw));
+        }
 
         this.drawing = true;
         poseStack.pushPose();
