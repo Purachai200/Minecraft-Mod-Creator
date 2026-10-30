@@ -1,0 +1,891 @@
+package com.obsolete.entity;
+
+import com.obsolete.entity.inventory.ExoframeArmorSlot;
+import com.obsolete.entity.inventory.ExoframeInventory;
+import com.obsolete.gui.ExoframeMenu;
+import com.obsolete.item.ExoframeAmmoItem;
+import com.obsolete.item.ExoframeArmorItem;
+import com.obsolete.item.ExoframeWeaponItem;
+import com.obsolete.item.ExoframeRocketLauncherItem;
+import com.obsolete.item.ExoframeRPG7Item;
+import com.obsolete.item.ModItems;
+import com.obsolete.network.ExoframeInventorySyncS2CPacket;
+import com.obsolete.network.ModNetworking;
+import com.obsolete.sound.ModSounds;
+import com.obsolete.util.InputHelper;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.util.Mth;
+import net.minecraft.world.Containers;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.NetworkHooks;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.AnimatableManager;
+import software.bernie.geckolib.core.animation.AnimationController;
+import software.bernie.geckolib.core.animation.RawAnimation;
+import software.bernie.geckolib.core.object.PlayState;
+import software.bernie.geckolib.util.GeckoLibUtil;
+
+import java.util.List;
+
+public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProvider {
+
+    // Synced Data Accessors
+    public static final EntityDataAccessor<Boolean> DATA_IS_CROUCHING =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Boolean> DATA_IS_MELEEING =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Integer> DATA_RECOIL_TICK =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> DATA_ARMOR_MASK =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Boolean> DATA_IS_DYING =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Integer> DATA_PRIMARY_COLOR =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> DATA_CAMO_PATTERN =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Boolean> DATA_IS_AIMING =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Integer> DATA_FRAME_TIER =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.INT);
+
+    // Chassis momentum response
+    private float smoothedForward = 0.0F;
+    private float smoothedStrafe = 0.0F;
+
+    // Modular 6-slot Inventory
+    private final ExoframeInventory modularInventory;
+    private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
+
+    // Combat & movement cooldown timers
+    private int weaponCooldown = 0;
+    private int meleeCooldown = 0;
+    private int deathTimer = -1;
+    private static final int DEATH_ANIMATION_TICKS = 50; // 2.5 seconds collapse
+
+    // Raw Animations
+    protected static final RawAnimation ANIM_IDLE = RawAnimation.begin().thenLoop("animation.exoframe.idle");
+    protected static final RawAnimation ANIM_WALK = RawAnimation.begin().thenLoop("animation.exoframe.walk");
+    protected static final RawAnimation ANIM_SPRINT = RawAnimation.begin().thenLoop("animation.exoframe.sprint");
+    protected static final RawAnimation ANIM_JUMP = RawAnimation.begin().thenPlay("animation.exoframe.jump");
+    protected static final RawAnimation ANIM_CROUCH = RawAnimation.begin().thenLoop("animation.exoframe.crouch");
+    protected static final RawAnimation ANIM_MELEE = RawAnimation.begin().thenPlay("animation.exoframe.melee");
+    protected static final RawAnimation ANIM_SHOOT = RawAnimation.begin().thenPlay("animation.exoframe.shoot");
+    protected static final RawAnimation ANIM_DEATH = RawAnimation.begin().thenPlayAndHold("animation.exoframe.death");
+    /** Render/world scale of the geo model (anime proportions: frame ~2x the pilot's height). */
+    public static final float MODEL_SCALE = 1.8F;
+
+    protected static final RawAnimation ANIM_CROUCH_WALK = RawAnimation.begin().thenLoop("animation.exoframe.crouch_walk");
+
+    /** Client-only render state: eased 0..1 blend between rest carry and shouldered aim. */
+    public float clientAimBlend;
+    public float clientAimAge;
+
+    public static final String EMOTE_CONTROLLER = "emote";
+    /** Emote names as sent by the client; "salute" switches to the left hand when a weapon fills the right. */
+    public static final String[] EMOTES = {"salute", "wave", "point", "scan"};
+
+    public ExoframeEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
+        super(entityType, level);
+        this.setMaxUpStep(2.05F); // long legs at MODEL_SCALE clear 2-block ledges (with floating-point clearance)
+        this.modularInventory = new ExoframeInventory(this::syncArmorMaskAndNotify);
+        this.setPersistenceRequired();
+    }
+
+    public static AttributeSupplier.Builder createAttributes() {
+        return Mob.createMobAttributes()
+                .add(Attributes.MAX_HEALTH, 160.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.32D)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.8D)
+                .add(Attributes.ARMOR, 14.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 8.0D)
+                .add(Attributes.ATTACK_DAMAGE, 18.0D);
+    }
+
+    @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(DATA_IS_CROUCHING, false);
+        this.entityData.define(DATA_IS_MELEEING, false);
+        this.entityData.define(DATA_RECOIL_TICK, 0);
+        this.entityData.define(DATA_ARMOR_MASK, 0);
+        this.entityData.define(DATA_IS_DYING, false);
+        this.entityData.define(DATA_PRIMARY_COLOR, 0xFFFFFF);
+        this.entityData.define(DATA_CAMO_PATTERN, 0);
+        this.entityData.define(DATA_IS_AIMING, false);
+        this.entityData.define(DATA_FRAME_TIER, 1);
+    }
+
+    public int getFrameTier() {
+        return this.entityData.get(DATA_FRAME_TIER);
+    }
+
+    public void setFrameTier(int tier) {
+        this.entityData.set(DATA_FRAME_TIER, Math.max(0, Math.min(3, tier)));
+    }
+
+    public boolean isAiming() {
+        return this.entityData.get(DATA_IS_AIMING);
+    }
+
+    public void setAiming(boolean aiming) {
+        this.entityData.set(DATA_IS_AIMING, aiming);
+    }
+
+    public int getPrimaryColor() {
+        return this.entityData.get(DATA_PRIMARY_COLOR);
+    }
+
+    public void setPrimaryColor(int rgb) {
+        this.entityData.set(DATA_PRIMARY_COLOR, rgb);
+    }
+
+    public int getCamoPattern() {
+        return this.entityData.get(DATA_CAMO_PATTERN);
+    }
+
+    public void setCamoPattern(int pattern) {
+        this.entityData.set(DATA_CAMO_PATTERN, pattern);
+    }
+
+    public ExoframeInventory getModularInventory() {
+        return modularInventory;
+    }
+
+    public boolean isMechCrouching() {
+        return this.entityData.get(DATA_IS_CROUCHING);
+    }
+
+    public void setMechCrouching(boolean crouching) {
+        this.entityData.set(DATA_IS_CROUCHING, crouching);
+        this.refreshDimensions();
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (DATA_IS_CROUCHING.equals(key)) {
+            this.refreshDimensions();
+        }
+    }
+
+    public boolean isMechMeleeing() {
+        return this.entityData.get(DATA_IS_MELEEING);
+    }
+
+    public boolean isDying() {
+        return this.entityData.get(DATA_IS_DYING);
+    }
+
+    public int getArmorMask() {
+        return this.entityData.get(DATA_ARMOR_MASK);
+    }
+
+    public boolean isSlotEquipped(ExoframeArmorSlot slot) {
+        return (getArmorMask() & (1 << slot.getIndex())) != 0;
+    }
+
+    public void syncArmorMaskAndNotify() {
+        int mask = 0;
+        for (int i = 0; i < ExoframeInventory.SLOT_COUNT; i++) {
+            ItemStack stack = modularInventory.getStackInSlot(i);
+            if (!stack.isEmpty()) {
+                mask |= (1 << i);
+            }
+        }
+        this.entityData.set(DATA_ARMOR_MASK, mask);
+
+        if (!this.level().isClientSide) {
+            for (int i = 0; i < ExoframeInventory.SLOT_COUNT; i++) {
+                ModNetworking.sendToTracking(new ExoframeInventorySyncS2CPacket(this.getId(), i, modularInventory.getStackInSlot(i)), this);
+            }
+        }
+    }
+
+    @Override
+    public EntityDimensions getDimensions(Pose pose) {
+        if (isMechCrouching()) {
+            return EntityDimensions.scalable(1.2F * MODEL_SCALE, 1.8F * MODEL_SCALE);
+        }
+        return EntityDimensions.scalable(1.2F * MODEL_SCALE, 2.2F * MODEL_SCALE);
+    }
+
+    @Override
+    public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource source) {
+        // High-mobility hydraulic shock absorption: immune to fall damage
+        return false;
+    }
+
+    @Override
+    public boolean isPushable() {
+        return false;
+    }
+
+    @Override
+    public boolean canBeCollidedWith() {
+        return true;
+    }
+
+    @Override
+    public boolean canCollideWith(Entity other) {
+        return true;
+    }
+
+    @Override
+    public boolean isPickable() {
+        return true;
+    }
+
+    @Override
+    public boolean canBeLeashed(Player player) {
+        return false;
+    }
+
+    @Override
+    public boolean isBaby() {
+        return false;
+    }
+
+    @Override
+    public boolean canBreatheUnderwater() {
+        return true; // Sealed hydraulic military frame operates underwater
+    }
+
+    @Override
+    public boolean isPushedByFluid() {
+        return false; // Heavy chassis is immune to water currents
+    }
+
+    @Override
+    public void aiStep() {
+        // Vehicle standby behavior: when not piloted, lock chassis & head firmly (no random mob wandering or head twitching)
+        if (!this.isVehicle()) {
+            this.yHeadRot = this.getYRot();
+            this.yBodyRot = this.getYRot();
+            this.setSpeed(0.0F);
+            this.smoothedForward = 0.0F;
+            this.smoothedStrafe = 0.0F;
+        }
+        super.aiStep();
+    }
+
+    @Override
+    public boolean showVehicleHealth() {
+        // Rendered via custom tactical Sci-Fi HUD
+        return false;
+    }
+
+    @Override
+    public boolean shouldRiderSit() {
+        return false; // pilot rides astride; ExoframeRiderPose draws the straddling legs and grip-reaching arms
+    }
+
+    @Override
+    protected void positionRider(Entity passenger, Entity.MoveFunction moveFunction) {
+        if (this.hasPassenger(passenger)) {
+            // Pilot's thighs rest on the seat cushion (model y30.8, z4.3); the capsules in
+            // tools/build_exoframe_geo.py (RIDER envelope) are fitted to exactly this seat.
+            float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
+            double forwardOffset = -4.3D * MODEL_SCALE / 16.0D;
+            double xOffset = -Mth.sin(yawRad) * forwardOffset;
+            double zOffset = Mth.cos(yawRad) * forwardOffset;
+            double seat = (30.8D * MODEL_SCALE - 10.0D) / 16.0D;          // feet = cushion top minus the seated thigh height
+            double yOffset = isMechCrouching() ? seat - 6.0D * MODEL_SCALE / 16.0D : seat; // crouch pelvis drop is 6 model px
+            moveFunction.accept(passenger, this.getX() + xOffset, this.getY() + yOffset, this.getZ() + zOffset);
+        }
+    }
+
+    @Nullable
+    @Override
+    public LivingEntity getControllingPassenger() {
+        Entity passenger = this.getFirstPassenger();
+        return passenger instanceof LivingEntity living ? living : null;
+    }
+
+    @Override
+    public void travel(Vec3 travelVector) {
+        if (this.isAlive() && !isDying()) {
+            LivingEntity rider = this.getControllingPassenger();
+            if (this.isVehicle() && rider != null) {
+                // Steer mech with pilot view
+                this.setYRot(rider.getYRot());
+                this.yRotO = this.getYRot();
+                this.setXRot(rider.getXRot() * 0.5F);
+                this.setRot(this.getYRot(), this.getXRot());
+                this.yBodyRot = this.getYRot();
+                this.yHeadRot = this.yBodyRot;
+
+                if (this.isControlledByLocalInstance()) {
+                    travelPiloted(rider, travelVector);
+                } else if (rider instanceof Player) {
+                    this.setDeltaMovement(Vec3.ZERO);
+                }
+                return;
+            }
+        }
+        super.travel(travelVector);
+    }
+
+    protected void travelPiloted(LivingEntity rider, Vec3 travelVector) {
+        float targetForward = rider.zza;
+        float targetStrafe = rider.xxa * 0.75F;
+
+        if (targetForward <= 0.0F) {
+            targetForward *= 0.6F; // Reverse speed penalty
+        }
+
+        // Heavy vehicle chassis momentum smoothing
+        float accelRate = this.onGround() ? 0.28F : 0.10F;
+        smoothedForward += (targetForward - smoothedForward) * accelRate;
+        smoothedStrafe += (targetStrafe - smoothedStrafe) * accelRate;
+
+        float speed = (float) this.getAttributeValue(Attributes.MOVEMENT_SPEED);
+        if (isAiming()) {
+            speed *= 0.65F; // Tactical ADS aim stance speed
+        } else if (isMechCrouching()) {
+            speed *= 0.50F; // 50% speed while crouching
+        } else if (rider.isSprinting() && smoothedForward > 0.1F) {
+            speed *= 1.35F; // Sprint boost
+        }
+
+        // Space bar jump handling
+        if (InputHelper.isJumping(rider) && this.onGround()) {
+            this.setDeltaMovement(this.getDeltaMovement().x, 0.62D, this.getDeltaMovement().z);
+            this.hasImpulse = true;
+            if (!this.level().isClientSide) {
+                this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_SERVO.get(), SoundSource.PLAYERS, 1.5F, 1.3F);
+            }
+        }
+
+        this.setSpeed(speed);
+        super.travel(new Vec3(smoothedStrafe, travelVector.y, smoothedForward));
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+
+        if (weaponCooldown > 0) weaponCooldown--;
+        if (meleeCooldown > 0) {
+            meleeCooldown--;
+            if (meleeCooldown <= 0) {
+                this.entityData.set(DATA_IS_MELEEING, false);
+            }
+        }
+
+        // Dying sequence animation timer
+        if (isDying()) {
+            if (!this.level().isClientSide) {
+                deathTimer--;
+                if (deathTimer <= 0) {
+                    dropInventoryAndDiscard();
+                }
+            }
+            return;
+        }
+
+        // Hydraulic servo hum while moving
+        if (this.level().isClientSide && this.isVehicle() && this.getDeltaMovement().horizontalDistanceSqr() > 0.005D) {
+            if (this.tickCount % 18 == 0) {
+                this.level().playLocalSound(this.getX(), this.getY(), this.getZ(),
+                        ModSounds.EXOFRAME_STEP.get(), SoundSource.PLAYERS, 0.8F, 1.0F, false);
+            }
+        }
+
+        // Active module effects for pilot
+        if (this.isVehicle()) {
+            LivingEntity rider = this.getControllingPassenger();
+            if (rider != null) {
+                // 1. Diving ballast module: provides rebreather life support (water breathing) while submerged
+                if (hasItemEquipped(ModItems.MODULE_DIVING_BALLAST.get()) && this.isInWater()) {
+                    if (!this.level().isClientSide) {
+                        rider.addEffect(new MobEffectInstance(MobEffects.WATER_BREATHING, 40, 0, false, false, true));
+                    }
+                    if (InputHelper.isJumping(rider)) {
+                        // Blow ballast tanks: buoyant propulsion
+                        this.setDeltaMovement(this.getDeltaMovement().add(0, 0.035D, 0));
+                    }
+                }
+
+                // 2. Night vision optic module or Cerberus helmet: provides FLIR thermal night-vision
+                if (hasItemEquipped(ModItems.MODULE_NIGHT_VISION_OPTIC.get()) || getEquippedSlot(ExoframeArmorSlot.HEAD).is(ModItems.ARMOR_CERBERUS_HEAD.get())) {
+                    if (!this.level().isClientSide) {
+                        rider.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 220, 0, false, false, false));
+                    }
+                }
+            }
+        }
+    }
+
+    public boolean hasItemEquipped(Item item) {
+        for (int i = 0; i < ExoframeInventory.SLOT_COUNT; i++) {
+            if (modularInventory.getStackInSlot(i).is(item)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public ItemStack getEquippedSlot(ExoframeArmorSlot slot) {
+        return modularInventory.getStackInSlot(slot.getIndex());
+    }
+
+    @Override
+    public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        if (isDying()) return InteractionResult.FAIL;
+
+        ItemStack held = player.getItemInHand(hand);
+        // Kit Item chassis re-tiering
+        if (held.getItem() instanceof com.obsolete.item.ExoframeKitItem kit) {
+            if (!this.level().isClientSide) {
+                this.setFrameTier(kit.getFrameTier());
+                this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_SERVO.get(), SoundSource.PLAYERS, 2.0F, 0.9F);
+                String[] tierNames = {"Salvage Militia (Tier 0)", "Standard Military (Tier 1)", "Advanced Special Forces (Tier 2)", "Elite Spec-Ops (Tier 3)"};
+                player.displayClientMessage(Component.literal("§6[Chassis Kit Applied] §fFrame upgraded to " + tierNames[kit.getFrameTier()]), true);
+                if (!player.getAbilities().instabuild) held.shrink(1);
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
+        // Custom Paint & Dye System (Dyeing with any of the 16 Minecraft Dyes)
+        if (held.getItem() instanceof net.minecraft.world.item.DyeItem dye) {
+            if (!this.level().isClientSide) {
+                float[] diffuse = dye.getDyeColor().getTextureDiffuseColors();
+                int r = (int) (diffuse[0] * 255.0F);
+                int g = (int) (diffuse[1] * 255.0F);
+                int b = (int) (diffuse[2] * 255.0F);
+                setPrimaryColor((r << 16) | (g << 8) | b);
+
+                if (!player.getAbilities().instabuild) {
+                    held.shrink(1);
+                }
+                this.level().playSound(null, this.blockPosition(), SoundEvents.ANVIL_USE, SoundSource.PLAYERS, 1.2F, 1.4F);
+                player.displayClientMessage(Component.translatable("message.obsolete.color_changed", dye.getDyeColor().getName().toUpperCase()), true);
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
+        // Cleaning paint & camo back to factory finish
+        if (held.is(net.minecraft.world.item.Items.SPONGE) || held.is(net.minecraft.world.item.Items.WATER_BUCKET)) {
+            if (getCamoPattern() != 0 || getPrimaryColor() != 0xFFFFFF) {
+                if (!this.level().isClientSide) {
+                    setCamoPattern(0);
+                    setPrimaryColor(0xFFFFFF);
+                    this.level().playSound(null, this.blockPosition(), SoundEvents.BUCKET_EMPTY, SoundSource.PLAYERS, 1.0F, 1.0F);
+                    player.displayClientMessage(Component.literal("§b[Exoframe] Cleaned paint & camouflage back to Factory Finish."), true);
+                }
+                return InteractionResult.sidedSuccess(this.level().isClientSide);
+            }
+        }
+
+        // Camouflage application using intuitive items
+        int newCamo = -1;
+        String camoName = "";
+        if (held.is(net.minecraft.world.item.Items.VINE) || held.is(net.minecraft.world.item.Items.OAK_LEAVES)) {
+            newCamo = 5; camoName = "Jungle Tigerstripe";
+        } else if (held.is(net.minecraft.world.item.Items.SAND) || held.is(net.minecraft.world.item.Items.SANDSTONE)) {
+            newCamo = 2; camoName = "Desert Nomad";
+        } else if (held.is(net.minecraft.world.item.Items.FLINT) || held.is(net.minecraft.world.item.Items.INK_SAC)) {
+            newCamo = 3; camoName = "Urban Hex";
+        } else if (held.is(net.minecraft.world.item.Items.SNOWBALL) || held.is(net.minecraft.world.item.Items.SNOW_BLOCK)) {
+            newCamo = 4; camoName = "Arctic Blizzard";
+        } else if (held.is(net.minecraft.world.item.Items.HONEYCOMB)) {
+            newCamo = 6; camoName = "Industrial Hazard";
+        }
+
+        if (newCamo != -1) {
+            if (!this.level().isClientSide) {
+                setCamoPattern(newCamo);
+                if (!player.getAbilities().instabuild) held.shrink(1);
+                this.level().playSound(null, this.blockPosition(), SoundEvents.ANVIL_USE, SoundSource.PLAYERS, 1.0F, 1.6F);
+                player.displayClientMessage(Component.literal("§a[Exoframe] Applied Camouflage: §e" + camoName), true);
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
+        // Shift + Right Click opens Modular Inventory GUI
+        if (player.isShiftKeyDown()) {
+            if (!this.level().isClientSide && player instanceof ServerPlayer serverPlayer) {
+                NetworkHooks.openScreen(serverPlayer, this, buf -> buf.writeInt(this.getId()));
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
+        // Mount / Ride Mech
+        if (!this.isVehicle() && !player.isPassenger()) {
+            if (!this.level().isClientSide) {
+                player.startRiding(this);
+                this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_SERVO.get(), SoundSource.PLAYERS, 1.5F, 1.1F);
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
+        return super.mobInteract(player, hand);
+    }
+
+    private boolean shoulderMissileAlt = false;
+
+    /**
+     * Weapon firing server execution.
+     */
+    public boolean fireEquippedWeapon(ServerPlayer pilot) {
+        if (weaponCooldown > 0 || isDying()) return false;
+
+        ItemStack weaponStack = modularInventory.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
+        if (weaponStack.getItem() instanceof ExoframeWeaponItem weaponItem) {
+            boolean fired = weaponItem.performFire(this, pilot);
+            if (fired) {
+                weaponCooldown = weaponItem.getFireCooldownTicks();
+                return true;
+            }
+        } else {
+            ItemStack utilStack = modularInventory.getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
+            boolean hasShoulderWeapon = utilStack.is(ModItems.MODULE_SHOULDER_MISSILE.get())
+                    || utilStack.is(ModItems.MODULE_TWIN_MANPADS.get())
+                    || utilStack.getItem() instanceof ExoframeRocketLauncherItem
+                    || utilStack.getItem() instanceof ExoframeRPG7Item;
+
+            if (hasShoulderWeapon) {
+                return fireShoulderMissile(pilot);
+            }
+
+            // No weapon equipped: default to melee punch
+            performMeleeAttack(pilot);
+        }
+        return false;
+    }
+
+    /**
+     * Computes the point the pilot is looking at (either block collision or targeted entity within 64 blocks,
+     * or at 64 blocks in empty sky) for authentic military FCS reticle convergence.
+     */
+    public static Vec3 computeTargetConvergence(Level level, ServerPlayer pilot, ExoframeEntity exoframe) {
+        Vec3 eyePos = pilot.getEyePosition();
+        Vec3 look = pilot.getLookAngle();
+        Vec3 rayEnd = eyePos.add(look.scale(64.0D));
+        HitResult blockHit = level.clip(new ClipContext(eyePos, rayEnd, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, pilot));
+        Vec3 target = blockHit.getType() != HitResult.Type.MISS ? blockHit.getLocation() : rayEnd;
+
+        AABB searchBox = new AABB(eyePos, target).inflate(1.5D);
+        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(level, pilot, eyePos, target, searchBox,
+                e -> !e.isSpectator() && e.isPickable() && e != exoframe && e != pilot);
+        if (entityHit != null) {
+            target = entityHit.getLocation();
+        }
+        return target;
+    }
+
+    /**
+     * Fires a rocket or anti-tank guided missile from the shoulder-mounted launcher pods.
+     * Alternates left and right shoulder pods with authentic launch smoke and sound.
+     */
+    public boolean fireShoulderMissile(ServerPlayer pilot) {
+        // Check for AT_ROCKET in utility slot or pilot inventory
+        boolean hasAmmo = false;
+        ItemStack utilStack = modularInventory.getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
+        if (utilStack.getItem() instanceof ExoframeAmmoItem ammoItem && ammoItem.getAmmoType() == ExoframeAmmoItem.AmmoType.AT_ROCKET) {
+            utilStack.shrink(1);
+            hasAmmo = true;
+        } else {
+            for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
+                ItemStack stack = pilot.getInventory().getItem(i);
+                if (stack.getItem() instanceof ExoframeAmmoItem ammoItem && ammoItem.getAmmoType() == ExoframeAmmoItem.AmmoType.AT_ROCKET) {
+                    stack.shrink(1);
+                    hasAmmo = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasAmmo) {
+            pilot.displayClientMessage(Component.translatable("message.obsolete.out_of_ammo_rocket").withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+
+        Level level = this.level();
+        Vec3 look = pilot.getLookAngle();
+        Vec3 forward = look.normalize();
+        Vec3 right = new Vec3(-forward.z, 0, forward.x).normalize();
+
+        // Alternate left shoulder (+0.75 blocks) and right shoulder (-0.75 blocks) pod launch
+        double sideOffset = shoulderMissileAlt ? -0.75D : 0.75D;
+        shoulderMissileAlt = !shoulderMissileAlt;
+
+        Vec3 podPos = this.position().add(0, 2.25D * MODEL_SCALE, 0)
+                .add(right.scale(sideOffset * MODEL_SCALE))
+                .add(forward.scale(0.55D * MODEL_SCALE));
+
+        Vec3 target = computeTargetConvergence(level, pilot, this);
+        Vec3 shootDir = target.subtract(podPos).normalize();
+
+        ExoframeRocketEntity rocket = new ExoframeRocketEntity(level, pilot);
+        rocket.setPos(podPos.x, podPos.y, podPos.z);
+        rocket.shoot(shootDir.x, shootDir.y, shootDir.z, 2.5F, 0.08F);
+        level.addFreshEntity(rocket);
+
+        level.playSound(null, this.blockPosition(), ModSounds.EXOFRAME_ROCKET_FIRE.get(), SoundSource.PLAYERS, 3.2F, 1.0F);
+        this.triggerRecoilAnim();
+        this.weaponCooldown = 25; // 1.25s cooldown between shoulder missile salvos
+        return true;
+    }
+
+    /**
+     * Melee attack execution (Phase 6).
+     */
+    public void performMeleeAttack(ServerPlayer pilot) {
+        if (meleeCooldown > 0 || isDying()) return;
+
+        meleeCooldown = 15; // 0.75 second attack cooldown
+        this.entityData.set(DATA_IS_MELEEING, true);
+
+        // Find enemies in front cone (sweep hitbox ~2.8 blocks)
+        Vec3 forward = pilot.getLookAngle().normalize();
+        Vec3 strikeCenter = this.position().add(0, 1.2D * MODEL_SCALE, 0).add(forward.scale(1.8D * MODEL_SCALE));
+        double reach = 1.4D * MODEL_SCALE, high = 1.2D * MODEL_SCALE;
+        AABB strikeBox = new AABB(strikeCenter.x - reach, strikeCenter.y - high, strikeCenter.z - reach,
+                strikeCenter.x + reach, strikeCenter.y + high, strikeCenter.z + reach);
+
+        List<LivingEntity> targets = this.level().getEntitiesOfClass(LivingEntity.class, strikeBox,
+                e -> e != this && e != pilot && !this.isAlliedTo(e));
+
+        float meleeDamage = 22.0F;
+        for (LivingEntity target : targets) {
+            target.hurt(this.damageSources().mobAttack(this), meleeDamage);
+            Vec3 kb = forward.scale(1.2D).add(0, 0.35D, 0);
+            target.setDeltaMovement(kb);
+            target.hurtMarked = true;
+        }
+
+        Level level = this.level();
+        level.playSound(null, this.blockPosition(), ModSounds.EXOFRAME_MELEE.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
+
+        if (level instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(ParticleTypes.SWEEP_ATTACK,
+                    strikeCenter.x, strikeCenter.y, strikeCenter.z, 2, 0.2D, 0.2D, 0.2D, 0.0D);
+        }
+    }
+
+    public void triggerRecoilAnim() {
+        this.entityData.set(DATA_RECOIL_TICK, this.tickCount);
+    }
+
+    /**
+     * Phase 9 & 10: Damage Interception, Armor Mitigation, & Dynamic Armor Degradation.
+     */
+    @Override
+    public boolean hurt(@NotNull DamageSource source, float amount) {
+        if (isDying()) return false;
+
+        boolean isProjectile = source.is(DamageTypeTags.IS_PROJECTILE) || source.getDirectEntity() instanceof net.minecraft.world.entity.projectile.Projectile;
+
+        // Calculate modular armor mitigation factor
+        float totalMitigation = 0.0F;
+        for (int i = 0; i < 4; i++) { // Head, Chest, Arms, Legs
+            ItemStack armorStack = modularInventory.getStackInSlot(i);
+            if (armorStack.getItem() instanceof ExoframeArmorItem armorItem) {
+                totalMitigation += armorItem.getDamageReduction();
+            }
+        }
+        totalMitigation = Math.min(0.85F, totalMitigation); // Max 85% damage mitigation
+
+        float finalDamage = amount * (1.0F - totalMitigation);
+
+        // Apply durability degradation to equipped modular armor plates
+        if (!this.level().isClientSide && amount > 0.5F) {
+            applyArmorDegradation(amount, isProjectile);
+        }
+
+        return super.hurt(source, finalDamage);
+    }
+
+    /**
+     * Phase 10: Distributes durability loss across equipped armor. If durability hits 0, permanently destroys plate.
+     */
+    private void applyArmorDegradation(float rawDamage, boolean isProjectile) {
+        int durabilityLoss = Math.max(1, (int) Math.ceil(rawDamage * (isProjectile ? 1.5F : 1.0F)));
+
+        for (int slot = 0; slot < 4; slot++) {
+            ItemStack stack = modularInventory.getStackInSlot(slot);
+            if (stack.getItem() instanceof ExoframeArmorItem) {
+                int slotLoss = durabilityLoss;
+                if (slot == ExoframeArmorSlot.CHEST.getIndex()) slotLoss = (int) (durabilityLoss * 0.5F) + 1;
+                else if (slot == ExoframeArmorSlot.LEGS.getIndex()) slotLoss = (int) (durabilityLoss * 0.3F) + 1;
+
+                int newDamage = stack.getDamageValue() + slotLoss;
+                if (newDamage >= stack.getMaxDamage()) {
+                    // Armor Broken Permanently!
+                    modularInventory.setStackInSlot(slot, ItemStack.EMPTY);
+                    this.level().playSound(null, this.blockPosition(), SoundEvents.SHIELD_BREAK, SoundSource.PLAYERS, 2.0F, 0.8F);
+                    this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_ARMOR_BREAK.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
+
+                    if (this.level() instanceof ServerLevel serverLevel) {
+                        serverLevel.sendParticles(ParticleTypes.LAVA, this.getX(), this.getY() + 1.5D, this.getZ(), 12, 0.3D, 0.5D, 0.3D, 0.1D);
+                        serverLevel.sendParticles(ParticleTypes.SMOKE, this.getX(), this.getY() + 1.5D, this.getZ(), 10, 0.3D, 0.4D, 0.3D, 0.05D);
+                    }
+
+                    Entity passenger = this.getFirstPassenger();
+                    if (passenger instanceof Player player) {
+                        player.displayClientMessage(Component.translatable("message.obsolete.armor_destroyed",
+                                ExoframeArmorSlot.byIndex(slot).getName().toUpperCase()), true);
+                    }
+                } else {
+                    stack.setDamageValue(newDamage);
+                    modularInventory.setStackInSlot(slot, stack);
+                }
+            }
+        }
+        syncArmorMaskAndNotify();
+    }
+
+    /**
+     * Phase 6: Anime-accurate collapse death sequence.
+     */
+    @Override
+    public void die(@NotNull DamageSource source) {
+        super.die(source);
+        if (!this.level().isClientSide) {
+            this.entityData.set(DATA_IS_DYING, true);
+            this.deathTimer = DEATH_ANIMATION_TICKS;
+
+            // Eject pilot safely
+            Entity passenger = this.getFirstPassenger();
+            if (passenger instanceof Player player) {
+                player.stopRiding();
+                Vec3 safePos = this.position().add(-1.2D, 0, 0);
+                player.teleportTo(safePos.x, safePos.y, safePos.z);
+            }
+
+            this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_DEATH.get(), SoundSource.PLAYERS, 2.5F, 0.9F);
+        }
+    }
+
+    private void dropInventoryAndDiscard() {
+        for (int i = 0; i < modularInventory.getSlots(); i++) {
+            ItemStack stack = modularInventory.getStackInSlot(i);
+            if (!stack.isEmpty()) {
+                Containers.dropItemStack(this.level(), this.getX(), this.getY() + 0.5D, this.getZ(), stack);
+            }
+        }
+        this.discard();
+    }
+
+    @Override
+    public void addAdditionalSaveData(@NotNull CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putBoolean("IsCrouching", isMechCrouching());
+        tag.putBoolean("IsAiming", isAiming());
+        tag.putInt("PrimaryColor", getPrimaryColor());
+        tag.putInt("CamoPattern", getCamoPattern());
+        tag.putInt("FrameTier", getFrameTier());
+        modularInventory.saveToNbt(tag);
+    }
+
+    @Override
+    public void readAdditionalSaveData(@NotNull CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        if (tag.contains("IsCrouching")) setMechCrouching(tag.getBoolean("IsCrouching"));
+        if (tag.contains("IsAiming")) setAiming(tag.getBoolean("IsAiming"));
+        if (tag.contains("PrimaryColor")) setPrimaryColor(tag.getInt("PrimaryColor"));
+        if (tag.contains("CamoPattern")) setCamoPattern(tag.getInt("CamoPattern"));
+        if (tag.contains("FrameTier")) setFrameTier(tag.getInt("FrameTier"));
+        modularInventory.loadFromNbt(tag);
+        syncArmorMaskAndNotify();
+    }
+
+    @Override
+    public @NotNull Component getDisplayName() {
+        return Component.translatable("entity.obsolete.exoframe");
+    }
+
+    @Nullable
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, @NotNull Inventory playerInventory, @NotNull Player player) {
+        return new ExoframeMenu(containerId, playerInventory, this);
+    }
+
+    // GeckoLib 4 Animation Controllers
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<>(this, "movement", 3, state -> {
+            if (isDying()) {
+                return state.setAndContinue(ANIM_DEATH);
+            }
+            if (isMechCrouching()) {
+                return state.setAndContinue(state.isMoving() ? ANIM_CROUCH_WALK : ANIM_CROUCH);
+            }
+            if (!this.onGround()) {
+                return state.setAndContinue(ANIM_JUMP);
+            }
+            if (state.isMoving()) {
+                LivingEntity rider = getControllingPassenger();
+                if (rider != null && rider.isSprinting()) {
+                    return state.setAndContinue(ANIM_SPRINT);
+                }
+                return state.setAndContinue(ANIM_WALK);
+            }
+            return state.setAndContinue(ANIM_IDLE);
+        }));
+
+        controllers.add(new AnimationController<>(this, "combat", 2, state -> {
+            if (isMechMeleeing()) {
+                return state.setAndContinue(ANIM_MELEE);
+            }
+            if (this.tickCount - this.entityData.get(DATA_RECOIL_TICK) < 8) {
+                return state.setAndContinue(ANIM_SHOOT);
+            }
+            return PlayState.STOP;
+        }));
+
+        AnimationController<ExoframeEntity> emotes = new AnimationController<>(this, EMOTE_CONTROLLER, 4, state -> PlayState.STOP);
+        for (String emote : new String[]{"salute", "salute_left", "wave", "point", "scan"}) {
+            emotes.triggerableAnim(emote, RawAnimation.begin().thenPlay("animation.exoframe." + emote));
+        }
+        controllers.add(emotes);
+    }
+
+    /** Server-side: plays a gesture for everyone tracking this exoframe. */
+    public void playEmote(String emote) {
+        if (isDying() || java.util.Arrays.stream(EMOTES).noneMatch(emote::equals)) return;
+        boolean armed = !modularInventory.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex()).isEmpty();
+        triggerAnim(EMOTE_CONTROLLER, emote.equals("salute") && armed ? "salute_left" : emote);
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return geoCache;
+    }
+}

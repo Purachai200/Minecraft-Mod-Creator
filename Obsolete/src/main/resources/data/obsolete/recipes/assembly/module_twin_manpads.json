@@ -1,0 +1,18 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:ammo_rocket"
+    },
+    {
+      "item": "obsolete:ammo_rocket"
+    },
+    {
+      "item": "obsolete:servo_motor"
+    }
+  ],
+  "result": {
+    "item": "obsolete:module_twin_manpads",
+    "count": 1
+  }
+}

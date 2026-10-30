@@ -1,0 +1,22 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:peddler_core"
+    },
+    {
+      "item": "obsolete:hydraulic_cylinder"
+    },
+    {
+      "item": "obsolete:hydraulic_cylinder"
+    },
+    {
+      "item": "obsolete:servo_motor"
+    }
+  ],
+  "result": {
+    "item": "obsolete:exoframe_kit",
+    "count": 1
+  },
+  "assemble_time": 160
+}

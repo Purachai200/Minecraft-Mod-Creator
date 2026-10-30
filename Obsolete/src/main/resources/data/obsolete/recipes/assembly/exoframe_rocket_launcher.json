@@ -1,0 +1,22 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "obsolete:servo_motor"
+    }
+  ],
+  "result": {
+    "item": "obsolete:exoframe_rocket_launcher",
+    "count": 1
+  },
+  "assemble_time": 140
+}

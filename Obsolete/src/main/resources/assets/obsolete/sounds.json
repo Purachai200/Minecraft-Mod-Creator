@@ -1,0 +1,62 @@
+{
+  "exoframe_step": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_step",
+    "sounds": [
+      "minecraft:mob/iron_golem/step1",
+      "minecraft:mob/iron_golem/step2",
+      "minecraft:mob/iron_golem/step3"
+    ]
+  },
+  "exoframe_servo": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_servo",
+    "sounds": [
+      "minecraft:item/armor/equip_iron1",
+      "minecraft:item/armor/equip_iron2"
+    ]
+  },
+  "exoframe_rifle_fire": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_rifle_fire",
+    "sounds": [
+      "minecraft:random/explode",
+      "minecraft:mob/warden/sonic_boom"
+    ]
+  },
+  "exoframe_rocket_fire": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_rocket_fire",
+    "sounds": [
+      "minecraft:entity/firework_rocket/launch"
+    ]
+  },
+  "exoframe_melee": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_melee",
+    "sounds": [
+      "minecraft:mob/iron_golem/hit"
+    ]
+  },
+  "exoframe_armor_break": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_armor_break",
+    "sounds": [
+      "minecraft:item/shield/break"
+    ]
+  },
+  "exoframe_death": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_death",
+    "sounds": [
+      "minecraft:mob/iron_golem/death"
+    ]
+  },
+  "assembly_process": {
+    "category": "block",
+    "subtitle": "subtitles.obsolete.assembly_process",
+    "sounds": [
+      "minecraft:block/anvil/use"
+    ]
+  }
+}

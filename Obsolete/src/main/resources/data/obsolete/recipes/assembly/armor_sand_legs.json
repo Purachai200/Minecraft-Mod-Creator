@@ -1,0 +1,22 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "obsolete:hydraulic_cylinder"
+    },
+    {
+      "item": "obsolete:hydraulic_cylinder"
+    }
+  ],
+  "result": {
+    "item": "obsolete:armor_sand_legs",
+    "count": 1
+  },
+  "assemble_time": 100
+}
