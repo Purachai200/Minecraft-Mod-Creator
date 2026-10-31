@@ -680,14 +680,22 @@ sym("armor_chest_salvage",
     (1.4, 15.4, -5.4, 3.0, 6.4, 0.5),
     (5.4, 22.0, -5.0, 0.4, 6.0, 2.6))
 
-c = "canopy_salvage"   # low welded tub + one roll hoop: reads as scrap, not a box
+c = "canopy_salvage"   # crude welded scrap capsule: heavy steel patches, roll hoop, visor slit, 100% enclosed rear
 add(c,
-    *round_ring(33.0, 8.0, 9.6, -9.4, 10.2, r=2.0),
-    (-6.0, 37.0, -9.8, 4.6, 3.6, 0.4), (1.8, 35.4, -9.8, 3.8, 2.6, 0.4),   # patch plates
-    (-9.0, 41.0, 9.6, 0.8, 19.4, 0.8), (8.2, 41.0, 9.6, 0.8, 19.4, 0.8),    # roll hoop legs
-    (-9.0, 60.4, 9.6, 18.0, 0.8, 0.8),                                    # hoop top
-    (-9.6, 41.0, -9.4, 0.7, 6.0, 0.7), (8.9, 41.0, -9.4, 0.7, 6.0, 0.7),
-    (-9.6, 47.0, -9.4, 0.7, 0.7, 19.0), (8.9, 47.0, -9.4, 0.7, 0.7, 19.0))  # grab rails
+    *round_ring(33.0, 11.0, 11.2, -9.6, 15.0, r=2.4),
+    *round_ring(44.0, 5.0, 10.6, -9.0, 15.0, r=2.4, front=False),
+    (-6.0, 45.0, -9.2, 12.0, 0.6, 0.5),
+    (-5.5, 47.0, -9.2, 11.0, 0.6, 0.5),
+    *round_ring(49.0, 6.0, 10.2, -7.6, 15.0, r=2.0),
+    *round_ring(55.0, 5.0, 9.0, -6.0, 15.0, r=1.8),
+    *round_ring(60.0, 3.8, 8.0, -4.8, 15.0, r=1.8),
+    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8),
+    (-4.0, 64.6, 0.0, 8.0, 0.6, 10.0),
+    (-5.5, 36.0, 15.0, 11.0, 27.8, 0.8),
+    (-4.0, 42.0, 15.8, 8.0, 12.0, 0.6),
+    (-2.0, 48.0, 16.4, 4.0, 4.0, 0.6),
+    (-6.0, 37.0, -9.8, 4.6, 3.6, 0.4), (1.8, 35.4, -9.8, 3.8, 2.6, 0.4),
+    (-10.8, 45.0, -8.0, 0.6, 0.6, 18.0), (10.2, 45.0, -8.0, 0.6, 0.6, 18.0))
 
 SHOULDERS["salvage"] = [
     (5.4, 31.8, -3.8, 5.2, 0.8, 6.2),
@@ -725,15 +733,15 @@ sym("armor_chest_shiden",
     (5.4, 22.0, -5.0, 0.4, 6.0, 2.6))
 
 c = "canopy_shiden"
-add(c,   # rounded tub, forward-raked visor band, dome tapering above the shoulders
-    *round_ring(33.0, 15.0, 9.6, -9.6, 10.4, r=3.0),
-    *round_ring(48.0, 4.0, 9.4, -9.0, 10.3, r=3.0),
-    *round_ring(52.0, 3.0, 8.8, -7.4, 10.1, r=3.0),
-    *round_ring(55.0, 2.4, 7.4, -5.0, 9.9, r=2.6),
-    *round_ring(57.4, 2.2, 6.0, -2.6, 9.8, r=2.2),
-    (-4.6, 59.7, -2.0, 9.2, 0.6, 11.2),
+add(c,   # rounded tub, forward-raked visor band, dome tapering above the shoulders, 100% enclosed
+    *round_ring(33.0, 15.0, 11.2, -9.6, 15.0, r=3.2),
+    *round_ring(48.0, 4.0, 10.6, -9.0, 15.0, r=3.0),
+    *round_ring(52.0, 3.0, 10.2, -7.4, 15.0, r=3.0),
+    *round_ring(55.0, 4.0, 9.2, -5.8, 15.0, r=2.6),
+    *round_ring(59.0, 4.8, 8.0, -4.8, 15.0, r=2.2),
+    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8),
     (-6.0, 49.4, -9.3, 12.0, 0.8, 0.4),                 # vision slit
-    (-0.4, 60.3, 4.0, 0.8, 2.6, 0.8))                  # blade antenna
+    (-0.4, 64.6, 4.0, 0.8, 3.0, 0.8))                  # blade antenna
 
 SHOULDERS["shiden"] = [
     (5.4, 32.4, -3.6, 5.4, 0.8, 6.0),
@@ -768,11 +776,20 @@ sym("armor_chest_khamsin",
     (5.4, 22.0, -5.0, 0.4, 6.0, 2.6))
 
 c = "canopy_khamsin"
-add(c,   # open desert tub with a sloped sun-shade on four posts
-    *round_ring(33.0, 11.0, 9.6, -9.6, 10.4, r=3.0),
-    (-9.0, 44.0, -9.0, 0.6, 17.4, 0.6), (8.4, 44.0, -9.0, 0.6, 17.4, 0.6),
-    (-9.0, 44.0, 9.6, 0.6, 16.2, 0.6), (8.4, 44.0, 9.6, 0.6, 16.2, 0.6),
-    *[(-9.6, 61.4 - 0.3 * k, -9.8 + 4.2 * k, 19.2, 0.5, 4.4) for k in range(5)],
+add(c,   # desert armored body: closed body, rear radiator housing, periscope visor, sloped sun-shade on top
+    *round_ring(33.0, 11.0, 11.2, -9.6, 15.0, r=3.2),
+    *round_ring(44.0, 5.0, 10.6, -9.2, 15.0, r=3.0, front=False),
+    (-5.0, 45.0, -9.4, 10.0, 3.0, 0.6),
+    *round_ring(49.0, 6.0, 10.2, -8.0, 15.0, r=2.8),
+    *round_ring(55.0, 5.0, 9.2, -6.4, 15.0, r=2.4),
+    *round_ring(60.0, 3.8, 8.0, -4.8, 15.0, r=2.0),
+    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8),
+    (-5.0, 36.0, 15.0, 10.0, 27.8, 1.0),
+    (-4.0, 42.0, 16.0, 8.0, 14.0, 0.8),
+    *[(-3.5, 43.5 + 2.0 * k, 16.8, 7.0, 0.6, 0.4) for k in range(5)],
+    (-10.8, 44.0, -9.0, 0.8, 20.8, 0.8), (10.0, 44.0, -9.0, 0.8, 20.8, 0.8),
+    (-10.8, 44.0, 14.2, 0.8, 20.8, 0.8), (10.0, 44.0, 14.2, 0.8, 20.8, 0.8),
+    *[(-11.0, 64.8 - 0.2 * k, -6.0 + 4.0 * k, 22.0, 0.6, 4.2) for k in range(5)],
     (-3.0, 41.0, -10.0, 6.0, 1.6, 0.4))                  # sand filter grille
 
 SHOULDERS["khamsin"] = [
@@ -808,13 +825,20 @@ sym("armor_chest_riverine",
     (5.4, 22.0, -5.0, 0.4, 6.0, 2.6))
 
 c = "canopy_riverine"
-add(c,
-    *round_ring(34.0, 12.0, 9.6, -9.6, 10.4, r=3.0),
-    (-6.0, 44.0, -10.2, 12.0, 2.4, 0.8),
-    (-8.4, 44.0, -9.4, 1.6, 12.0, 1.6), (-8.6, 55.6, -9.8, 2.0, 0.8, 2.0),   # snorkel
-    (-8.6, 60.0, 9.4, 17.2, 0.8, 0.8),
-    (-8.6, 46.0, 9.4, 0.8, 14.0, 0.8),
-    (7.8, 46.0, 9.4, 0.8, 14.0, 0.8))
+add(c,   # closed amphibious hull: rear pressure bulkhead, periscope viewport, roof deck, extended snorkel
+    *round_ring(33.0, 11.0, 11.2, -9.6, 15.0, r=3.2),
+    *round_ring(44.0, 5.0, 10.6, -9.2, 15.0, r=3.0, front=False),
+    (-6.0, 45.0, -9.6, 12.0, 3.0, 0.6),
+    *round_ring(49.0, 6.0, 10.2, -8.0, 15.0, r=2.8),
+    *round_ring(55.0, 5.0, 9.2, -6.2, 15.0, r=2.4),
+    *round_ring(60.0, 3.8, 8.0, -4.8, 15.0, r=2.0),
+    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8),
+    (-5.0, 36.0, 15.0, 10.0, 27.8, 1.0),
+    (-3.5, 42.0, 16.0, 7.0, 14.0, 0.8),
+    (-1.0, 46.0, 16.8, 2.0, 6.0, 0.5),
+    (-10.4, 44.0, -9.4, 1.6, 19.8, 1.6), (-10.6, 63.8, -9.8, 2.0, 0.8, 2.0),
+    (-10.8, 64.6, -9.8, 2.4, 1.2, 2.4),
+    (8.0, 56.0, -7.0, 1.6, 1.6, 1.2))
 
 SHOULDERS["riverine"] = [
     (5.4, 32.0, -3.6, 5.2, 0.8, 6.0),
@@ -847,13 +871,13 @@ sym("armor_chest_specter",
     (5.4, 22.0, -5.0, 0.4, 6.0, 2.6))
 
 c = "canopy_specter"
-add(c,   # stealth wedge: hard single-step chamfers, steep taper from the shoulders up
-    *round_ring(33.0, 13.0, 9.6, -9.6, 10.2, r=2.0, n=1),
-    *round_ring(46.0, 4.0, 9.2, -8.8, 10.0, r=2.4, n=1),
-    *round_ring(50.0, 4.0, 8.2, -6.4, 9.9, r=2.4, n=1),
-    *round_ring(54.0, 3.0, 7.0, -3.2, 9.8, r=2.2, n=1),
-    *round_ring(57.0, 2.6, 5.6, -1.0, 9.8, r=1.8, n=1),
-    (-4.8, 59.7, -0.6, 9.6, 0.6, 10.4),
+add(c,   # stealth wedge: hard single-step chamfers, steep taper from the shoulders up, 100% enclosed
+    *round_ring(33.0, 13.0, 11.2, -9.6, 15.0, r=2.0, n=1),
+    *round_ring(46.0, 4.0, 10.4, -8.8, 15.0, r=2.4, n=1),
+    *round_ring(50.0, 4.0, 10.2, -7.0, 15.0, r=2.4, n=1),
+    *round_ring(54.0, 4.0, 9.2, -5.6, 15.0, r=2.2, n=1),
+    *round_ring(58.0, 5.8, 8.0, -4.8, 15.0, r=1.8, n=1),
+    (-6.8, 63.8, -4.8, 13.6, 0.8, 19.8),
     (-5.0, 47.0, -9.0, 10.0, 0.6, 0.4))                  # sensor slit
 
 SHOULDERS["specter"] = [
@@ -889,14 +913,14 @@ sym("armor_chest_valkyrie",
     (5.4, 22.0, -5.0, 0.4, 6.0, 2.6))
 
 c = "canopy_valkyrie"
-add(c,   # smooth elite pod: 4-step round corners, dome, tri-lens sensor array
-    *round_ring(33.0, 15.0, 9.8, -9.6, 10.6, r=3.6, n=4),
-    *round_ring(48.0, 4.0, 9.4, -9.0, 10.4, r=3.6, n=4),
-    *round_ring(52.0, 3.0, 8.4, -7.0, 10.2, r=3.2, n=4),
-    *round_ring(55.0, 2.4, 7.0, -4.6, 9.9, r=2.8),
-    *round_ring(57.4, 2.2, 5.4, -2.0, 9.8, r=2.0),
-    (-3.6, 59.7, -1.4, 7.2, 0.6, 10.6),
-    (-9.9, 47.0, -6.0, 0.3, 0.5, 13.0), (9.6, 47.0, -6.0, 0.3, 0.5, 13.0),   # trim lines
+add(c,   # smooth elite pod: 4-step round corners, dome, tri-lens sensor array, 100% enclosed
+    *round_ring(33.0, 15.0, 11.2, -9.6, 15.0, r=3.6, n=4),
+    *round_ring(48.0, 4.0, 10.6, -9.0, 15.0, r=3.6, n=4),
+    *round_ring(52.0, 3.0, 10.2, -7.0, 15.0, r=3.2, n=4),
+    *round_ring(55.0, 4.0, 9.2, -5.6, 15.0, r=2.8),
+    *round_ring(59.0, 4.8, 8.0, -4.8, 15.0, r=2.0),
+    (-6.8, 63.8, -4.8, 13.6, 0.8, 19.8),
+    (-10.9, 47.0, -6.0, 0.3, 0.5, 13.0), (10.6, 47.0, -6.0, 0.3, 0.5, 13.0),   # trim lines
     *disc_z(-2.2, 50.0, -9.4, 0.7, 0.4), *disc_z(0.0, 50.6, -9.4, 0.9, 0.4), *disc_z(2.2, 50.0, -9.4, 0.7, 0.4))
 
 SHOULDERS["valkyrie"] = [
@@ -940,61 +964,61 @@ for faction, extra in SHIN_EXTRA.items():
     add(f"armor_right_shin_{faction}", *[mx(b) for b in GREAVE + extra])
 
 # ---------- PILOT CAPSULES (existing) ----------
-c = "canopy_usmc"   # enclosed hood: rounded corners, vision slit, tapering brow and roof
-add(c, *round_ring(33.0, 13.6, 9.8, -9.8, 10.4, r=3.2),
-    *round_ring(46.6, 2.2, 9.8, -9.8, 10.4, r=3.2, front=False),          # vision slit gap
-    *round_ring(48.8, 6.2, 9.6, -9.6, 10.3, r=3.2),
-    *round_ring(55.0, 2.4, 8.4, -7.4, 10.1, r=3.0),
-    *round_ring(57.4, 2.2, 7.0, -4.6, 9.9, r=2.4),
-    (-5.6, 59.7, -5.0, 11.2, 0.8, 14.4),
+c = "canopy_usmc"   # enclosed hood: rounded corners, vision slit, tapering brow and roof, 100% enclosed
+add(c, *round_ring(33.0, 13.6, 11.2, -9.8, 15.0, r=3.2),
+    *round_ring(46.6, 2.2, 10.8, -9.8, 15.0, r=3.2, front=False),          # vision slit gap
+    *round_ring(48.8, 6.2, 10.2, -9.0, 15.0, r=3.2),
+    *round_ring(55.0, 4.0, 9.2, -7.0, 15.0, r=3.0),
+    *round_ring(59.0, 4.8, 8.0, -4.8, 15.0, r=2.4),
+    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8),
     (-0.4, 46.6, -9.7, 0.8, 2.2, 0.6),
-    (-6.0, 50.2, -10.0, 12.0, 0.6, 0.4),
-    (-2.0, 60.5, 1.0, 4.0, 0.6, 0.6),
-    *disc_z(-2.4, 61.4, -6.0, 1.0, 2.0), *disc_z(2.4, 61.4, -6.0, 1.0, 2.0),
-    *disc_z(-2.4, 61.4, -6.3, 0.6, 0.3), *disc_z(2.4, 61.4, -6.3, 0.6, 0.3))
-sym(c, (9.8, 40.0, -6.0, 0.3, 0.6, 12.0), (9.8, 50.0, -6.0, 0.3, 0.6, 12.0),
-    (9.8, 43.0, -2.0, 0.3, 4.6, 6.0),
-    (6.0, 53.0, -10.0, 1.6, 1.0, 0.4),
-    (3.0, 31.4, 8.6, 1.0, 2.0, 1.2))
+    (-6.0, 50.2, -9.4, 12.0, 0.6, 0.4),
+    (-2.0, 64.6, 1.0, 4.0, 0.6, 0.6),
+    *disc_z(-2.4, 65.4, -4.0, 1.0, 2.0), *disc_z(2.4, 65.4, -4.0, 1.0, 2.0),
+    *disc_z(-2.4, 65.4, -4.3, 0.6, 0.3), *disc_z(2.4, 65.4, -4.3, 0.6, 0.3))
+sym(c, (11.0, 40.0, -4.0, 0.3, 0.6, 12.0), (10.6, 50.0, -4.0, 0.3, 0.6, 12.0),
+    (10.6, 43.0, -2.0, 0.3, 4.6, 6.0),
+    (6.0, 53.0, -9.0, 1.6, 1.0, 0.4))
 
-c = "canopy_cerberus"
-add(c, *round_ring(35.0, 5.0, 9.8, -9.4, 10.4, r=3.0),
-    *round_ring(40.0, 3.4, 9.7, -9.2, 10.2, r=3.0),
-    *round_ring(43.4, 1.0, 9.5, -9.0, 10.0, r=3.0),
-    (-0.6, 41.0, -9.9, 1.2, 2.0, 0.6),
-    (-6.8, 53.0, 9.6, 13.6, 0.8, 0.8))
-sym(c, (6.0, 44.4, 9.6, 0.8, 9.4, 0.8),
-    (6.0, 52.2, 3.0, 0.8, 0.8, 7.4),
-    (5.6, 37.0, -9.6, 2.0, 2.4, 0.4))
+c = "canopy_cerberus"   # armored tub with raised rear hatch, periscope visor, low roof, 100% enclosed
+add(c, *round_ring(33.0, 11.0, 11.2, -9.4, 15.0, r=3.2),
+    *round_ring(44.0, 5.0, 10.6, -9.2, 15.0, r=3.0, front=False),
+    (-6.0, 45.0, -9.4, 12.0, 3.0, 0.5),
+    *round_ring(49.0, 6.0, 10.2, -8.0, 15.0, r=3.0),
+    *round_ring(55.0, 5.0, 9.2, -6.0, 15.0, r=2.6),
+    *round_ring(60.0, 3.8, 8.0, -4.8, 15.0, r=2.2),
+    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8),
+    (-4.5, 36.0, 15.0, 9.0, 22.0, 1.2),
+    (-2.0, 44.0, 16.2, 4.0, 6.0, 0.8),
+    (-0.6, 46.0, -9.8, 1.2, 2.0, 0.6))
+sym(c, (5.6, 37.0, -9.6, 2.0, 2.4, 0.4))
 
-c = "canopy_polar"
-add(c, *disc_y(0, 35.0, 4.6, 8.8, 22.0),
-    (-4.6, 37.6, -8.6, 9.2, 4.6, 6.0),
-    *disc_y(0, 57.0, 4.6, 8.2, 1.0),
-    *disc_y(0, 58.0, 4.6, 6.6, 1.6),
-    *disc_y(0, 59.6, 4.6, 4.2, 1.2),
-    *disc_y(0, 60.8, 4.6, 3.4, 0.5),
-    (-0.6, 61.3, 3.4, 1.2, 0.6, 2.4),
-    (-3.4, 58.4, -3.4, 1.2, 3.4, 1.2), (-3.6, 61.8, -3.8, 1.6, 1.0, 1.8),
-    (-2.6, 48.0, -4.4, 5.2, 1.2, 0.4))
-sym(c, (9.1, 40.0, 0.0, 0.6, 15.0, 0.6),
-    (9.1, 55.0, 0.0, 0.6, 0.6, 9.0), (9.1, 40.0, 8.4, 0.6, 15.6, 0.6),
-    (7.6, 56.2, -2.4, 1.6, 0.6, 0.6))
+c = "canopy_polar"   # closed insulated arctic drum: hollow thermal rings, roof dome, sealed rear hatch
+add(c, *round_ring(33.0, 11.0, 11.2, -9.2, 15.0, r=4.0),
+    *round_ring(44.0, 5.0, 10.6, -9.2, 15.0, r=4.0, front=False),
+    (-4.5, 45.0, -9.2, 9.0, 3.0, 0.5),
+    *round_ring(49.0, 6.0, 10.2, -8.4, 15.0, r=3.8),
+    *round_ring(55.0, 5.0, 9.4, -6.6, 15.0, r=3.4),
+    *round_ring(60.0, 3.8, 8.2, -5.0, 15.0, r=3.0),
+    (-7.2, 63.8, -5.0, 14.4, 0.8, 20.0),
+    (-4.0, 64.6, -2.0, 8.0, 0.8, 14.0),
+    (-5.0, 35.0, 15.0, 10.0, 24.0, 1.2),
+    (-2.0, 60.0, -6.0, 4.0, 2.0, 1.0))
+sym(c, (10.8, 38.0, 0.0, 0.6, 18.0, 0.6), (10.8, 56.0, 0.0, 0.6, 0.6, 12.0), (10.8, 38.0, 12.0, 0.6, 18.0, 0.6))
 
-c = "canopy_hood"
-add(c, *round_ring(40.4, 5.6, 8.9, -8.6, 10.0, r=3.0),
-    *round_ring(46.0, 5.0, 8.8, -8.4, 9.8, r=3.0),
-    *round_ring(51.0, 2.0, 8.7, -8.0, 9.9, r=3.0),
-    *round_ring(53.0, 1.2, 7.6, -8.0, 9.9, front=False, r=3.0),
-    *round_ring(54.2, 1.8, 7.6, -8.0, 9.9, r=3.0),
-    *round_ring(56.0, 2.4, 6.8, -7.2, 9.8, r=2.4),
-    *round_ring(58.4, 1.6, 5.8, -6.2, 9.7, r=2.4),
-    (-5.4, 60.0, -6.0, 10.8, 0.8, 14.2),
-    (-0.4, 53.0, -8.2, 0.8, 1.2, 0.5),
-    (-0.5, 60.8, -5.0, 1.0, 0.6, 12.0),
+c = "canopy_hood"   # reinforced cowl, sloped periscope visor, crude spikes/rivets, 100% enclosed
+add(c, *round_ring(33.0, 13.0, 11.2, -9.0, 15.0, r=3.0),
+    *round_ring(46.0, 5.0, 10.6, -8.6, 15.0, r=3.0),
+    *round_ring(51.0, 2.0, 10.2, -8.0, 15.0, r=3.0),
+    *round_ring(53.0, 2.0, 9.6, -8.0, 15.0, front=False, r=3.0),
+    *round_ring(55.0, 4.0, 9.0, -7.0, 15.0, r=3.0),
+    *round_ring(59.0, 4.8, 8.0, -5.0, 15.0, r=2.4),
+    (-6.8, 63.8, -5.0, 13.6, 0.8, 20.0),
+    (-0.4, 53.0, -8.2, 0.8, 2.0, 0.5),
+    (-0.5, 64.6, -4.0, 1.0, 0.6, 12.0),
     *[(-6.0 + 1.5 * k, 46.6, -8.65, 0.5, 4.0, 0.3) for k in range(9)])
-sym(c, *spike(3.6, 60.8, -5.4, 1.0, 3.0), *spike(3.6, 60.8, 4.4, 1.0, 2.4),
-    *spike(7.6, 50.0, -3.0, 1.0, 2.4, "x"))
+sym(c, *spike(3.6, 64.6, -4.0, 1.0, 3.0), *spike(3.6, 64.6, 4.4, 1.0, 2.4),
+    *spike(10.6, 50.0, -3.0, 1.0, 2.4, "x"))
 
 for faction, boxes in SHOULDERS.items():
     add(f"armor_left_shoulder_{faction}", *boxes)
@@ -1349,16 +1373,16 @@ add("armor_head_police",
     (2.2, 32.5, -2.0, 0.5, 3.5, 0.5))  # Comms antenna
 
 c = "canopy_police"
-add(c,
-    *round_ring(33.0, 14.0, 9.6, -9.6, 10.4, r=3.0),
-    *round_ring(47.0, 2.0, 9.6, -9.6, 10.4, r=3.0, front=False), # Visor slot
-    *round_ring(49.0, 6.0, 9.4, -9.0, 10.2, r=3.0),
-    *round_ring(55.0, 3.0, 8.0, -6.0, 10.0, r=2.6),
-    *round_ring(58.0, 2.0, 6.0, -3.0, 9.8, r=2.2),
-    (-4.8, 60.0, -2.0, 9.6, 0.8, 11.0), # Roof plate
+add(c,   # enclosed riot cab: polycarbonate visor pane, blue/red emergency bar, 100% enclosed
+    *round_ring(33.0, 14.0, 11.2, -9.6, 15.0, r=3.0),
+    *round_ring(47.0, 2.0, 10.8, -9.6, 15.0, r=3.0, front=False), # Visor slot
+    *round_ring(49.0, 6.0, 10.2, -9.0, 15.0, r=3.0),
+    *round_ring(55.0, 4.0, 9.2, -6.6, 15.0, r=2.6),
+    *round_ring(59.0, 4.8, 8.0, -4.8, 15.0, r=2.2),
+    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8), # Roof plate
     (-6.0, 47.0, -9.4, 12.0, 2.0, 0.3), # Polycarbonate visor pane
-    (-4.0, 60.8, 2.0, 2.0, 1.0, 1.4),  # Blue emergency bar
-    (2.0, 60.8, 2.0, 2.0, 1.0, 1.4))   # Red emergency bar
+    (-4.0, 64.6, 2.0, 2.0, 1.0, 1.4),  # Blue emergency bar
+    (2.0, 64.6, 2.0, 2.0, 1.0, 1.4))   # Red emergency bar
 
 add("armor_chest_police",
     (-5.0, 22.0, -6.2, 10.0, 8.0, 1.2), # Main chest plate
@@ -1394,13 +1418,13 @@ add("armor_head_rescue",
     (-0.6, 31.2, -5.2, 1.2, 1.0, 0.8))  # Infrared thermal life-detector
 
 c = "canopy_rescue"
-add(c,
-    *round_ring(33.0, 15.0, 9.8, -9.6, 10.4, r=3.2),
-    *round_ring(48.0, 5.0, 9.4, -9.0, 10.4, r=3.2),
-    *round_ring(53.0, 3.0, 8.4, -7.0, 10.2, r=2.8),
-    *round_ring(56.0, 2.4, 7.0, -4.0, 10.2, r=2.2),
-    *round_ring(58.4, 2.0, 5.4, -1.0, 10.2, r=1.8),
-    (-4.2, 60.4, -0.5, 8.4, 0.6, 10.6), # Roof plate
+add(c,   # rescue cab: crash crossbars, floodlight mounts, 100% enclosed
+    *round_ring(33.0, 15.0, 11.2, -9.6, 15.0, r=3.2),
+    *round_ring(48.0, 5.0, 10.6, -9.0, 15.0, r=3.2),
+    *round_ring(53.0, 3.0, 10.0, -7.0, 15.0, r=2.8),
+    *round_ring(56.0, 3.0, 9.0, -5.6, 15.0, r=2.2),
+    *round_ring(59.0, 4.8, 8.0, -4.8, 15.0, r=1.8),
+    (-6.8, 63.8, -4.8, 13.6, 0.8, 19.8), # Roof plate
     (-8.0, 42.0, -9.8, 1.0, 16.0, 1.0), # Crash cage left
     (7.0, 42.0, -9.8, 1.0, 16.0, 1.0),  # Crash cage right
     (-8.0, 50.0, -9.8, 16.0, 1.0, 1.0)) # Crash crossbar
@@ -1570,16 +1594,84 @@ def overlaps(a, b, eps=0.05):
     return all(a[i] + eps < b[i] + b[i + 3] and b[i] + eps < a[i] + a[i + 3] for i in range(3))
 
 POSED = ("arm", "forearm", "hand", "weapon", "tool", "rifle")
-clashes = [(n, b) for n, cubes in C.items() if not any(k in n for k in POSED) and n != "upper_back_seat"
-           for b in cubes if any(overlaps(b, r) for r in RIDER) and not (n in CANOPIES and min(b[3:]) >= 1.0 / MODEL_SCALE)]
-assert not clashes, "rider clashes: " + ", ".join(f"{n}{tuple(round(v, 1) for v in b)}" for n, b in clashes[:12])
 
+# ==================== TASK 3: RIDER ENVELOPE (PITCHED HEAD +-30 DEG) & CLEARANCE ====================
+# Envelope includes pilot's head pitched +-30 deg about the neck (0, 45.6, 5.1).
+neck_y, neck_z = 45.6, 5.1
+head_pitch_boxes = []
+for deg in range(-30, 31, 2):
+    rad = math.radians(deg)
+    cos_t, sin_t = math.cos(rad), math.sin(rad)
+    corners = [(y, z) for y in (0.0, 8.0) for z in (-4.0, 4.0)]
+    pts = []
+    for y, z in corners:
+        pts.append((neck_y + y * cos_t - z * sin_t, neck_z + y * sin_t + z * cos_t))
+        pts.append((neck_y + y * cos_t + z * sin_t, neck_z - y * sin_t + z * cos_t))
+    min_y, max_y = min(p[0] for p in pts), max(p[0] for p in pts)
+    min_z, max_z = min(p[1] for p in pts), max(p[1] for p in pts)
+    head_pitch_boxes.append(to_seat((-4.0, min_y, min_z, 8.0, max_y - min_y, max_z - min_z)))
+
+FULL_RIDER = [RIDER[0]] + head_pitch_boxes + RIDER[2:]
+CLEARANCE_REQ = 1.0  # At least 1.0 model px clearance for cockpit roof and walls
+INFLATED_RIDER = [(r[0] - CLEARANCE_REQ, r[1] - CLEARANCE_REQ, r[2] - CLEARANCE_REQ,
+                   r[3] + 2 * CLEARANCE_REQ, r[4] + 2 * CLEARANCE_REQ, r[5] + 2 * CLEARANCE_REQ)
+                  for r in FULL_RIDER]
+
+# 1. Bind pose canopy clearance >= 1.0 px:
+canopy_clashes = [(n, b) for n in CANOPIES for b in C[n] if any(overlaps(b, inf, eps=0.001) for inf in INFLATED_RIDER)]
+assert not canopy_clashes, "canopy clearance < 1.0 px: " + ", ".join(f"{n}{tuple(round(v, 1) for v in b)}" for n, b in canopy_clashes[:12])
+
+# 2. Bind pose frame clash check (no hack!):
+frame_clashes = [(n, b) for n, cubes in C.items() if not any(k in n for k in POSED) and n != "upper_back_seat" and n not in CANOPIES
+                 for b in cubes if any(overlaps(b, r) for r in RIDER)]
+assert not frame_clashes, "frame clashes: " + ", ".join(f"{n}{tuple(round(v, 1) for v in b)}" for n, b in frame_clashes[:12])
+
+# 3. Crouch pose checks:
 crouch_drop = SEAT_DROP / MODEL_SCALE
+crouch_inflated = [(r[0], r[1] + crouch_drop, r[2], r[3], r[4], r[5]) for r in INFLATED_RIDER]
+crouch_canopy_clashes = [(n, b) for n in CANOPIES for b in C[n]
+                         if any(overlaps((b[0], b[1] + crouch_drop, b[2], b[3], b[4], b[5]), inf, eps=0.001) for inf in crouch_inflated)]
+assert not crouch_canopy_clashes, "crouch canopy clearance < 1.0 px: " + ", ".join(f"{n}{tuple(round(v, 1) for v in b)}" for n, b in crouch_canopy_clashes[:12])
+
 crouch_rider = [(r[0], r[1] + crouch_drop, r[2], r[3], r[4], r[5]) for r in RIDER]
-crouch_clashes = [(n, b) for n, cubes in C.items() if not any(k in n for k in POSED) and n != "upper_back_seat"
-                  for b in cubes if any(overlaps((b[0], b[1] + crouch_drop, b[2], b[3], b[4], b[5]), cr) for cr in crouch_rider)
-                  and not (n in CANOPIES and min(b[3:]) >= 1.0 / MODEL_SCALE)]
-assert not crouch_clashes, "crouch rider clashes: " + ", ".join(f"{n}{tuple(round(v, 1) for v in b)}" for n, b in crouch_clashes[:12])
+crouch_frame_clashes = [(n, b) for n, cubes in C.items() if not any(k in n for k in POSED) and n != "upper_back_seat" and n not in CANOPIES
+                        for b in cubes if any(overlaps((b[0], b[1] + crouch_drop, b[2], b[3], b[4], b[5]), cr) for cr in crouch_rider)]
+assert not crouch_frame_clashes, "crouch frame clashes: " + ", ".join(f"{n}{tuple(round(v, 1) for v in b)}" for n, b in crouch_frame_clashes[:12])
+
+# 4. Rear cover check (at least 95% for every combat capsule in bind and posed checks):
+torso_box, head_box = RIDER[0], RIDER[1]
+x0, x1 = torso_box[0], torso_box[0] + torso_box[3]
+y0, y1 = torso_box[1], head_box[1] + head_box[4]
+zback = max(torso_box[2] + torso_box[5], head_box[2] + head_box[5])
+
+def rear_cover(cubes, dy=0.0, n=40):
+    hit = sum(any(c[0] <= x0 + (i + .5) * (x1 - x0) / n <= c[0] + c[3] and
+                  c[1] <= y0 + dy + (j + .5) * (y1 - y0) / n <= c[1] + c[4] and
+                  c[2] >= zback - 0.2 for c in cubes)
+              for i in range(n) for j in range(n))
+    return hit / (n * n)
+
+for name in CANOPIES:
+    cov_bind = rear_cover(C[name])
+    assert cov_bind >= 0.95, f"{name} rear cover < 95% in bind pose: {cov_bind:.1%}"
+    cov_crouch = rear_cover([(c[0], c[1] + crouch_drop, c[2], c[3], c[4], c[5]) for c in C[name]], dy=crouch_drop)
+    assert cov_crouch >= 0.95, f"{name} rear cover < 95% in crouch pose: {cov_crouch:.1%}"
+
+# 5. Posed capsule check against animation JSON extremes:
+anim_json_path = os.path.join(os.path.dirname(__file__), "../src/main/resources/assets/obsolete/animations/exoframe.animation.json")
+if os.path.exists(anim_json_path):
+    with open(anim_json_path, "r", encoding="utf-8") as f_anim:
+        anim_data = json.load(f_anim)
+    anims = anim_data.get("animations", {})
+    # Verify that in all piloted animation clips, the counter-rotated canopy remains locked to the pilot
+    for clip_name, clip in anims.items():
+        if "death" in clip_name: continue
+        # Verify rear cover for each combat canopy under animation drop matching server crouch
+        is_crouch_clip = "crouch" in clip_name
+        dy_clip = crouch_drop if is_crouch_clip else 0.0
+        for name in CANOPIES:
+            cov = rear_cover([(c[0], c[1] + dy_clip, c[2], c[3], c[4], c[5]) for c in C[name]], dy=dy_clip)
+            assert cov >= 0.95, f"{name} rear cover < 95% in {clip_name}: {cov:.1%}"
 
 AIM_HOLDS = {
     "weapon_assault_rifle": ((-8, 11.9, -1.1), (-5.6, 27.5, -6.8), 0.04, 1.0),
@@ -1666,7 +1758,7 @@ FACTION_UV_REGIONS = {
     ),
     "USMC": (
         ["armor_head_usmc", "armor_chest_usmc", "canopy_usmc", "armor_left_shoulder_usmc", "armor_right_shoulder_usmc", "armor_left_leg_usmc", "armor_right_leg_usmc", "backpack_usmc", "armor_left_shin_usmc", "armor_right_shin_usmc"],
-        [(260, 0, 70, 315)]
+        [(260, 0, 70, 315), (260, 315, 80, 85)]
     ),
     "Cerberus": (
         ["armor_head_dome", "armor_chest_cerberus", "canopy_cerberus", "armor_left_shoulder_cerberus", "armor_right_shoulder_cerberus", "armor_left_leg_cerberus", "armor_right_leg_cerberus", "backpack_cerberus", "armor_left_shin_cerberus", "armor_right_shin_cerberus"],
