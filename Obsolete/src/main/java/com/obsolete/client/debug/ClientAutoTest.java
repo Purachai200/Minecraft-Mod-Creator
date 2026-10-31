@@ -598,19 +598,46 @@ public final class ClientAutoTest {
                 }
             }
             if (level.getEntity(exoframeId) instanceof ExoframeEntity exo) {
+                p.connection.teleport(exoX, exoY, exoZ, 0.0F, 0.0F, java.util.Collections.emptySet());
+                exo.moveTo(exoX, exoY, exoZ, 0.0F, 0.0F);
+                exo.yRotO = 0.0F;
+                exo.setYRot(0.0F);
+                exo.setYBodyRot(0.0F);
+                exo.setYHeadRot(0.0F);
                 p.startRiding(exo, true);
                 p.setYRot(0.0F); // Face South (+Z) towards the 2-block ledge
                 p.setXRot(0.0F);
             }
         })));
+        steps.add(new Step(90, mc -> {
+            // Confirm vehicle mounting on client side
+            if (mc.player != null && mc.level != null && mc.player.getVehicle() == null) {
+                Entity exo = mc.level.getEntity(exoframeId);
+                if (exo != null) mc.player.startRiding(exo, true);
+            }
+            if (mc.player != null) {
+                mc.player.setYRot(0.0F);
+                mc.player.yRotO = 0.0F;
+            }
+        }));
         steps.add(new Step(95, mc -> {
             mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
-            mc.player.setYRot(0.0F);
-            mc.player.setXRot(0.0F);
+            if (mc.player != null) {
+                mc.player.setYRot(0.0F);
+                mc.player.yRotO = 0.0F;
+            }
             mc.options.keyUp.setDown(true); // Walk forward onto ledge
             mc.options.keySprint.setDown(true);
         }));
-        steps.add(new Step(145, mc -> {
+        for (int t = 96; t < 155; t++) {
+            steps.add(new Step(t, mc -> {
+                if (mc.player != null) {
+                    mc.player.setYRot(0.0F);
+                    mc.player.yRotO = 0.0F;
+                }
+            }));
+        }
+        steps.add(new Step(155, mc -> {
             mc.options.keyUp.setDown(false);
             mc.options.keySprint.setDown(false);
             serverExoById(mc, (p, exo) -> {
@@ -623,7 +650,7 @@ public final class ClientAutoTest {
                 }
             });
         }));
-        steps.add(new Step(155, mc -> shot(mc, "g01_step_height_2block_pass")));
+        steps.add(new Step(160, mc -> shot(mc, "g01_step_height_2block_pass")));
 
         // ==================== 2. CROUCH HITBOX & DOORWAY TEST ====================
         steps.add(new Step(165, mc -> serverLevel(mc, (p, level) -> {
@@ -643,8 +670,12 @@ public final class ClientAutoTest {
             if (level.getEntity(exoframeId) instanceof ExoframeEntity exo) {
                 p.stopRiding();
                 exo.setDeltaMovement(Vec3.ZERO);
-                exo.teleportTo(exoX, exoY, exoZ);
-                p.teleportTo(exoX, exoY, exoZ);
+                exo.moveTo(exoX, exoY, exoZ, 0.0F, 0.0F);
+                exo.yRotO = 0.0F;
+                exo.setYRot(0.0F);
+                exo.setYBodyRot(0.0F);
+                exo.setYHeadRot(0.0F);
+                p.connection.teleport(exoX, exoY, exoZ, 0.0F, 0.0F, java.util.Collections.emptySet());
             }
             // Wall with clearance doorway at Z+3: opening width 5 (dx=-2..2), height 5 (dy=0..4)
             // Standing mech 3.96m + rider (4.64m) is blocked by ceiling; crouching 3.24m clears smoothly!
@@ -672,6 +703,14 @@ public final class ClientAutoTest {
             mc.player.setYRot(0.0F);
             mc.options.keyUp.setDown(true); // Walk crouching through doorway
         }));
+        for (int t = 196; t < 270; t++) {
+            steps.add(new Step(t, mc -> {
+                if (mc.player != null) {
+                    mc.player.setYRot(0.0F);
+                    mc.player.yRotO = 0.0F;
+                }
+            }));
+        }
         steps.add(new Step(270, mc -> {
             mc.options.keyUp.setDown(false);
             com.obsolete.client.ModKeyMappings.KEY_MECH_CROUCH.setDown(false);
@@ -860,7 +899,7 @@ public final class ClientAutoTest {
                 new WeaponEntry("shotgun_breacher", ModItems.EXOFRAME_SHOTGUN_BREACHER, ModItems.AMMO_SHOTGUN_SLUG,
                         8.0D, 1.2D, 7.8F),
                 new WeaponEntry("grenade_launcher", ModItems.EXOFRAME_GRENADE_LAUNCHER, ModItems.AMMO_40MM_GRENADE,
-                        10.0D, 1.0D, 6.0F),
+                        12.0D, 1.2D, 6.0F),
                 new WeaponEntry("recoilless_rifle", ModItems.EXOFRAME_RECOILLESS_RIFLE, ModItems.AMMO_84MM_ROCKET,
                         12.0D, 1.2D, 6.0F),
                 new WeaponEntry("atgm_guided", ModItems.EXOFRAME_ATGM_GUIDED, ModItems.AMMO_ATGM_MISSILE,
@@ -1079,11 +1118,17 @@ public final class ClientAutoTest {
                 inv.setStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex(), new ItemStack(ModItems.EXOFRAME_ASSAULT_RIFLE.get()));
                 exo.syncArmorMaskAndNotify();
             })));
-            steps.add(new Step(t + 5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON)));
+            steps.add(new Step(t + 5, mc -> {
+                mc.options.hideGui = false; // Enable HUD overlay rendering for first-person cockpit telemetry!
+                mc.options.setCameraType(CameraType.FIRST_PERSON);
+            }));
             steps.add(new Step(t + 20, mc -> shot(mc, "tier_" + curTier + "_hud_firstperson")));
             steps.add(new Step(t + 25, mc -> com.obsolete.network.ModNetworking.sendToServer(new com.obsolete.network.ExoframeOpenMenuC2SPacket())));
             steps.add(new Step(t + 40, mc -> shot(mc, "tier_" + curTier + "_loadout_screen")));
-            steps.add(new Step(t + 45, mc -> mc.setScreen(null)));
+            steps.add(new Step(t + 45, mc -> {
+                mc.setScreen(null);
+                mc.options.hideGui = true;
+            }));
             t += 50;
         }
         // Inventory key while riding: same packet the E key sends; the loadout screen must open.
@@ -1143,7 +1188,7 @@ public final class ClientAutoTest {
         if (NAME.isEmpty() || event.phase != TickEvent.Phase.END) return;
 
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null) {
+        if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null || !mc.getSingleplayerServer().isReady()) {
             if ((mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen || mc.screen instanceof net.minecraft.client.gui.screens.DisconnectedScreen) && !worldCreationTriggered) {
                 worldCreationTriggered = true;
                 ObsoleteMod.LOGGER.info("[autotest] Screen {} detected, opening CreateWorldScreen...", mc.screen.getClass().getSimpleName());

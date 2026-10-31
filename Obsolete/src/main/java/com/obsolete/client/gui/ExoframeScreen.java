@@ -42,16 +42,18 @@ public class ExoframeScreen extends AbstractContainerScreen<ExoframeMenu> {
         // Header banner
         guiGraphics.fill(left + 2, top + 2, left + imageWidth - 2, top + 15, headerBg);
 
-        // 3D Mech Preview Bay on Left
+        // 3D Mech Preview Bay on Left (Scissor-clipped to prevent bleeding over slot frames / title)
         int previewX = left + 28;
         int previewY = top + 74;
         guiGraphics.fill(left + 8, top + 18, left + 48, top + 78, 0xFF0E1215);
         guiGraphics.renderOutline(left + 8, top + 18, 40, 60, previewBorder);
 
         if (exoframe != null) {
+            guiGraphics.enableScissor(left + 8, top + 18, left + 48, top + 78);
             InventoryScreen.renderEntityInInventoryFollowsMouse(
-                    guiGraphics, previewX, previewY, 18,
-                    (float) previewX - mouseX, (float) (previewY - 30) - mouseY, exoframe);
+                    guiGraphics, previewX, previewY - 2, 14,
+                    (float) previewX - mouseX, (float) (previewY - 25) - mouseY, exoframe);
+            guiGraphics.disableScissor();
         }
 
         // Draw frames for the 6 modular mech slots

@@ -242,7 +242,7 @@ def faction_livery(x, y):
     if 260 <= x < 330 and y < 315: return (78, 88, 58)
     if (460 <= x < 512 and y < 315) or (420 <= x < 512 and 315 <= y < 400):   # <512: the new factions own x>=512
         return polar_splinter(x, y)
-    if (400 <= x < 460 and 165 <= y < 315) or (340 <= x < 420 and 315 <= y < 400):
+    if (400 <= x < 460 and 165 <= y < 315) or (340 <= x < 420 and 315 <= y < 400) or (200 <= x < 260 and 240 <= y < 315):
         return (64, 68, 66)
     if 512 <= x < 597 and y < 340: return (88, 82, 76)
     if 597 <= x < 682 and y < 340: return (52, 60, 56)

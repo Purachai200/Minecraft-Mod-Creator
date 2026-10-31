@@ -53,16 +53,16 @@ public class ExoframeGrenadeLauncherItem extends ExoframeWeaponItem {
         Vec3 look = pilot.getLookAngle();
         Vec3 forward = look.normalize();
         Vec3 right = new Vec3(-forward.z, 0, forward.x).normalize();
-        Vec3 muzzlePos = exoframe.position().add(0, 1.75D * ExoframeEntity.MODEL_SCALE, 0)
-                .add(right.scale(0.68D * ExoframeEntity.MODEL_SCALE))
-                .add(forward.scale(1.0D * ExoframeEntity.MODEL_SCALE));
+        Vec3 muzzlePos = exoframe.position().add(0, 1.8D * ExoframeEntity.MODEL_SCALE, 0)
+                .add(right.scale(0.65D * ExoframeEntity.MODEL_SCALE))
+                .add(forward.scale(1.1D * ExoframeEntity.MODEL_SCALE));
 
         Vec3 target = ExoframeEntity.computeTargetConvergence(level, pilot, exoframe);
         Vec3 shootDir = target.subtract(muzzlePos).normalize();
 
         ExoframeRocketEntity grenade = new ExoframeRocketEntity(level, pilot);
         grenade.setPos(muzzlePos.x, muzzlePos.y, muzzlePos.z);
-        grenade.shoot(shootDir.x, shootDir.y, shootDir.z, 2.6F, 0.3F);   // rocket entity is no-gravity: a lob offset just flies over the target
+        grenade.shoot(shootDir.x, shootDir.y, shootDir.z, 2.8F, 0.02F); // High-velocity direct-fire 40mm round with precision convergence
         level.addFreshEntity(grenade);
 
         level.playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_ROCKET_FIRE.get(), SoundSource.PLAYERS, 2.5F, 1.4F);

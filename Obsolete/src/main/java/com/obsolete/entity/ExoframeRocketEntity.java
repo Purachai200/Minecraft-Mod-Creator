@@ -132,7 +132,8 @@ public class ExoframeRocketEntity extends ThrowableProjectile {
             for (LivingEntity e : nearby) {
                 double dist = e.distanceToSqr(explosionCenter);
                 if (dist < EXPLOSION_RADIUS * EXPLOSION_RADIUS) {
-                    float factor = (float) (1.0D - Math.sqrt(dist) / EXPLOSION_RADIUS);
+                    float factor = Math.max(0.4F, (float) (1.0D - Math.sqrt(dist) / EXPLOSION_RADIUS));
+                    e.invulnerableTime = 0; // reset invulnerability so direct kinetic explosion shockwave registers
                     e.hurt(this.damageSources().explosion(shooter instanceof LivingEntity l ? l : null, this), this.directDamage * factor);
                     Vec3 knock = e.position().subtract(explosionCenter).normalize().scale(factor * 1.5D);
                     e.setDeltaMovement(knock.x, knock.y + 0.3D, knock.z);

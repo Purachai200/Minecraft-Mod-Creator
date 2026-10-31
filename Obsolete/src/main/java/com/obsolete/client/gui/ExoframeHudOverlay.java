@@ -44,6 +44,9 @@ public class ExoframeHudOverlay {
 
     public static final IGuiOverlay HUD_EXOFRAME = (ForgeGui gui, GuiGraphics graphics, float partialTick, int width, int height) -> {
         Minecraft mc = Minecraft.getInstance();
+        if (mc.options.hideGui || mc.screen != null) {
+            return;
+        }
         if (mc.player == null || mc.level == null || !(mc.player.getVehicle() instanceof ExoframeEntity exoframe)) {
             return;
         }
