@@ -1430,14 +1430,44 @@ public final class ClientAutoTest {
             })));
             steps.add(new Step(t + 5, mc -> {
                 mc.player.setXRot(25.0F);
+                mc.player.setYRot(0.0F);
+                mc.player.yRotO = 0.0F;
                 mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
             }));
             steps.add(new Step(t + 25, mc -> shot(mc, "c_" + s.name() + "_piloted_front")));
-            steps.add(new Step(t + 30, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK)));
+            steps.add(new Step(t + 30, mc -> {
+                mc.player.setXRot(15.0F);
+                mc.player.setYRot(0.0F);
+                mc.player.yRotO = 0.0F;
+                mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            }));
             steps.add(new Step(t + 50, mc -> shot(mc, "c_" + s.name() + "_piloted_back")));
-            steps.add(new Step(t + 55, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON)));
-            steps.add(new Step(t + 70, mc -> shot(mc, "c_" + s.name() + "_firstperson")));
-            t += 80;
+            // Piloted rear 3/4 view: camera at angle 140 deg to inspect shoulder/cockpit juncture
+            steps.add(new Step(t + 55, mc -> {
+                mc.player.setYRot(140.0F);
+                mc.player.yRotO = 140.0F;
+                mc.player.setXRot(15.0F);
+                mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            }));
+            steps.add(new Step(t + 70, mc -> shot(mc, "c_" + s.name() + "_piloted_rear_34")));
+            // Piloted walking view: mech walking forward so gait cycle / hunch is active
+            steps.add(new Step(t + 75, mc -> {
+                mc.player.setYRot(0.0F);
+                mc.player.yRotO = 0.0F;
+                mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+                mc.options.keyUp.setDown(true);
+            }));
+            steps.add(new Step(t + 95, mc -> shot(mc, "c_" + s.name() + "_piloted_walking")));
+            steps.add(new Step(t + 100, mc -> {
+                mc.options.keyUp.setDown(false);
+                serverExoById(mc, (p, exo) -> {
+                    exo.moveTo(exoX, exoY, exoZ, 0.0F, 0.0F);
+                    exo.setDeltaMovement(0, 0, 0);
+                });
+                mc.options.setCameraType(CameraType.FIRST_PERSON);
+            }));
+            steps.add(new Step(t + 115, mc -> shot(mc, "c_" + s.name() + "_firstperson")));
+            t += 125;
         }
 
         // ==================== CROSS-FACTION MIX TEST ====================
