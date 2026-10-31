@@ -46,6 +46,9 @@ import java.util.function.Consumer;
 public final class ClientAutoTest {
     private static final String NAME = System.getProperty("obsolete.autotest", "");
     private static int tick = -1;
+    private static int startServerTick = -1;
+    /** Release W once the ridden mech passes this Z (checked every client frame; NaN = off). */
+    private static double stopWalkZ = Double.NaN;
     private static int exoframeId = -1;
     private static double exoX, exoY, exoZ;
     private static boolean worldCreationTriggered = false;
@@ -631,6 +634,7 @@ public final class ClientAutoTest {
                 mc.player.yRotO = 0.0F;
             }
             mc.options.keyUp.setDown(true); // Walk forward onto ledge
+            stopWalkZ = exoZ + 8.0D;
             mc.options.keySprint.setDown(true);
         }));
         for (int t = 96; t < 155; t++) {
@@ -1561,7 +1565,18 @@ public final class ClientAutoTest {
             return;
         }
 
-        tick++;
+        // The client drives a ridden vehicle in real time, even while the server (and so the step clock) stalls.
+        if (!Double.isNaN(stopWalkZ) && mc.player.getVehicle() != null && mc.player.getVehicle().getZ() > stopWalkZ) {
+            mc.options.keyUp.setDown(false);
+            mc.options.keySprint.setDown(false);
+            stopWalkZ = Double.NaN;
+        }
+        // Steps follow the integrated server's clock, not client frames: when the server falls behind
+        // ("Can't keep up!") client ticks ran ahead of it and steps fired before the previous one had played out.
+        int serverTick = mc.getSingleplayerServer().getTickCount();
+        if (startServerTick < 0) startServerTick = serverTick;
+        int previous = tick;
+        tick = serverTick - startServerTick;
         Step[] activeSteps;
         if (NAME.equals("anim")) {
             activeSteps = ANIM;
@@ -1572,11 +1587,10 @@ public final class ClientAutoTest {
         } else {
             activeSteps = SHOWCASE;
         }
-        for (Step step : activeSteps) {
-            if (step.at() == tick) {
-                step.action().accept(mc);
-            }
-        }
+        final int now = tick;
+        java.util.Arrays.stream(activeSteps).filter(st -> st.at() > previous && st.at() <= now)
+                .sorted(java.util.Comparator.comparingInt(Step::at))
+                .forEach(st -> st.action().accept(mc));
     }
 
     private static void aimPlayerAt(ServerPlayer p, double tx, double ty, double tz, double dist, double angleDeg, double height) {
