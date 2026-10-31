@@ -304,17 +304,17 @@ for y in (20.0, 21.8, 23.6, 25.4, 27.2):
 add(t,
     (-0.4, 20.0, 1.0, 0.8, 9.6, 0.6),                          # Rear spine runner / cable conduit
     (-0.7, 28.4, -4.2, 1.4, 1.2, 3.6),                         # Slender forward neck boom to sensor head mount
-    (-1.2, 25.0, 1.2, 2.4, 0.8, 3.6),                          # Seat back cradle lower
-    (-1.8, 25.8, 0.6, 3.6, 1.2, 4.2),                          # Seat back cradle upper
+    (-1.2, 23.0, 1.2, 2.4, 0.8, 3.6),                          # Seat cradle lower (under the pilot)
+    (-1.8, 23.8, 0.6, 3.6, 1.2, 4.2),                          # Seat cradle upper
     # Arched shoulder yoke: one wide bar whose ends carry the arms (shoulders at x +-9, see YOKE WIDTH below)
-    (-2.0, 32.4, -0.8, 4.0, 1.4, 1.8),                         # Centre peak of the arch, the highest point of the bare frame
+    # (the yoke runs 2 px ahead of the shoulder line so the seated pilot's arms pass behind it)
+    (-2.0, 32.4, -2.8, 4.0, 1.4, 1.8),                         # Centre peak of the arch, the highest point of the bare frame
     (-0.8, 30.6, -1.2, 1.6, 1.8, 1.6))                         # Center keel collar
 sym(t,
-    (1.8, 31.6, -0.8, 3.2, 1.4, 1.8),                          # Mid arch section falling towards the shoulders
-    (4.8, 30.8, -0.8, 2.2, 1.6, 1.8),                          # Shoulder bracket
-    (6.8, 30.2, -0.9, 0.8, 2.0, 2.0),                          # Yoke end cap, meets the shoulder joint disc
+    (1.8, 31.6, -2.8, 3.2, 1.4, 1.8),                          # Mid arch section falling towards the shoulders
+    (4.8, 30.8, -2.8, 2.2, 1.6, 1.8),                          # Shoulder bracket
+    (6.8, 30.2, -2.9, 0.8, 2.0, 2.0),                          # Yoke end cap, meets the shoulder joint disc
     *piston_y(1.2, 20.4, 28.0, -0.4, 0.6),                     # Spine lateral hydraulic dampers
-    (1.4, 21.6, 1.2, 0.6, 5.4, 0.6),                           # Seat back diagonal truss
     (2.6, 26.6, 4.8, 0.6, 2.8, 0.6))
 
 s = "upper_back_seat"
@@ -1485,7 +1485,8 @@ for name, _, pivot, _ in BONES:
 MODEL_SCALE = 1.8
 SEAT_DROP = -6.0
 AUTHORED = (0.0, 21.6, 5.1)
-SEATED = (0.0, (30.8 * MODEL_SCALE - 10.0) / MODEL_SCALE, 4.3)
+SEAT_LOWER = 4.0   # the Phase-1 frame put its saddle in the pelvis drum: sit the pilot down onto it
+SEATED = (0.0, ((30.8 - SEAT_LOWER) * MODEL_SCALE - 10.0) / MODEL_SCALE, 4.3)   # mirrors ExoframeEntity.SEAT_CUSHION_Y
 HEAD_GROUP = (
     "head", "armor_head", "armor_head_usmc", "armor_head_dome", "armor_head_votoms", "armor_head_hood", "armor_head_polar",
     "armor_head_salvage", "armor_head_shiden", "armor_head_khamsin", "armor_head_riverine", "armor_head_specter", "armor_head_valkyrie",
@@ -1543,7 +1544,8 @@ def cap_top(bone, top, zmin, zmax):
 
 for chest in (
     "armor_chest", "armor_chest_usmc", "armor_chest_cerberus", "armor_chest_polar", "armor_chest_hood",
-    "armor_chest_salvage", "armor_chest_shiden", "armor_chest_khamsin", "armor_chest_riverine", "armor_chest_specter", "armor_chest_valkyrie"
+    "armor_chest_salvage", "armor_chest_shiden", "armor_chest_khamsin", "armor_chest_riverine", "armor_chest_specter", "armor_chest_valkyrie",
+    "armor_chest_police", "armor_chest_rescue"
 ):
     for b in leg_fairing():
         C[chest] += [b, mx(b)]
@@ -1555,7 +1557,7 @@ for n in HEAD_GROUP:
     move(n, dy=-3.6, dz=-4.6)
     cap_top(n, thighs[1] - 0.1, thighs[2], thighs[2] + thighs[5])
 
-move("upper_back_seat", SEAT_DROP)
+move("upper_back_seat", SEAT_DROP - SEAT_LOWER)
 
 for n in CANOPIES:
     C[n] = [to_seat((x, y + SEAT_DROP, z, sx, sy, sz)) for x, y, z, sx, sy, sz in C[n]]

@@ -44,7 +44,13 @@ public final class ExoframeRiderPose {
 
     @SubscribeEvent
     public static void onPre(RenderPlayerEvent.Pre event) {
-        if (!(event.getEntity() instanceof AbstractClientPlayer player) || !piloting(player)) return;
+        if (!(event.getEntity() instanceof AbstractClientPlayer player) || !(player.getVehicle() instanceof ExoframeEntity exo)) return;
+        // shouldRiderSit() is false, so vanilla never locks the rider's body to the mount: do it here, or the body
+        // follows the camera and the legs swing out through the capsule walls. The head may still look ±75°.
+        player.yBodyRot = exo.yBodyRot;
+        player.yBodyRotO = exo.yBodyRotO;
+        player.yHeadRot = exo.yBodyRot + Mth.clamp(Mth.wrapDegrees(player.yHeadRot - exo.yBodyRot), -75.0F, 75.0F);
+        player.yHeadRotO = exo.yBodyRotO + Mth.clamp(Mth.wrapDegrees(player.yHeadRotO - exo.yBodyRotO), -75.0F, 75.0F);
         ModelPart[] parts = limbs(event.getRenderer().getModel());
         for (int i = 0; i < parts.length; i++) {
             savedVisibility[i] = parts[i].visible;   // keep the skin-customisation toggles (pants/sleeves)

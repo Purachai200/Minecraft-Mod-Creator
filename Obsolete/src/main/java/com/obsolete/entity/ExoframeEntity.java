@@ -112,6 +112,8 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     private int deathTimer = -1;
     private static final int DEATH_ANIMATION_TICKS = 50; // 2.5 seconds collapse
     private BlockPos lastLightPos = null;
+    /** Seat cushion height in model px; mirrored as 30.8 - SEAT_LOWER in tools/build_exoframe_geo.py (capsules are fitted to it). */
+    public static final double SEAT_CUSHION_Y = 26.8D;
 
     // Raw Animations
     protected static final RawAnimation ANIM_IDLE = RawAnimation.begin().thenLoop("animation.exoframe.idle");
@@ -335,7 +337,7 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         if (this.hasPassenger(passenger)) {
             float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
             boolean isFirstPassenger = this.getPassengers().indexOf(passenger) == 0;
-            double seat = (30.8D * MODEL_SCALE - 10.0D) / 16.0D;
+            double seat = (SEAT_CUSHION_Y * MODEL_SCALE - 10.0D) / 16.0D;
             double forwardOffset;
             double yOffset;
             if (isFirstPassenger) {
