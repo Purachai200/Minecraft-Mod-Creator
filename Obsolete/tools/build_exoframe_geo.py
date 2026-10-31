@@ -10,7 +10,7 @@ BONES = [
     # Base skeleton (74 baseline bones)
     ("root", None, [0, 0, 0], None),
     ("pelvis", "root", [0, 18, 0], [0, 0]),
-    ("pelvis_wheel", "pelvis", [0, 15.5, 4.5], [50, 0]),
+    ("pelvis_wheel", "pelvis", [0, 16.8, 3.6], [50, 0]),
     ("torso", "pelvis", [0, 20, 0], [0, 50]),
     ("upper_back_seat", "torso", [0, 25, 3.5], [80, 50]),
     ("head", "torso", [0, 32, -1], [160, 0]),
@@ -37,32 +37,32 @@ BONES = [
     ("backpack_missile_pod", "torso", [0, 32, 2], [400, 100]),       # VOTOMS 9-Tube Shoulder Pod (Image 4)
 
     # Left Arm & Shoulders
-    ("left_arm", "torso", [7.5, 30, -0.5], [0, 130]),
-    ("armor_left_shoulder", "left_arm", [7.5, 30, -0.5], [200, 120]),            # Sand
-    ("armor_left_shoulder_usmc", "left_arm", [7.5, 30, -0.5], [260, 120]),       # USMC
-    ("armor_left_shoulder_cerberus", "left_arm", [7.5, 30, -0.5], [330, 120]),   # Cerberus
-    ("left_forearm", "left_arm", [8.0, 23.5, -0.5], [50, 130]),
-    ("left_hand", "left_forearm", [8.0, 15.5, -0.5], [90, 130]),
+    ("left_arm", "torso", [7.0, 30, -0.5], [0, 130]),
+    ("armor_left_shoulder", "left_arm", [7.0, 30, -0.5], [200, 120]),            # Sand
+    ("armor_left_shoulder_usmc", "left_arm", [7.0, 30, -0.5], [260, 120]),       # USMC
+    ("armor_left_shoulder_cerberus", "left_arm", [7.0, 30, -0.5], [330, 120]),   # Cerberus
+    ("left_forearm", "left_arm", [7.0, 24.6, -0.5], [50, 130]),
+    ("left_hand", "left_forearm", [7.0, 17.6, -0.5], [90, 130]),
 
     # Right Arm & Shoulders
-    ("right_arm", "torso", [-7.5, 30, -0.5], [0, 130]),
-    ("armor_right_shoulder", "right_arm", [-7.5, 30, -0.5], [200, 120]),          # Sand
-    ("armor_right_shoulder_usmc", "right_arm", [-7.5, 30, -0.5], [260, 120]),     # USMC
-    ("armor_right_shoulder_cerberus", "right_arm", [-7.5, 30, -0.5], [330, 120]), # Cerberus
-    ("armor_right_shoulder_red", "right_arm", [-7.5, 30, -0.5], [400, 50]),       # VOTOMS Blood Red Shoulder (Image 4)
-    ("right_forearm", "right_arm", [-8.0, 23.5, -0.5], [50, 130]),
-    ("right_hand", "right_forearm", [-8.0, 15.5, -0.5], [90, 130]),
-    ("right_hand_weapon_mount", "right_hand", [-8.0, 14, -2], None),
+    ("right_arm", "torso", [-7.0, 30, -0.5], [0, 130]),
+    ("armor_right_shoulder", "right_arm", [-7.0, 30, -0.5], [200, 120]),          # Sand
+    ("armor_right_shoulder_usmc", "right_arm", [-7.0, 30, -0.5], [260, 120]),     # USMC
+    ("armor_right_shoulder_cerberus", "right_arm", [-7.0, 30, -0.5], [330, 120]), # Cerberus
+    ("armor_right_shoulder_red", "right_arm", [-7.0, 30, -0.5], [400, 50]),       # VOTOMS Blood Red Shoulder (Image 4)
+    ("right_forearm", "right_arm", [-7.0, 24.6, -0.5], [50, 130]),
+    ("right_hand", "right_forearm", [-7.0, 17.6, -0.5], [90, 130]),
+    ("right_hand_weapon_mount", "right_hand", [-7.0, 16.0, -2.0], None),
 
     # Weapons & Industrial Tools (mount at right_hand_weapon_mount)
-    ("weapon_assault_rifle", "right_hand_weapon_mount", [-8.0, 14, -2], [0, 320]),
-    ("weapon_sniper_amr", "right_hand_weapon_mount", [-8.0, 14, -2], [80, 320]),       # USMC 20mm AMR (Image 1)
-    ("weapon_machine_gun", "right_hand_weapon_mount", [-8.0, 14, -2], [180, 320]),     # 12.7mm HMG with belt (Image 2 & 4)
-    ("weapon_minigun_m134", "right_hand_weapon_mount", [-8.0, 14, -2], [280, 320]),    # M134 Gatling (Image 4)
-    ("weapon_rocket_launcher", "right_hand_weapon_mount", [-8.0, 14, -2], [0, 400]),   # Quad AT Missile Pod
-    ("weapon_rpg7_heavy", "right_hand_weapon_mount", [-8.0, 14, -2], [120, 400]),      # Demolition Warhead (Image 5)
-    ("tool_mining_drill", "right_hand_weapon_mount", [-8.0, 14, -2], [240, 400]),
-    ("tool_chainsaw", "right_hand_weapon_mount", [-8.0, 14, -2], [360, 400]),
+    ("weapon_assault_rifle", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [0, 320]),
+    ("weapon_sniper_amr", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [80, 320]),       # USMC 20mm AMR (Image 1)
+    ("weapon_machine_gun", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [180, 320]),     # 12.7mm HMG with belt (Image 2 & 4)
+    ("weapon_minigun_m134", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [280, 320]),    # M134 Gatling (Image 4)
+    ("weapon_rocket_launcher", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [0, 400]),   # Quad AT Missile Pod
+    ("weapon_rpg7_heavy", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [120, 400]),      # Demolition Warhead (Image 5)
+    ("tool_mining_drill", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [240, 400]),
+    ("tool_chainsaw", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [360, 400]),
 
     # Left Leg & Armor
     ("left_thigh", "pelvis", [4.5, 17, 0], [0, 180]),
@@ -86,10 +86,10 @@ BONES = [
     ("armor_head_polar", "head", [0, 32, -1], [462, 0]),
     ("armor_chest_polar", "torso", [0, 20, 0], [462, 30]),
     ("backpack_manpads", "torso", [0, 32, 2], [200, 240]),
-    ("armor_left_shoulder_polar", "left_arm", [7.5, 30, -0.5], [462, 70]),
-    ("armor_right_shoulder_polar", "right_arm", [-7.5, 30, -0.5], [462, 70]),
-    ("armor_left_shoulder_outlander", "left_arm", [7.5, 30, -0.5], [430, 170]),
-    ("armor_right_shoulder_outlander", "right_arm", [-7.5, 30, -0.5], [430, 170]),
+    ("armor_left_shoulder_polar", "left_arm", [7.0, 30, -0.5], [462, 70]),
+    ("armor_right_shoulder_polar", "right_arm", [-7.0, 30, -0.5], [462, 70]),
+    ("armor_left_shoulder_outlander", "left_arm", [7.0, 30, -0.5], [430, 170]),
+    ("armor_right_shoulder_outlander", "right_arm", [-7.0, 30, -0.5], [430, 170]),
     ("armor_left_leg_polar", "left_thigh", [4.5, 17, 0], [462, 100]),
     ("armor_right_leg_polar", "right_thigh", [-4.5, 17, 0], [462, 100]),
     ("armor_left_leg_outlander", "left_thigh", [4.5, 17, 0], [430, 240]),
@@ -120,8 +120,8 @@ BONES = [
     ("armor_head_salvage", "head", [0, 32, -1], [512, 0]),
     ("armor_chest_salvage", "torso", [0, 20, 0], [512, 30]),
     ("canopy_salvage", "torso", [0, 20, 0], [512, 30]),
-    ("armor_left_shoulder_salvage", "left_arm", [7.5, 30, -0.5], [512, 80]),
-    ("armor_right_shoulder_salvage", "right_arm", [-7.5, 30, -0.5], [512, 80]),
+    ("armor_left_shoulder_salvage", "left_arm", [7.0, 30, -0.5], [512, 80]),
+    ("armor_right_shoulder_salvage", "right_arm", [-7.0, 30, -0.5], [512, 80]),
     ("armor_left_leg_salvage", "left_thigh", [4.5, 17, 0], [512, 120]),
     ("armor_right_leg_salvage", "right_thigh", [-4.5, 17, 0], [512, 120]),
     ("armor_left_shin_salvage", "left_shin", [4.5, 9, -2.8], [512, 0]),
@@ -132,8 +132,8 @@ BONES = [
     ("armor_head_shiden", "head", [0, 32, -1], [597, 0]),
     ("armor_chest_shiden", "torso", [0, 20, 0], [597, 30]),
     ("canopy_shiden", "torso", [0, 20, 0], [597, 30]),
-    ("armor_left_shoulder_shiden", "left_arm", [7.5, 30, -0.5], [597, 80]),
-    ("armor_right_shoulder_shiden", "right_arm", [-7.5, 30, -0.5], [597, 80]),
+    ("armor_left_shoulder_shiden", "left_arm", [7.0, 30, -0.5], [597, 80]),
+    ("armor_right_shoulder_shiden", "right_arm", [-7.0, 30, -0.5], [597, 80]),
     ("armor_left_leg_shiden", "left_thigh", [4.5, 17, 0], [597, 120]),
     ("armor_right_leg_shiden", "right_thigh", [-4.5, 17, 0], [597, 120]),
     ("armor_left_shin_shiden", "left_shin", [4.5, 9, -2.8], [597, 0]),
@@ -144,8 +144,8 @@ BONES = [
     ("armor_head_khamsin", "head", [0, 32, -1], [682, 0]),
     ("armor_chest_khamsin", "torso", [0, 20, 0], [682, 30]),
     ("canopy_khamsin", "torso", [0, 20, 0], [682, 30]),
-    ("armor_left_shoulder_khamsin", "left_arm", [7.5, 30, -0.5], [682, 80]),
-    ("armor_right_shoulder_khamsin", "right_arm", [-7.5, 30, -0.5], [682, 80]),
+    ("armor_left_shoulder_khamsin", "left_arm", [7.0, 30, -0.5], [682, 80]),
+    ("armor_right_shoulder_khamsin", "right_arm", [-7.0, 30, -0.5], [682, 80]),
     ("armor_left_leg_khamsin", "left_thigh", [4.5, 17, 0], [682, 120]),
     ("armor_right_leg_khamsin", "right_thigh", [-4.5, 17, 0], [682, 120]),
     ("armor_left_shin_khamsin", "left_shin", [4.5, 9, -2.8], [682, 0]),
@@ -156,8 +156,8 @@ BONES = [
     ("armor_head_riverine", "head", [0, 32, -1], [767, 0]),
     ("armor_chest_riverine", "torso", [0, 20, 0], [767, 30]),
     ("canopy_riverine", "torso", [0, 20, 0], [767, 30]),
-    ("armor_left_shoulder_riverine", "left_arm", [7.5, 30, -0.5], [767, 80]),
-    ("armor_right_shoulder_riverine", "right_arm", [-7.5, 30, -0.5], [767, 80]),
+    ("armor_left_shoulder_riverine", "left_arm", [7.0, 30, -0.5], [767, 80]),
+    ("armor_right_shoulder_riverine", "right_arm", [-7.0, 30, -0.5], [767, 80]),
     ("armor_left_leg_riverine", "left_thigh", [4.5, 17, 0], [767, 120]),
     ("armor_right_leg_riverine", "right_thigh", [-4.5, 17, 0], [767, 120]),
     ("armor_left_shin_riverine", "left_shin", [4.5, 9, -2.8], [767, 0]),
@@ -168,8 +168,8 @@ BONES = [
     ("armor_head_specter", "head", [0, 32, -1], [852, 0]),
     ("armor_chest_specter", "torso", [0, 20, 0], [852, 30]),
     ("canopy_specter", "torso", [0, 20, 0], [852, 30]),
-    ("armor_left_shoulder_specter", "left_arm", [7.5, 30, -0.5], [852, 80]),
-    ("armor_right_shoulder_specter", "right_arm", [-7.5, 30, -0.5], [852, 80]),
+    ("armor_left_shoulder_specter", "left_arm", [7.0, 30, -0.5], [852, 80]),
+    ("armor_right_shoulder_specter", "right_arm", [-7.0, 30, -0.5], [852, 80]),
     ("armor_left_leg_specter", "left_thigh", [4.5, 17, 0], [852, 120]),
     ("armor_right_leg_specter", "right_thigh", [-4.5, 17, 0], [852, 120]),
     ("armor_left_shin_specter", "left_shin", [4.5, 9, -2.8], [852, 0]),
@@ -180,8 +180,8 @@ BONES = [
     ("armor_head_valkyrie", "head", [0, 32, -1], [937, 0]),
     ("armor_chest_valkyrie", "torso", [0, 20, 0], [937, 30]),
     ("canopy_valkyrie", "torso", [0, 20, 0], [937, 30]),
-    ("armor_left_shoulder_valkyrie", "left_arm", [7.5, 30, -0.5], [937, 80]),
-    ("armor_right_shoulder_valkyrie", "right_arm", [-7.5, 30, -0.5], [937, 80]),
+    ("armor_left_shoulder_valkyrie", "left_arm", [7.0, 30, -0.5], [937, 80]),
+    ("armor_right_shoulder_valkyrie", "right_arm", [-7.0, 30, -0.5], [937, 80]),
     ("armor_left_leg_valkyrie", "left_thigh", [4.5, 17, 0], [937, 120]),
     ("armor_right_leg_valkyrie", "right_thigh", [-4.5, 17, 0], [937, 120]),
     ("armor_left_shin_valkyrie", "left_shin", [4.5, 9, -2.8], [937, 0]),
@@ -189,14 +189,14 @@ BONES = [
     ("backpack_valkyrie", "torso", [0, 24, 8], [937, 160]),
 
     # ==================== 8 NEW WEAPONS ====================
-    ("weapon_battle_rifle", "right_hand_weapon_mount", [-8.0, 14, -2], [0, 520]),
-    ("weapon_autocannon_30mm", "right_hand_weapon_mount", [-8.0, 14, -2], [120, 520]),
-    ("weapon_shotgun_breacher", "right_hand_weapon_mount", [-8.0, 14, -2], [240, 520]),
-    ("weapon_grenade_launcher", "right_hand_weapon_mount", [-8.0, 14, -2], [360, 520]),
-    ("weapon_recoilless_rifle", "right_hand_weapon_mount", [-8.0, 14, -2], [480, 520]),
-    ("weapon_atgm_guided", "right_hand_weapon_mount", [-8.0, 14, -2], [600, 520]),
-    ("weapon_flamethrower", "right_hand_weapon_mount", [-8.0, 14, -2], [720, 520]),
-    ("weapon_vibro_blade", "right_hand_weapon_mount", [-8.0, 14, -2], [840, 520]),
+    ("weapon_battle_rifle", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [0, 520]),
+    ("weapon_autocannon_30mm", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [120, 520]),
+    ("weapon_shotgun_breacher", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [240, 520]),
+    ("weapon_grenade_launcher", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [360, 520]),
+    ("weapon_recoilless_rifle", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [480, 520]),
+    ("weapon_atgm_guided", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [600, 520]),
+    ("weapon_flamethrower", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [720, 520]),
+    ("weapon_vibro_blade", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [840, 520]),
 ]
 
 C = {}
@@ -252,62 +252,71 @@ def stepped(x, y_top, z_top, y_bot, z_bot, sx, sz, n):
 
 # ==================== 1. BASE SKELETON ====================
 p = "pelvis"
-add(p, (-3.0, 16.6, -2.8, 6.0, 3.2, 3.6),
-    (-2.4, 19.8, -2.2, 4.8, 0.6, 2.8),
-    (-2.6, 17.2, -3.1, 5.2, 2.0, 0.4),
-    (-0.4, 17.6, -3.3, 0.8, 1.2, 0.2),
-    (-3.4, 18.4, 0.6, 6.8, 0.8, 0.8))
-sym(p, *disc_x(2.8, 17.0, 0.0, 1.8, 0.7),
-    (1.7, 19.0, 0.6, 0.6, 0.6, 8.2),
-    (1.7, 11.0, 0.6, 0.6, 0.6, 8.2),
-    (1.7, 11.0, 8.2, 0.6, 8.6, 0.6),
-    (1.7, 16.6, 0.6, 0.6, 2.4, 0.6),
-    (1.6, 14.7, 3.7, 0.9, 1.6, 1.6),
-    (3.0, 16.4, -2.6, 0.5, 1.8, 2.0),
-    (1.4, 16.0, -2.4, 1.0, 0.6, 0.6))
+# Pelvis central motor drum:
+# Hip width = 9.0 (thighs at ±4.5).
+# Target drum diameter ≈ 0.5 * 9.0 = 4.5 (radius r = 2.25). Axis left-right (X axis).
+# Width = 4.4 (from x = -2.2 to +2.2). Visible radial ribs along circumference.
+add(p,
+    *disc_x(-2.2, 16.8, 0.0, 2.25, 4.4),                       # Main central motor/battery drum cylinder (diam 4.5 = 0.50x hip)
+    *ring_x(-2.25, 16.8, 0.0, 2.35, 4.5, n=12, s=0.45),        # 12 cooling / structural radial ribs
+    (-2.2, 16.5, -2.4, 4.4, 0.6, 4.8),                         # Drum perimeter reinforcement rail
+    (-1.8, 19.4, -1.0, 3.6, 0.6, 4.2),                         # Open tubular seat base cradle
+    (-1.4, 19.8, 0.2, 2.8, 0.5, 3.2))                          # Pilot saddle deck
+sym(p,
+    *disc_x(2.3, 17.0, 0.0, 1.8, 1.2),                         # Hip joint knuckle housings connecting to thighs
+    (2.2, 16.2, -1.6, 1.1, 1.6, 3.2),                         # Hip mount bracket
+    (1.7, 18.8, -1.2, 0.6, 0.6, 4.8),                         # Side seat cradle tube
+    (1.7, 16.8, 3.2, 0.6, 2.6, 0.6),                          # Rear vertical seat support truss
+    (1.7, 16.0, -1.4, 0.8, 0.8, 0.8))
 
 w = "pelvis_wheel"
-add(w, *disc_x(-1.2, 15.5, 4.5, 3.6, 2.4),
-    *ring_x(-1.3, 15.5, 4.5, 3.6, 2.6),
-    *disc_x(-1.35, 15.5, 4.5, 1.4, 2.7),
-    (-1.5, 15.1, 4.1, 3.0, 0.8, 0.8))
+# Secondary generator spindle / lower auxiliary drive
+add(w, *disc_x(-1.1, 16.8, 3.6, 1.35, 2.2),
+    *ring_x(-1.15, 16.8, 3.6, 1.45, 2.3, n=8, s=0.35),
+    (-1.3, 16.5, 3.3, 2.6, 0.6, 0.6))
 
 t = "torso"
-for y in (20.0, 21.8, 23.6, 25.4):
-    add(t, (-1.4, y, -1.2, 2.8, 1.2, 2.4), (-0.9, y + 1.2, -0.8, 1.8, 0.6, 1.6))
-add(t, (-1.0, 25.6, -2.0, 2.0, 3.6, 4.0),            # chest keel (narrow: the pilot's legs straddle it)
-    (-5.0, 26.6, -2.4, 10.0, 1.0, 1.0),              # front yoke bar (below the pilot's legs)
-    (-2.4, 26.4, 0.2, 4.8, 2.4, 5.4),                # back hump (narrow saddle ridge between the legs)
-    (-1.2, 28.4, 0.8, 2.4, 0.6, 4.4),                # seat deck (between the straddling legs)
-    (-0.8, 27.6, -6.0, 1.6, 1.2, 4.6),               # neck boom to the forward sensor head
-    (-0.4, 20.4, 1.2, 0.8, 9.8, 0.6),
-    *disc_z(0, 28.6, -2.4, 1.0, 0.4))
-sym(t, (3.0, 25.8, -0.2, 2.0, 1.6, 4.0),
-    (4.8, 30.8, -0.8, 1.6, 1.8, 3.4),
-    (6.0, 29.2, -1.6, 0.8, 2.4, 2.2),
-    *[(1.4 + 0.8 * i, 21.6 + 2.0 * i, -0.4, 0.8, 2.3, 0.8) for i in range(3)],
-    *piston_y(1.6, 20.2, 26.6, -1.8, 0.8),
-    (2.4, 27.2, -2.2, 0.6, 3.0, 0.4),
-    (3.0, 26.6, 5.4, 0.6, 2.8, 0.6),
-    )
+# Torso: Slender exposed spine and neck column from yoke down to pelvis.
+# NO big chest block on the bare frame! Front is open frame.
+# Vertebrae column:
+for y in (20.0, 21.8, 23.6, 25.4, 27.2):
+    add(t, (-0.9, y, -0.6, 1.8, 1.2, 1.6),                     # Articulated vertebra segment
+           (-0.6, y + 1.2, -0.4, 1.2, 0.6, 1.2))                # Intervertebral shock-absorber pad
+add(t,
+    (-0.4, 20.0, 1.0, 0.8, 9.6, 0.6),                          # Rear spine runner / cable conduit
+    (-0.7, 28.4, -4.2, 1.4, 1.2, 3.6),                         # Slender forward neck boom to sensor head mount
+    (-1.2, 25.0, 1.2, 2.4, 0.8, 3.6),                          # Seat back cradle lower
+    (-1.8, 25.8, 0.6, 3.6, 1.2, 4.2),                          # Seat back cradle upper
+    # Arched Shoulder Yoke (one wide arched bar over top, outer span 14.4 = 1.60x hip 9.0!)
+    (-2.0, 32.4, -0.8, 4.0, 1.4, 1.8),                         # Center peak of upward arch (y reaches 33.8 - highest point!)
+    (-0.8, 30.6, -1.2, 1.6, 1.8, 1.6))                         # Center keel collar
+sym(t,
+    (1.8, 31.4, -0.8, 2.8, 1.4, 1.8),                          # Mid arch section rising from shoulders
+    (4.9, 30.4, -0.8, 1.5, 1.6, 1.8),                          # Shoulder bracket
+    (6.4, 29.3, -0.9, 0.8, 1.8, 2.0),                          # Outermost shoulder yoke cap (outer X = 7.2 -> outer span 14.4!)
+    *piston_y(1.2, 20.4, 28.0, -0.4, 0.6),                     # Spine lateral hydraulic dampers
+    (1.4, 21.6, 1.2, 0.6, 5.4, 0.6),                           # Seat back diagonal truss
+    (2.6, 26.6, 4.8, 0.6, 2.8, 0.6))
 
 s = "upper_back_seat"
-add(s, (-2.8, 35.0, 1.4, 5.6, 1.2, 5.8),
-    (-2.4, 36.2, 1.8, 4.8, 0.6, 5.0),
-    (-0.25, 36.25, 1.8, 0.5, 0.6, 5.0),
-    (-2.8, 35.0, 7.2, 5.6, 7.0, 0.8),
-    (-2.2, 37.0, 6.8, 4.4, 5.4, 0.4),
-    (-2.6, 40.4, 6.6, 5.2, 0.4, 0.3))
-sym(s, (2.8, 36.2, 1.6, 0.5, 1.0, 5.4),
-    (1.1, 37.4, 6.5, 0.6, 4.6, 0.3),
-    (4.4, 35.2, -1.4, 0.6, 0.6, 3.0),
-    (4.45, 35.8, -1.35, 0.5, 2.8, 0.5),
-    (4.3, 38.4, -1.5, 0.8, 1.4, 0.8),
-    (4.45, 39.0, -1.75, 0.3, 0.4, 0.3),
-    (4.5, 39.8, -1.4, 0.6, 0.3, 0.6))
+# Pilot upper seat back & harness frame
+add(s, (-2.4, 34.0, 1.4, 4.8, 1.2, 5.0),
+    (-2.0, 35.2, 1.8, 4.0, 0.6, 4.4),
+    (-2.4, 34.0, 6.2, 4.8, 5.6, 0.8),
+    (-2.0, 35.8, 5.8, 4.0, 4.0, 0.4))
+sym(s, (2.4, 34.8, 1.6, 0.5, 1.0, 4.6),
+    (1.1, 36.0, 5.6, 0.6, 3.6, 0.3),
+    (3.8, 34.2, -1.2, 0.6, 0.6, 2.6))
 
 h = "head"
-add(h, (-2.2, 31.0, -5.0, 4.4, 3.2, 4.0),
+# Bare frame head has 0 cubes (empty transform on bare frame; highest point is arched shoulder yoke!)
+# Sensors come from head armor pieces (armor_head, armor_head_usmc, etc.)
+
+# ==================== 2. HEAD ARMOR VARIANTS ====================
+# A. Sand Head
+a = "armor_head"
+# Sand PMC Head Sensor & Optics
+add(a, (-2.2, 31.0, -5.0, 4.4, 3.2, 4.0),
     (-1.8, 34.2, -4.4, 3.6, 0.4, 3.2),
     (-1.4, 31.4, -5.4, 2.8, 2.4, 0.4),
     *disc_z(0, 32.6, -5.8, 0.9, 0.4),
@@ -315,13 +324,8 @@ add(h, (-2.2, 31.0, -5.0, 4.4, 3.2, 4.0),
     (0.9, 31.5, -5.6, 0.4, 0.4, 0.2),
     (-1.0, 30.4, -1.6, 2.0, 1.0, 1.2),
     (-2.4, 33.4, -1.6, 0.5, 0.8, 0.5),
-    (-2.3, 34.2, -1.5, 0.3, 10.0, 0.3))
-sym(h, *[(2.2, 31.4, z, 0.2, 2.4, 0.3) for z in (-4.4, -3.6, -2.8, -2.0)])
-
-# ==================== 2. HEAD ARMOR VARIANTS ====================
-# A. Sand Head
-a = "armor_head"
-add(a, (-2.7, 34.2, -5.4, 5.4, 0.5, 4.6),
+    (-2.3, 34.2, -1.5, 0.3, 8.0, 0.3),
+    (-2.7, 34.2, -5.4, 5.4, 0.5, 4.6),
     (-2.2, 34.7, -4.8, 4.4, 0.3, 3.4),
     (-2.7, 33.8, -5.8, 5.4, 0.5, 0.5))
 sym(a, (2.2, 31.0, -5.4, 0.5, 3.2, 4.6),
@@ -981,39 +985,36 @@ for faction, boxes in LEG_ARMOR.items():
 # ==================== 5. ARMS & SHOULDERS ====================
 L = {
     "left_arm": [
-        *disc_x(6.6, 30.0, -0.5, 1.8, 2.2),
-        (6.9, 24.6, -1.6, 2.2, 4.6, 2.2),
-        (7.1, 25.2, -1.9, 1.8, 3.6, 0.3),
-        (9.1, 25.0, -1.2, 0.3, 3.8, 1.4),
-        *piston_y(7.6, 23.8, 28.4, 0.7, 0.8),
-        (6.7, 23.0, -1.4, 0.4, 2.0, 1.8), (9.0, 23.0, -1.4, 0.4, 2.0, 1.8)
+        *disc_x(5.4, 30.0, -0.5, 1.6, 1.8),                   # Shoulder joint disk (outer edge x = 7.2)
+        (5.2, 24.8, -1.5, 2.0, 4.8, 2.0),                     # Slender upper arm cylinder (thickness 2.0, length 5.4, outer x = 7.2)
+        (5.3, 25.2, -1.8, 1.8, 3.6, 0.3),                     # Upper arm front plate
+        *piston_y(6.0, 24.8, 29.2, 0.4, 0.6),                  # Upper arm hydraulic line
+        (5.3, 24.0, -1.4, 0.4, 1.6, 1.8), (6.7, 24.0, -1.4, 0.4, 1.6, 1.8)
     ],
     "armor_left_shoulder": [
-        (5.6, 32.0, -3.6, 5.0, 0.8, 6.0),
-        (6.2, 32.8, -3.0, 3.8, 0.5, 4.8),
-        (10.4, 26.6, -3.6, 0.8, 5.0, 6.0),
-        (9.8, 31.4, -3.4, 1.0, 1.0, 5.6),
-        (5.8, 27.2, -4.2, 4.8, 4.8, 0.6),
-        (5.8, 27.2, 2.4, 4.8, 4.8, 0.6),
-        (10.0, 27.2, -4.0, 0.6, 4.4, 0.4), (10.0, 27.2, 2.2, 0.6, 4.4, 0.4),
-        (10.0, 24.6, -3.0, 0.6, 2.0, 5.0),
-        (11.2, 28.0, -2.0, 0.2, 2.6, 3.0),
-        (9.4, 24.8, -2.0, 0.5, 3.2, 3.0)
+        (5.2, 31.8, -3.4, 4.6, 0.8, 5.6),
+        (5.6, 32.4, -2.8, 3.6, 0.5, 4.4),
+        (9.6, 26.6, -3.4, 0.8, 5.0, 5.6),
+        (9.0, 31.2, -3.2, 1.0, 1.0, 5.2),
+        (5.4, 27.2, -4.0, 4.4, 4.6, 0.6),
+        (5.4, 27.2, 2.2, 4.4, 4.6, 0.6),
+        (9.2, 27.2, -3.8, 0.6, 4.2, 0.4), (9.2, 27.2, 2.0, 0.6, 4.2, 0.4),
+        (9.2, 24.6, -2.8, 0.6, 2.0, 4.6),
+        (10.2, 28.0, -1.8, 0.2, 2.6, 2.8),
+        (8.8, 24.8, -1.8, 0.5, 3.0, 2.8)
     ],
     "left_forearm": [
-        *disc_x(6.7, 23.5, -0.5, 1.4, 2.6),
-        (7.0, 17.2, -1.8, 2.2, 5.4, 2.6),
-        (9.2, 17.8, -1.4, 0.3, 4.2, 1.8),
-        *piston_y(7.6, 16.6, 22.4, 0.8, 0.7),
-        (6.7, 15.6, -2.1, 2.8, 1.6, 3.2),
-        (6.6, 16.0, -2.2, 3.0, 0.4, 3.4)
+        *disc_x(5.5, 24.6, -0.5, 1.4, 2.0),                   # Elbow joint disk
+        (5.1, 18.0, -1.8, 3.0, 6.2, 3.0),                     # Heavy industrial forearm (thickness 3.0 = 1.50x upper, length 7.0 = 1.30x upper!)
+        (7.7, 18.6, -1.4, 0.4, 5.0, 2.4),                     # Outer armored forearm rib
+        *piston_y(6.0, 17.8, 23.6, 0.6, 0.7),                  # Forearm main hydraulic piston
+        (5.1, 17.4, -1.9, 3.0, 1.0, 3.2)                      # Wrist cuff flange
     ],
     "left_hand": [
-        (7.1, 13.4, -1.8, 1.8, 2.2, 2.6),
-        (7.0, 12.8, -2.0, 2.0, 0.6, 3.0),
-        *[(7.2, 10.8, z, 1.4, 2.0, 0.55) for z in (-1.9, -1.25, -0.6, 0.05)],
-        *[(7.0, 10.0, z, 1.3, 0.9, 0.5) for z in (-1.9, -1.25, -0.6, 0.05)],
-        (6.6, 11.8, -2.4, 0.6, 2.0, 0.8)
+        (5.5, 15.6, -1.7, 2.0, 1.8, 2.6),                     # Wrist joint block
+        (5.3, 12.8, -2.0, 2.4, 2.8, 3.2),                     # Large blocky fist palm
+        *[(5.5, 10.0, z, 2.0, 2.8, 0.65) for z in (-1.8, -1.0, -0.2, 0.6)], # Heavy blocky knuckles (hang to y = 10.0 = knee top!)
+        (5.0, 11.6, -2.2, 0.6, 2.2, 1.0)                      # Thumb block
     ]
 }
 
@@ -1055,7 +1056,7 @@ LEGS = {
     "left_shin": [
         *disc_x(3.8, 9.0, -2.8, 1.8, 1.4),
         (3.6, 3.0, -2.2, 1.8, 5.6, 2.6),
-        *piston_y(4.0, 2.8, 8.4, -0.6, 0.9),
+        *piston_y(4.0, 2.8, 8.4, 0.6, 0.8),                   # Exposed hydraulic piston rod behind the shin!
         (3.7, 2.4, -0.8, 1.6, 1.4, 3.2),
         *disc_x(3.7, 2.0, 2.2, 1.2, 1.6)
     ],
@@ -1066,11 +1067,11 @@ LEGS = {
         (5.3, 8.7, -3.1, 3.0, 0.6, 0.6)
     ],
     "left_foot": [
-        (3.2, 0.0, -3.2, 2.6, 2.0, 7.4),
-        (3.0, 0.0, -3.4, 3.0, 0.8, 7.8),
-        (3.4, 1.8, -2.6, 2.2, 0.6, 5.6),
-        (3.6, 2.2, 1.4, 1.8, 1.2, 1.8),
-        (3.0, 0.4, 3.8, 3.0, 1.4, 1.0)
+        # Long pointed foot: length = 6.0 (ratio foot_len / leg_len = 6.0 / 17.08 = 0.351 = 0.35x leg length!)
+        (3.2, 0.0, -3.8, 2.6, 1.8, 6.0),                      # Sleek main foot sole
+        (3.4, 0.0, -4.4, 2.2, 1.2, 0.8),                      # Pointed forward toe wedge
+        (3.3, 1.8, 0.2, 2.4, 0.8, 2.2),                       # Ankle knuckle mount
+        (3.4, 0.4, 1.8, 2.2, 1.2, 1.2)                        # Rear heel spur
     ]
 }
 
@@ -1367,9 +1368,12 @@ def leg_fairing():
             (x_out + 0.5, y_lo + 0.8, z_lo + 1.0, 0.2, 0.4, z_hi - z_lo - 2.0)]
 
 def move(bone, dy=0.0, dz=0.0):
-    C[bone] = [(x, y + dy, z + dz, sx, sy, sz) for x, y, z, sx, sy, sz in C[bone]]
+    if bone in C:
+        C[bone] = [(x, y + dy, z + dz, sx, sy, sz) for x, y, z, sx, sy, sz in C[bone]]
 
 def cap_top(bone, top, zmin, zmax):
+    if bone not in C:
+        return
     out = []
     for x, y, z, sx, sy, sz in C[bone]:
         if z < zmax and z + sz > zmin and y + sy > top:

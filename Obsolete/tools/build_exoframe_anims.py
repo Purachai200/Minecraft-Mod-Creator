@@ -199,9 +199,10 @@ anims = json.load(open(ANIM))["animations"]
 P = "animation.exoframe."
 
 # Pelvis drop for crouch matches the rider seat drop in ExoframeEntity.positionRider (1.72 -> 1.35 blocks = ~6px).
-anims[P + "idle"] = stance_clip(4.0, 0.0, 0.0, 0.18, head_scan=6.0)
+# Idle: hunched ape-like work frame posture: torso pitched 15° forward, forward knee bend 20-25° (pelvis drop 2.0)
+anims[P + "idle"] = stance_clip(4.0, 2.0, 15.0, 0.18, head_scan=6.0, arms=(-15, -10))
 anims[P + "crouch"] = stance_clip(2.0, 6.0, 12.0, 0.12, arms=(-14, -22))
-anims[P + "walk"] = gait(1.0, 3.2, 2.4, 0.6, 0.3, 0.35, 3.0, 14.0, 2.5)
+anims[P + "walk"] = gait(1.0, 3.2, 2.4, 0.6, 0.5, 0.35, 10.0, 14.0, 2.5)
 anims[P + "sprint"] = gait(0.6, 4.6, 3.4, 0.45, 0.9, 0.6, 12.0, 30.0, 4.0)
 anims[P + "crouch_walk"] = gait(1.2, 2.4, 1.6, 0.62, 6.0, 0.25, 13.0, 8.0, 1.5)
 

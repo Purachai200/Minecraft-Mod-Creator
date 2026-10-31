@@ -86,8 +86,9 @@ public class ExoframeModel extends GeoModel<ExoframeEntity> {
             setHidden(armorBone, !visibleBones.contains(armorBone));
         }
 
-        // Frame head handling: hide if chest piece has its own sensors (e.g. Marine hood)
-        setHidden("head", shouldHideFrameHead);
+        // Frame head handling: bare frame has NO head; head is hidden unless head armor brings a sensor, or if chest piece replaces it
+        boolean hasHeadArmor = !exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.HEAD.getIndex()).isEmpty();
+        setHidden("head", !hasHeadArmor || shouldHideFrameHead);
         if (shouldHideFrameHead) {
             for (com.obsolete.registry.ExoframeVariantRegistry.ArmorVariantData d : com.obsolete.registry.ExoframeVariantRegistry.getAllArmorData()) {
                 if (d.slot() == ExoframeArmorSlot.HEAD) {

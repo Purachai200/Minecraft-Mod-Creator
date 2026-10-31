@@ -23,13 +23,13 @@ import java.util.function.Function;
 public final class ExoframeArmIK {
 
     /** Fist centre in the hand bones' rest frame, geo JSON coords (left hand is the mirror). */
-    private static final Vector3f RIGHT_FIST = new Vector3f(-7.9F, 12.0F, -0.6F);
+    private static final Vector3f RIGHT_FIST = new Vector3f(-7.0F, 14.0F, -0.4F);
 
     public enum Hold {
         //               grip (JSON)           support (JSON)      rest fist (JSON)        yaw   pitch | aim fist (JSON)     yaw   pitch share
         RIFLE(       v(-8, 11.9F, -1.1F), v(-8, 13.6F, -5.5F),  v(-1.5F, 21.5F, -7.2F), 0.7F,  -0.4F,  v(-5.6F, 27.5F, -6.8F), 0.04F, 1F),
         SNIPER(      v(-8, 11.7F, -2.3F), v(-8, 13.4F, -6.5F), v(-1.5F, 21F, -7.2F),   0.75F, -0.45F, v(-5.6F, 27.5F, -6.8F), 0.04F, 1F),
-        MACHINE_GUN( v(-8, 10.8F, -2.4F), v(-8, 13.6F, -6.5F), v(-3F, 21.5F, -7.5F),   0.45F, -0.05F, v(-6.4F, 22.5F, -7.0F), 0.04F, 1F),
+        MACHINE_GUN( v(-8, 10.8F, -2.4F), v(-8, 13.6F, -5.2F), v(-3F, 21.5F, -7.5F),   0.45F, -0.05F, v(-6.4F, 22.5F, -7.2F), 0.04F, 1F),
         MINIGUN(     v(-8, 11.5F, -1.1F), v(-8, 15.0F, -3.5F), v(-3F, 21.5F, -7.5F),   0.3F,  -0.05F, v(-7.2F, 24.0F, -7.5F), 0.02F, 1F),
         POD_LAUNCHER(v(-8, 9.4F, -3.2F),  v(-8, 10.6F, -5.5F), v(-4.5F, 21F, -7.5F),   0.4F,  -0.3F,  v(-7.6F, 28.0F, -7.0F), 0.02F, 1F),
         RPG(         v(-8, 10.9F, 0.7F),  v(-8, 10.9F, -4.0F), v(-2.5F, 21.5F, -7.2F), 0.65F, -0.3F,  v(-5.8F, 27.5F, -7.0F), 0.04F, 1F),
