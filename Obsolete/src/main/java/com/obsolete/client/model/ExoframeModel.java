@@ -9,6 +9,8 @@ import net.minecraft.world.item.ItemStack;
 import software.bernie.geckolib.core.animatable.model.CoreGeoBone;
 import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.model.GeoModel;
+import org.joml.Matrix3f;
+import org.joml.Vector3f;
 
 public class ExoframeModel extends GeoModel<ExoframeEntity> {
 
@@ -84,6 +86,62 @@ public class ExoframeModel extends GeoModel<ExoframeEntity> {
         // Apply visibility for all known armor bones
         for (String armorBone : com.obsolete.registry.ExoframeVariantRegistry.getAllKnownArmorBones()) {
             setHidden(armorBone, !visibleBones.contains(armorBone));
+        }
+
+        // ==================== TASK 1: COCKPIT ENCLOSURE LOCKING ====================
+        // Counter-rotate each visible canopy_* and armor_chest_* bone, plus upper_back_seat,
+        // using the exact inverse of torso's animated rotation and cancelling the unmatched
+        // vertical drop of the pelvis/torso. This locks the cockpit capsule to the pilot across
+        // every clip (idle, walk, sprint, crouch, crouch_walk, shoot, melee, emotes).
+        CoreGeoBone torso = bone("torso");
+        CoreGeoBone pelvis = bone("pelvis");
+        if (torso != null) {
+            float tx = torso.getRotX();
+            float ty = torso.getRotY();
+            float tz = torso.getRotZ();
+
+            // Exact inverse rotation matrix of torso (transpose of orthogonal matrix R = Rz*Ry*Rx)
+            Matrix3f inv = new Matrix3f().rotationZ(tz).rotateY(ty).rotateX(tx).transpose();
+            Vector3f euler = inv.getEulerAnglesZYX(new Vector3f());
+
+            // Unmatched vertical animation drop:
+            // Pelvis and torso drop in animation, but pilot in positionRider only drops 6px in crouch.
+            float animY = (pelvis != null ? pelvis.getPosY() : 0.0F) + torso.getPosY();
+            float pilotDrop = exoframe.isMechCrouching() ? -6.0F : 0.0F;
+            float unmatchedDrop = animY - pilotDrop;
+
+            Vector3f worldDisp = new Vector3f(0.0F, -unmatchedDrop, 0.0F);
+            Vector3f localDisp = inv.transform(worldDisp, new Vector3f());
+
+            // Lock visible canopies and chest pieces to pilot
+            for (String bName : visibleBones) {
+                if (bName.startsWith("canopy_") || bName.startsWith("armor_chest") || "armor_roll_cage".equals(bName)) {
+                    CoreGeoBone cBone = bone(bName);
+                    if (cBone != null) {
+                        cBone.setRotX(euler.x);
+                        cBone.setRotY(euler.y);
+                        cBone.setRotZ(euler.z);
+                        cBone.setPosX(-localDisp.x);
+                        cBone.setPosY(localDisp.y);
+                        cBone.setPosZ(localDisp.z);
+                    }
+                }
+            }
+
+            // Lock pilot upper back seat cushion to pilot
+            CoreGeoBone seat = bone("upper_back_seat");
+            if (seat != null) {
+                seat.setRotX(euler.x);
+                seat.setRotY(euler.y);
+                seat.setRotZ(euler.z);
+
+                Vector3f d = new Vector3f(0.0F, 5.0F, 3.5F); // seat pivot (0, 25, 3.5) - torso pivot (0, 20, 0)
+                Vector3f seatWorldDisp = new Vector3f(d).add(0.0F, -unmatchedDrop, 0.0F);
+                Vector3f seatLocal = inv.transform(seatWorldDisp, new Vector3f()).sub(d);
+                seat.setPosX(-seatLocal.x);
+                seat.setPosY(seatLocal.y);
+                seat.setPosZ(seatLocal.z);
+            }
         }
 
         // Frame head handling: bare frame has NO head; head is hidden unless head armor brings a sensor, or if chest piece replaces it
