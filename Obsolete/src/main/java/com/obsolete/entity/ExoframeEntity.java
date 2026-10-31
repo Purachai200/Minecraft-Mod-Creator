@@ -850,37 +850,32 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     }
 
     public boolean performFishing(ServerPlayer pilot) {
-        Level level = this.level();
-        if (level instanceof ServerLevel serverLevel) {
-            ItemStack weaponStack = modularInventory.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
-            List<ItemStack> catches = null;
-            try {
-                LootParams params = new LootParams.Builder(serverLevel)
-                        .withParameter(LootContextParams.ORIGIN, this.position())
-                        .withParameter(LootContextParams.TOOL, weaponStack)
-                        .withParameter(LootContextParams.THIS_ENTITY, this)
-                        .withLuck(pilot.getLuck() + 2.0F)
-                        .create(LootContextParamSets.FISHING);
-                catches = serverLevel.getServer().getLootData().getLootTable(BuiltInLootTables.FISHING).getRandomItems(params);
-            } catch (Throwable ignored) {}
-
-            if (catches == null || catches.isEmpty()) {
-                Item[] fishPool = {net.minecraft.world.item.Items.COD, net.minecraft.world.item.Items.SALMON, net.minecraft.world.item.Items.TROPICAL_FISH, net.minecraft.world.item.Items.PUFFERFISH};
-                catches = List.of(new ItemStack(fishPool[this.random.nextInt(fishPool.length)], 1 + this.random.nextInt(2)));
-            }
-
-            for (ItemStack loot : catches) {
-                ItemEntity itemEntity = new ItemEntity(serverLevel, this.getX(), this.getY() + 1.2D, this.getZ(), loot.copy());
-                itemEntity.setPickUpDelay(40);
-                Vec3 dir = pilot.getLookAngle().scale(-0.2D).add(0, 0.35D, 0);
-                itemEntity.setDeltaMovement(dir);
-                serverLevel.addFreshEntity(itemEntity);
-                pilot.getInventory().add(loot.copy());
-            }
-            serverLevel.playSound(null, this.blockPosition(), SoundEvents.FISHING_BOBBER_RETRIEVE, SoundSource.PLAYERS, 1.5F, 1.0F);
-            serverLevel.sendParticles(ParticleTypes.SPLASH, this.getX(), this.getY() + 0.5D, this.getZ(), 15, 0.5D, 0.2D, 0.5D, 0.1D);
+        if (!(this.level() instanceof ServerLevel serverLevel)) return false;
+        // Needs open water beside or below the mech: no fishing on dry land.
+        BlockPos at = this.blockPosition();
+        BlockPos water = BlockPos.betweenClosedStream(at.offset(-5, -4, -5), at.offset(5, 1, 5))
+                .filter(pos -> serverLevel.getFluidState(pos).is(FluidTags.WATER))
+                .findFirst().map(BlockPos::immutable).orElse(null);
+        if (water == null) {
+            serverLevel.playSound(null, at, SoundEvents.FISHING_BOBBER_THROW, SoundSource.PLAYERS, 0.6F, 0.6F);
+            this.weaponCooldown = 10;
+            return false;
         }
-        this.weaponCooldown = 25;
+        ItemStack weaponStack = modularInventory.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
+        LootParams params = new LootParams.Builder(serverLevel)
+                .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(water))
+                .withParameter(LootContextParams.TOOL, weaponStack)
+                .withParameter(LootContextParams.THIS_ENTITY, this)
+                .withLuck(pilot.getLuck())
+                .create(LootContextParamSets.FISHING);
+        for (ItemStack loot : serverLevel.getServer().getLootData().getLootTable(BuiltInLootTables.FISHING).getRandomItems(params)) {
+            if (!pilot.getInventory().add(loot)) {
+                pilot.drop(loot, false);
+            }
+        }
+        serverLevel.playSound(null, water, SoundEvents.FISHING_BOBBER_RETRIEVE, SoundSource.PLAYERS, 1.5F, 1.0F);
+        serverLevel.sendParticles(ParticleTypes.SPLASH, water.getX() + 0.5D, water.getY() + 1.0D, water.getZ() + 0.5D, 15, 0.5D, 0.2D, 0.5D, 0.1D);
+        this.weaponCooldown = 100;   // one catch per 5 s, roughly a vanilla rod's pace
         return true;
     }
 

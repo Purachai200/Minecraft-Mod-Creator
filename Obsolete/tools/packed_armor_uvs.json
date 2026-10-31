@@ -63,8 +63,8 @@
     "bone": "armor_left_shoulder",
     "cube_index": 0,
     "origin": [
-      5.2,
-      31.8,
+      7.2,
+      32.8,
       -3.4
     ],
     "size": [
@@ -122,8 +122,8 @@
     "bone": "armor_right_shoulder",
     "cube_index": 0,
     "origin": [
-      -9.8,
-      31.8,
+      -11.8,
+      32.8,
       -3.4
     ],
     "size": [
@@ -476,8 +476,8 @@
     "bone": "armor_left_shoulder",
     "cube_index": 1,
     "origin": [
-      5.6,
-      32.4,
+      7.6,
+      33.4,
       -2.8
     ],
     "size": [
@@ -535,8 +535,8 @@
     "bone": "armor_right_shoulder",
     "cube_index": 1,
     "origin": [
-      -9.2,
-      32.4,
+      -11.2,
+      33.4,
       -2.8
     ],
     "size": [
@@ -1420,8 +1420,8 @@
     "bone": "armor_left_shoulder",
     "cube_index": 2,
     "origin": [
-      9.6,
-      26.6,
+      11.6,
+      27.6,
       -3.4
     ],
     "size": [
@@ -1479,8 +1479,8 @@
     "bone": "armor_left_shoulder",
     "cube_index": 3,
     "origin": [
-      9.0,
-      31.2,
+      11.0,
+      32.2,
       -3.2
     ],
     "size": [
@@ -1538,8 +1538,8 @@
     "bone": "armor_right_shoulder",
     "cube_index": 2,
     "origin": [
-      -10.4,
-      26.6,
+      -12.4,
+      27.6,
       -3.4
     ],
     "size": [
@@ -1597,8 +1597,8 @@
     "bone": "armor_right_shoulder",
     "cube_index": 3,
     "origin": [
-      -10.0,
-      31.2,
+      -12.0,
+      32.2,
       -3.2
     ],
     "size": [
@@ -2010,8 +2010,8 @@
     "bone": "armor_left_shoulder",
     "cube_index": 4,
     "origin": [
-      5.4,
-      27.2,
+      7.4,
+      28.2,
       -4.0
     ],
     "size": [
@@ -2069,8 +2069,8 @@
     "bone": "armor_left_shoulder",
     "cube_index": 5,
     "origin": [
-      5.4,
-      27.2,
+      7.4,
+      28.2,
       2.2
     ],
     "size": [
@@ -2128,8 +2128,8 @@
     "bone": "armor_left_shoulder",
     "cube_index": 8,
     "origin": [
-      9.2,
-      24.6,
+      11.2,
+      25.6,
       -2.8
     ],
     "size": [
@@ -2187,8 +2187,8 @@
     "bone": "armor_right_shoulder",
     "cube_index": 4,
     "origin": [
-      -9.8,
-      27.2,
+      -11.8,
+      28.2,
       -4.0
     ],
     "size": [
@@ -2246,8 +2246,8 @@
     "bone": "armor_right_shoulder",
     "cube_index": 5,
     "origin": [
-      -9.8,
-      27.2,
+      -11.8,
+      28.2,
       2.2
     ],
     "size": [
@@ -2305,8 +2305,8 @@
     "bone": "armor_right_shoulder",
     "cube_index": 8,
     "origin": [
-      -9.8,
-      24.6,
+      -11.8,
+      25.6,
       -2.8
     ],
     "size": [
@@ -5196,8 +5196,8 @@
     "bone": "armor_left_shoulder",
     "cube_index": 9,
     "origin": [
-      10.2,
-      28.0,
+      12.2,
+      29.0,
       -1.8
     ],
     "size": [
@@ -5255,8 +5255,8 @@
     "bone": "armor_left_shoulder",
     "cube_index": 10,
     "origin": [
-      8.8,
-      24.8,
+      10.8,
+      25.8,
       -1.8
     ],
     "size": [
@@ -5314,8 +5314,8 @@
     "bone": "armor_right_shoulder",
     "cube_index": 9,
     "origin": [
-      -10.4,
-      28.0,
+      -12.4,
+      29.0,
       -1.8
     ],
     "size": [
@@ -5373,8 +5373,8 @@
     "bone": "armor_right_shoulder",
     "cube_index": 10,
     "origin": [
-      -9.3,
-      24.8,
+      -11.3,
+      25.8,
       -1.8
     ],
     "size": [
@@ -6376,8 +6376,8 @@
     "bone": "armor_left_shoulder",
     "cube_index": 6,
     "origin": [
-      9.2,
-      27.2,
+      11.2,
+      28.2,
       -3.8
     ],
     "size": [
@@ -6435,8 +6435,8 @@
     "bone": "armor_left_shoulder",
     "cube_index": 7,
     "origin": [
-      9.2,
-      27.2,
+      11.2,
+      28.2,
       2.0
     ],
     "size": [
@@ -6494,8 +6494,8 @@
     "bone": "armor_right_shoulder",
     "cube_index": 6,
     "origin": [
-      -9.8,
-      27.2,
+      -11.8,
+      28.2,
       -3.8
     ],
     "size": [
@@ -6553,8 +6553,8 @@
     "bone": "armor_right_shoulder",
     "cube_index": 7,
     "origin": [
-      -9.8,
-      27.2,
+      -11.8,
+      28.2,
       2.0
     ],
     "size": [
@@ -7438,8 +7438,8 @@
     "bone": "armor_left_shoulder_usmc",
     "cube_index": 0,
     "origin": [
-      5.4,
-      32.2,
+      7.4,
+      33.2,
       -3.8
     ],
     "size": [
@@ -7497,8 +7497,8 @@
     "bone": "armor_right_shoulder_usmc",
     "cube_index": 0,
     "origin": [
-      -10.6,
-      32.2,
+      -12.6,
+      33.2,
       -3.8
     ],
     "size": [
@@ -7674,8 +7674,8 @@
     "bone": "armor_left_shoulder_usmc",
     "cube_index": 1,
     "origin": [
-      5.8,
-      33.0,
+      7.8,
+      34.0,
       -3.2
     ],
     "size": [
@@ -7733,8 +7733,8 @@
     "bone": "armor_right_shoulder_usmc",
     "cube_index": 1,
     "origin": [
-      -10.2,
-      33.0,
+      -12.2,
+      34.0,
       -3.2
     ],
     "size": [
@@ -9680,8 +9680,8 @@
     "bone": "armor_left_shoulder_usmc",
     "cube_index": 2,
     "origin": [
-      10.6,
-      26.4,
+      12.6,
+      27.4,
       -3.8
     ],
     "size": [
@@ -9739,8 +9739,8 @@
     "bone": "armor_right_shoulder_usmc",
     "cube_index": 2,
     "origin": [
-      -11.4,
-      26.4,
+      -13.4,
+      27.4,
       -3.8
     ],
     "size": [
@@ -10624,8 +10624,8 @@
     "bone": "armor_left_shoulder_usmc",
     "cube_index": 3,
     "origin": [
-      10.0,
-      31.6,
+      12.0,
+      32.6,
       -3.6
     ],
     "size": [
@@ -10683,8 +10683,8 @@
     "bone": "armor_left_shoulder_usmc",
     "cube_index": 8,
     "origin": [
-      10.4,
-      24.8,
+      12.4,
+      25.8,
       -3.2
     ],
     "size": [
@@ -10742,8 +10742,8 @@
     "bone": "armor_right_shoulder_usmc",
     "cube_index": 3,
     "origin": [
-      -11.0,
-      31.6,
+      -13.0,
+      32.6,
       -3.6
     ],
     "size": [
@@ -10801,8 +10801,8 @@
     "bone": "armor_right_shoulder_usmc",
     "cube_index": 8,
     "origin": [
-      -11.0,
-      24.8,
+      -13.0,
+      25.8,
       -3.2
     ],
     "size": [
@@ -11509,8 +11509,8 @@
     "bone": "armor_left_shoulder_usmc",
     "cube_index": 4,
     "origin": [
-      5.6,
-      26.8,
+      7.6,
+      27.8,
       -4.4
     ],
     "size": [
@@ -11568,8 +11568,8 @@
     "bone": "armor_left_shoulder_usmc",
     "cube_index": 5,
     "origin": [
-      5.6,
-      26.8,
+      7.6,
+      27.8,
       2.2
     ],
     "size": [
@@ -11627,8 +11627,8 @@
     "bone": "armor_right_shoulder_usmc",
     "cube_index": 4,
     "origin": [
-      -10.6,
-      26.8,
+      -12.6,
+      27.8,
       -4.4
     ],
     "size": [
@@ -11686,8 +11686,8 @@
     "bone": "armor_right_shoulder_usmc",
     "cube_index": 5,
     "origin": [
-      -10.6,
-      26.8,
+      -12.6,
+      27.8,
       2.2
     ],
     "size": [
@@ -12571,8 +12571,8 @@
     "bone": "armor_left_shoulder_usmc",
     "cube_index": 9,
     "origin": [
-      11.4,
-      28.2,
+      13.4,
+      29.2,
       -2.2
     ],
     "size": [
@@ -12630,8 +12630,8 @@
     "bone": "armor_right_shoulder_usmc",
     "cube_index": 9,
     "origin": [
-      -11.7,
-      28.2,
+      -13.7,
+      29.2,
       -2.2
     ],
     "size": [
@@ -16347,8 +16347,8 @@
     "bone": "armor_left_shoulder_usmc",
     "cube_index": 6,
     "origin": [
-      10.2,
-      27.0,
+      12.2,
+      28.0,
       -4.2
     ],
     "size": [
@@ -16406,8 +16406,8 @@
     "bone": "armor_left_shoulder_usmc",
     "cube_index": 7,
     "origin": [
-      10.2,
-      27.0,
+      12.2,
+      28.0,
       2.1
     ],
     "size": [
@@ -16465,8 +16465,8 @@
     "bone": "armor_right_shoulder_usmc",
     "cube_index": 6,
     "origin": [
-      -10.8,
-      27.0,
+      -12.8,
+      28.0,
       -4.2
     ],
     "size": [
@@ -16524,8 +16524,8 @@
     "bone": "armor_right_shoulder_usmc",
     "cube_index": 7,
     "origin": [
-      -10.8,
-      27.0,
+      -12.8,
+      28.0,
       2.1
     ],
     "size": [
@@ -21480,8 +21480,8 @@
     "bone": "armor_left_shoulder_cerberus",
     "cube_index": 0,
     "origin": [
-      5.2,
-      32.0,
+      7.2,
+      33.0,
       -3.8
     ],
     "size": [
@@ -21539,8 +21539,8 @@
     "bone": "armor_right_shoulder_cerberus",
     "cube_index": 0,
     "origin": [
-      -10.8,
-      32.0,
+      -12.8,
+      33.0,
       -3.8
     ],
     "size": [
@@ -21598,8 +21598,8 @@
     "bone": "armor_left_shoulder_cerberus",
     "cube_index": 1,
     "origin": [
-      5.6,
-      33.0,
+      7.6,
+      34.0,
       -3.2
     ],
     "size": [
@@ -21657,8 +21657,8 @@
     "bone": "armor_right_shoulder_cerberus",
     "cube_index": 1,
     "origin": [
-      -10.4,
-      33.0,
+      -12.4,
+      34.0,
       -3.2
     ],
     "size": [
@@ -23663,8 +23663,8 @@
     "bone": "armor_left_shoulder_cerberus",
     "cube_index": 2,
     "origin": [
-      10.8,
-      26.0,
+      12.8,
+      27.0,
       -4.0
     ],
     "size": [
@@ -23722,8 +23722,8 @@
     "bone": "armor_right_shoulder_cerberus",
     "cube_index": 2,
     "origin": [
-      -11.8,
-      26.0,
+      -13.8,
+      27.0,
       -4.0
     ],
     "size": [
@@ -24017,8 +24017,8 @@
     "bone": "armor_left_shoulder_cerberus",
     "cube_index": 3,
     "origin": [
-      5.4,
-      26.6,
+      7.4,
+      27.6,
       -4.6
     ],
     "size": [
@@ -24076,8 +24076,8 @@
     "bone": "armor_left_shoulder_cerberus",
     "cube_index": 4,
     "origin": [
-      5.4,
-      26.6,
+      7.4,
+      27.6,
       2.4
     ],
     "size": [
@@ -24135,8 +24135,8 @@
     "bone": "armor_right_shoulder_cerberus",
     "cube_index": 3,
     "origin": [
-      -10.8,
-      26.6,
+      -12.8,
+      27.6,
       -4.6
     ],
     "size": [
@@ -24194,8 +24194,8 @@
     "bone": "armor_right_shoulder_cerberus",
     "cube_index": 4,
     "origin": [
-      -10.8,
-      26.6,
+      -12.8,
+      27.6,
       2.4
     ],
     "size": [
@@ -25433,8 +25433,8 @@
     "bone": "armor_left_shoulder_cerberus",
     "cube_index": 5,
     "origin": [
-      11.8,
-      27.6,
+      13.8,
+      28.6,
       -2.4
     ],
     "size": [
@@ -25492,8 +25492,8 @@
     "bone": "armor_right_shoulder_cerberus",
     "cube_index": 5,
     "origin": [
-      -12.2,
-      27.6,
+      -14.2,
+      28.6,
       -2.4
     ],
     "size": [
@@ -31333,8 +31333,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 0,
     "origin": [
-      5.4,
-      32.0,
+      7.4,
+      33.0,
       -4.2
     ],
     "size": [
@@ -31392,8 +31392,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 0,
     "origin": [
-      -11.4,
-      32.0,
+      -13.4,
+      33.0,
       -4.2
     ],
     "size": [
@@ -32159,8 +32159,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 1,
     "origin": [
-      10.6,
-      25.8,
+      12.6,
+      26.8,
       -4.2
     ],
     "size": [
@@ -32218,8 +32218,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 1,
     "origin": [
-      -11.6,
-      25.8,
+      -13.6,
+      26.8,
       -4.2
     ],
     "size": [
@@ -34165,8 +34165,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 2,
     "origin": [
-      5.6,
-      26.6,
+      7.6,
+      27.6,
       -4.8
     ],
     "size": [
@@ -34224,8 +34224,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 3,
     "origin": [
-      5.6,
-      26.6,
+      7.6,
+      27.6,
       2.4
     ],
     "size": [
@@ -34283,8 +34283,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 13,
     "origin": [
-      10.2,
-      24.2,
+      12.2,
+      25.2,
       -3.4
     ],
     "size": [
@@ -34342,8 +34342,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 2,
     "origin": [
-      -10.8,
-      26.6,
+      -12.8,
+      27.6,
       -4.8
     ],
     "size": [
@@ -34401,8 +34401,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 3,
     "origin": [
-      -10.8,
-      26.6,
+      -12.8,
+      27.6,
       2.4
     ],
     "size": [
@@ -34460,8 +34460,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 13,
     "origin": [
-      -11.0,
-      24.2,
+      -13.0,
+      25.2,
       -3.4
     ],
     "size": [
@@ -45021,8 +45021,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 4,
     "origin": [
-      9.4,
-      33.0,
+      11.4,
+      34.0,
       -2.8
     ],
     "size": [
@@ -45080,8 +45080,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 5,
     "origin": [
-      9.567,
-      34.0,
+      11.567,
+      35.0,
       -2.633
     ],
     "size": [
@@ -45139,8 +45139,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 6,
     "origin": [
-      9.733,
-      35.0,
+      11.733,
+      36.0,
       -2.467
     ],
     "size": [
@@ -45198,8 +45198,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 7,
     "origin": [
-      9.4,
-      33.0,
+      11.4,
+      34.0,
       0.8
     ],
     "size": [
@@ -45257,8 +45257,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 8,
     "origin": [
-      9.567,
-      33.8,
+      11.567,
+      34.8,
       0.967
     ],
     "size": [
@@ -45316,8 +45316,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 9,
     "origin": [
-      9.733,
-      34.6,
+      11.733,
+      35.6,
       1.133
     ],
     "size": [
@@ -45375,8 +45375,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 10,
     "origin": [
-      11.6,
-      28.4,
+      13.6,
+      29.4,
       -1.0
     ],
     "size": [
@@ -45434,8 +45434,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 11,
     "origin": [
-      12.467,
-      28.567,
+      14.467,
+      29.567,
       -0.833
     ],
     "size": [
@@ -45493,8 +45493,8 @@
     "bone": "armor_left_shoulder_outlander",
     "cube_index": 12,
     "origin": [
-      13.333,
-      28.733,
+      15.333,
+      29.733,
       -0.667
     ],
     "size": [
@@ -45552,8 +45552,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 4,
     "origin": [
-      -10.4,
-      33.0,
+      -12.4,
+      34.0,
       -2.8
     ],
     "size": [
@@ -45611,8 +45611,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 5,
     "origin": [
-      -10.233,
-      34.0,
+      -12.233,
+      35.0,
       -2.633
     ],
     "size": [
@@ -45670,8 +45670,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 6,
     "origin": [
-      -10.067,
-      35.0,
+      -12.067,
+      36.0,
       -2.467
     ],
     "size": [
@@ -45729,8 +45729,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 7,
     "origin": [
-      -10.4,
-      33.0,
+      -12.4,
+      34.0,
       0.8
     ],
     "size": [
@@ -45788,8 +45788,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 8,
     "origin": [
-      -10.233,
-      33.8,
+      -12.233,
+      34.8,
       0.967
     ],
     "size": [
@@ -45847,8 +45847,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 9,
     "origin": [
-      -10.067,
-      34.6,
+      -12.067,
+      35.6,
       1.133
     ],
     "size": [
@@ -45906,8 +45906,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 10,
     "origin": [
-      -12.517,
-      28.4,
+      -14.517,
+      29.4,
       -1.0
     ],
     "size": [
@@ -45965,8 +45965,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 11,
     "origin": [
-      -13.383,
-      28.567,
+      -15.383,
+      29.567,
       -0.833
     ],
     "size": [
@@ -46024,8 +46024,8 @@
     "bone": "armor_right_shoulder_outlander",
     "cube_index": 12,
     "origin": [
-      -14.25,
-      28.733,
+      -16.25,
+      29.733,
       -0.667
     ],
     "size": [
@@ -47440,8 +47440,8 @@
     "bone": "armor_left_shoulder_polar",
     "cube_index": 0,
     "origin": [
-      5.4,
-      32.0,
+      7.4,
+      33.0,
       -3.6
     ],
     "size": [
@@ -47499,8 +47499,8 @@
     "bone": "armor_right_shoulder_polar",
     "cube_index": 0,
     "origin": [
-      -10.6,
-      32.0,
+      -12.6,
+      33.0,
       -3.6
     ],
     "size": [
@@ -48443,8 +48443,8 @@
     "bone": "armor_left_shoulder_polar",
     "cube_index": 1,
     "origin": [
-      10.4,
-      26.4,
+      12.4,
+      27.4,
       -3.6
     ],
     "size": [
@@ -48502,8 +48502,8 @@
     "bone": "armor_right_shoulder_polar",
     "cube_index": 1,
     "origin": [
-      -11.2,
-      26.4,
+      -13.2,
+      27.4,
       -3.6
     ],
     "size": [
@@ -49092,8 +49092,8 @@
     "bone": "armor_left_shoulder_polar",
     "cube_index": 2,
     "origin": [
-      5.6,
-      27.0,
+      7.6,
+      28.0,
       -4.2
     ],
     "size": [
@@ -49151,8 +49151,8 @@
     "bone": "armor_left_shoulder_polar",
     "cube_index": 3,
     "origin": [
-      5.6,
-      27.0,
+      7.6,
+      28.0,
       2.2
     ],
     "size": [
@@ -49210,8 +49210,8 @@
     "bone": "armor_right_shoulder_polar",
     "cube_index": 2,
     "origin": [
-      -10.6,
-      27.0,
+      -12.6,
+      28.0,
       -4.2
     ],
     "size": [
@@ -49269,8 +49269,8 @@
     "bone": "armor_right_shoulder_polar",
     "cube_index": 3,
     "origin": [
-      -10.6,
-      27.0,
+      -12.6,
+      28.0,
       2.2
     ],
     "size": [
@@ -54520,8 +54520,8 @@
     "bone": "armor_left_shoulder_salvage",
     "cube_index": 0,
     "origin": [
-      5.4,
-      31.8,
+      7.4,
+      32.8,
       -3.8
     ],
     "size": [
@@ -54579,8 +54579,8 @@
     "bone": "armor_right_shoulder_salvage",
     "cube_index": 0,
     "origin": [
-      -10.6,
-      31.8,
+      -12.6,
+      32.8,
       -3.8
     ],
     "size": [
@@ -55700,8 +55700,8 @@
     "bone": "armor_left_shoulder_salvage",
     "cube_index": 1,
     "origin": [
-      10.4,
-      25.8,
+      12.4,
+      26.8,
       -3.8
     ],
     "size": [
@@ -55759,8 +55759,8 @@
     "bone": "armor_right_shoulder_salvage",
     "cube_index": 1,
     "origin": [
-      -11.2,
-      25.8,
+      -13.2,
+      26.8,
       -3.8
     ],
     "size": [
@@ -56467,8 +56467,8 @@
     "bone": "armor_left_shoulder_salvage",
     "cube_index": 2,
     "origin": [
-      5.6,
-      26.6,
+      7.6,
+      27.6,
       -4.4
     ],
     "size": [
@@ -56526,8 +56526,8 @@
     "bone": "armor_left_shoulder_salvage",
     "cube_index": 3,
     "origin": [
-      5.6,
-      26.6,
+      7.6,
+      27.6,
       2.2
     ],
     "size": [
@@ -56585,8 +56585,8 @@
     "bone": "armor_right_shoulder_salvage",
     "cube_index": 2,
     "origin": [
-      -10.6,
-      26.6,
+      -12.6,
+      27.6,
       -4.4
     ],
     "size": [
@@ -56644,8 +56644,8 @@
     "bone": "armor_right_shoulder_salvage",
     "cube_index": 3,
     "origin": [
-      -10.6,
-      26.6,
+      -12.6,
+      27.6,
       2.2
     ],
     "size": [
@@ -57234,8 +57234,8 @@
     "bone": "armor_left_shoulder_salvage",
     "cube_index": 4,
     "origin": [
-      10.6,
-      27.0,
+      12.6,
+      28.0,
       -2.5
     ],
     "size": [
@@ -57293,8 +57293,8 @@
     "bone": "armor_left_shoulder_salvage",
     "cube_index": 5,
     "origin": [
-      10.6,
-      29.0,
+      12.6,
+      30.0,
       -2.5
     ],
     "size": [
@@ -57352,8 +57352,8 @@
     "bone": "armor_right_shoulder_salvage",
     "cube_index": 4,
     "origin": [
-      -11.0,
-      27.0,
+      -13.0,
+      28.0,
       -2.5
     ],
     "size": [
@@ -57411,8 +57411,8 @@
     "bone": "armor_right_shoulder_salvage",
     "cube_index": 5,
     "origin": [
-      -11.0,
-      29.0,
+      -13.0,
+      30.0,
       -2.5
     ],
     "size": [
@@ -62013,8 +62013,8 @@
     "bone": "armor_left_shoulder_shiden",
     "cube_index": 0,
     "origin": [
-      5.4,
-      32.4,
+      7.4,
+      33.4,
       -3.6
     ],
     "size": [
@@ -62072,8 +62072,8 @@
     "bone": "armor_right_shoulder_shiden",
     "cube_index": 0,
     "origin": [
-      -10.8,
-      32.4,
+      -12.8,
+      33.4,
       -3.6
     ],
     "size": [
@@ -62308,8 +62308,8 @@
     "bone": "armor_left_shoulder_shiden",
     "cube_index": 1,
     "origin": [
-      5.2,
-      33.2,
+      7.2,
+      34.2,
       -3.0
     ],
     "size": [
@@ -62367,8 +62367,8 @@
     "bone": "armor_right_shoulder_shiden",
     "cube_index": 1,
     "origin": [
-      -10.0,
-      33.2,
+      -12.0,
+      34.2,
       -3.0
     ],
     "size": [
@@ -63665,8 +63665,8 @@
     "bone": "armor_left_shoulder_shiden",
     "cube_index": 2,
     "origin": [
-      10.6,
-      27.0,
+      12.6,
+      28.0,
       -3.8
     ],
     "size": [
@@ -63724,8 +63724,8 @@
     "bone": "armor_right_shoulder_shiden",
     "cube_index": 2,
     "origin": [
-      -11.4,
-      27.0,
+      -13.4,
+      28.0,
       -3.8
     ],
     "size": [
@@ -64137,8 +64137,8 @@
     "bone": "armor_left_shoulder_shiden",
     "cube_index": 4,
     "origin": [
-      5.6,
-      27.2,
+      7.6,
+      28.2,
       -4.2
     ],
     "size": [
@@ -64196,8 +64196,8 @@
     "bone": "armor_left_shoulder_shiden",
     "cube_index": 5,
     "origin": [
-      5.6,
-      27.2,
+      7.6,
+      28.2,
       2.2
     ],
     "size": [
@@ -64255,8 +64255,8 @@
     "bone": "armor_right_shoulder_shiden",
     "cube_index": 4,
     "origin": [
-      -10.8,
-      27.2,
+      -12.8,
+      28.2,
       -4.2
     ],
     "size": [
@@ -64314,8 +64314,8 @@
     "bone": "armor_right_shoulder_shiden",
     "cube_index": 5,
     "origin": [
-      -10.8,
-      27.2,
+      -12.8,
+      28.2,
       2.2
     ],
     "size": [
@@ -65081,8 +65081,8 @@
     "bone": "armor_left_shoulder_shiden",
     "cube_index": 3,
     "origin": [
-      11.4,
-      28.0,
+      13.4,
+      29.0,
       -3.0
     ],
     "size": [
@@ -65140,8 +65140,8 @@
     "bone": "armor_right_shoulder_shiden",
     "cube_index": 3,
     "origin": [
-      -12.0,
-      28.0,
+      -14.0,
+      29.0,
       -3.0
     ],
     "size": [
@@ -72987,8 +72987,8 @@
     "bone": "armor_left_shoulder_khamsin",
     "cube_index": 0,
     "origin": [
-      5.2,
-      32.0,
+      7.2,
+      33.0,
       -4.0
     ],
     "size": [
@@ -73046,8 +73046,8 @@
     "bone": "armor_right_shoulder_khamsin",
     "cube_index": 0,
     "origin": [
-      -10.8,
-      32.0,
+      -12.8,
+      33.0,
       -4.0
     ],
     "size": [
@@ -73990,8 +73990,8 @@
     "bone": "armor_left_shoulder_khamsin",
     "cube_index": 1,
     "origin": [
-      10.6,
-      26.2,
+      12.6,
+      27.2,
       -4.0
     ],
     "size": [
@@ -74049,8 +74049,8 @@
     "bone": "armor_right_shoulder_khamsin",
     "cube_index": 1,
     "origin": [
-      -11.4,
-      26.2,
+      -13.4,
+      27.2,
       -4.0
     ],
     "size": [
@@ -74108,8 +74108,8 @@
     "bone": "armor_left_shoulder_khamsin",
     "cube_index": 2,
     "origin": [
-      5.4,
-      26.8,
+      7.4,
+      27.8,
       -4.6
     ],
     "size": [
@@ -74167,8 +74167,8 @@
     "bone": "armor_left_shoulder_khamsin",
     "cube_index": 3,
     "origin": [
-      5.4,
-      26.8,
+      7.4,
+      27.8,
       2.6
     ],
     "size": [
@@ -74226,8 +74226,8 @@
     "bone": "armor_right_shoulder_khamsin",
     "cube_index": 2,
     "origin": [
-      -10.8,
-      26.8,
+      -12.8,
+      27.8,
       -4.6
     ],
     "size": [
@@ -74285,8 +74285,8 @@
     "bone": "armor_right_shoulder_khamsin",
     "cube_index": 3,
     "origin": [
-      -10.8,
-      26.8,
+      -12.8,
+      27.8,
       2.6
     ],
     "size": [
@@ -79831,8 +79831,8 @@
     "bone": "armor_left_shoulder_riverine",
     "cube_index": 0,
     "origin": [
-      5.4,
-      32.0,
+      7.4,
+      33.0,
       -3.6
     ],
     "size": [
@@ -79890,8 +79890,8 @@
     "bone": "armor_right_shoulder_riverine",
     "cube_index": 0,
     "origin": [
-      -10.6,
-      32.0,
+      -12.6,
+      33.0,
       -3.6
     ],
     "size": [
@@ -80893,8 +80893,8 @@
     "bone": "armor_left_shoulder_riverine",
     "cube_index": 1,
     "origin": [
-      10.4,
-      26.4,
+      12.4,
+      27.4,
       -3.6
     ],
     "size": [
@@ -80952,8 +80952,8 @@
     "bone": "armor_right_shoulder_riverine",
     "cube_index": 1,
     "origin": [
-      -11.2,
-      26.4,
+      -13.2,
+      27.4,
       -3.6
     ],
     "size": [
@@ -81483,8 +81483,8 @@
     "bone": "armor_left_shoulder_riverine",
     "cube_index": 2,
     "origin": [
-      5.6,
-      27.0,
+      7.6,
+      28.0,
       -4.2
     ],
     "size": [
@@ -81542,8 +81542,8 @@
     "bone": "armor_left_shoulder_riverine",
     "cube_index": 3,
     "origin": [
-      5.6,
-      27.0,
+      7.6,
+      28.0,
       2.2
     ],
     "size": [
@@ -81601,8 +81601,8 @@
     "bone": "armor_right_shoulder_riverine",
     "cube_index": 2,
     "origin": [
-      -10.6,
-      27.0,
+      -12.6,
+      28.0,
       -4.2
     ],
     "size": [
@@ -81660,8 +81660,8 @@
     "bone": "armor_right_shoulder_riverine",
     "cube_index": 3,
     "origin": [
-      -10.6,
-      27.0,
+      -12.6,
+      28.0,
       2.2
     ],
     "size": [
@@ -82132,8 +82132,8 @@
     "bone": "armor_left_shoulder_riverine",
     "cube_index": 4,
     "origin": [
-      10.8,
-      28.0,
+      12.8,
+      29.0,
       -2.5
     ],
     "size": [
@@ -82191,8 +82191,8 @@
     "bone": "armor_right_shoulder_riverine",
     "cube_index": 4,
     "origin": [
-      -11.3,
-      28.0,
+      -13.3,
+      29.0,
       -2.5
     ],
     "size": [
@@ -86498,8 +86498,8 @@
     "bone": "armor_left_shoulder_specter",
     "cube_index": 0,
     "origin": [
-      5.4,
-      32.6,
+      7.4,
+      33.6,
       -3.8
     ],
     "size": [
@@ -86557,8 +86557,8 @@
     "bone": "armor_right_shoulder_specter",
     "cube_index": 0,
     "origin": [
-      -10.6,
-      32.6,
+      -12.6,
+      33.6,
       -3.8
     ],
     "size": [
@@ -87973,8 +87973,8 @@
     "bone": "armor_left_shoulder_specter",
     "cube_index": 1,
     "origin": [
-      10.4,
-      27.0,
+      12.4,
+      28.0,
       -4.0
     ],
     "size": [
@@ -88032,8 +88032,8 @@
     "bone": "armor_right_shoulder_specter",
     "cube_index": 1,
     "origin": [
-      -11.2,
-      27.0,
+      -13.2,
+      28.0,
       -4.0
     ],
     "size": [
@@ -89035,8 +89035,8 @@
     "bone": "armor_left_shoulder_specter",
     "cube_index": 3,
     "origin": [
-      5.6,
-      27.2,
+      7.6,
+      28.2,
       -4.4
     ],
     "size": [
@@ -89094,8 +89094,8 @@
     "bone": "armor_left_shoulder_specter",
     "cube_index": 4,
     "origin": [
-      5.6,
-      27.2,
+      7.6,
+      28.2,
       2.2
     ],
     "size": [
@@ -89153,8 +89153,8 @@
     "bone": "armor_right_shoulder_specter",
     "cube_index": 3,
     "origin": [
-      -10.6,
-      27.2,
+      -12.6,
+      28.2,
       -4.4
     ],
     "size": [
@@ -89212,8 +89212,8 @@
     "bone": "armor_right_shoulder_specter",
     "cube_index": 4,
     "origin": [
-      -10.6,
-      27.2,
+      -12.6,
+      28.2,
       2.2
     ],
     "size": [
@@ -89802,8 +89802,8 @@
     "bone": "armor_left_shoulder_specter",
     "cube_index": 2,
     "origin": [
-      11.2,
-      28.5,
+      13.2,
+      29.5,
       -2.5
     ],
     "size": [
@@ -89861,8 +89861,8 @@
     "bone": "armor_right_shoulder_specter",
     "cube_index": 2,
     "origin": [
-      -11.8,
-      28.5,
+      -13.8,
+      29.5,
       -2.5
     ],
     "size": [
@@ -93932,8 +93932,8 @@
     "bone": "armor_left_shoulder_valkyrie",
     "cube_index": 0,
     "origin": [
-      5.2,
-      32.6,
+      7.2,
+      33.6,
       -3.8
     ],
     "size": [
@@ -93991,8 +93991,8 @@
     "bone": "armor_right_shoulder_valkyrie",
     "cube_index": 0,
     "origin": [
-      -10.8,
-      32.6,
+      -12.8,
+      33.6,
       -3.8
     ],
     "size": [
@@ -94168,8 +94168,8 @@
     "bone": "armor_left_shoulder_valkyrie",
     "cube_index": 1,
     "origin": [
-      5.4,
-      33.4,
+      7.4,
+      34.4,
       -3.2
     ],
     "size": [
@@ -94227,8 +94227,8 @@
     "bone": "armor_right_shoulder_valkyrie",
     "cube_index": 1,
     "origin": [
-      -10.0,
-      33.4,
+      -12.0,
+      34.4,
       -3.2
     ],
     "size": [
@@ -95466,8 +95466,8 @@
     "bone": "armor_left_shoulder_valkyrie",
     "cube_index": 2,
     "origin": [
-      10.6,
-      26.4,
+      12.6,
+      27.4,
       -4.0
     ],
     "size": [
@@ -95525,8 +95525,8 @@
     "bone": "armor_right_shoulder_valkyrie",
     "cube_index": 2,
     "origin": [
-      -11.5,
-      26.4,
+      -13.5,
+      27.4,
       -4.0
     ],
     "size": [
@@ -95820,8 +95820,8 @@
     "bone": "armor_left_shoulder_valkyrie",
     "cube_index": 4,
     "origin": [
-      5.4,
-      26.8,
+      7.4,
+      27.8,
       -4.4
     ],
     "size": [
@@ -95879,8 +95879,8 @@
     "bone": "armor_left_shoulder_valkyrie",
     "cube_index": 5,
     "origin": [
-      5.4,
-      26.8,
+      7.4,
+      27.8,
       2.2
     ],
     "size": [
@@ -95938,8 +95938,8 @@
     "bone": "armor_right_shoulder_valkyrie",
     "cube_index": 4,
     "origin": [
-      -10.8,
-      26.8,
+      -12.8,
+      27.8,
       -4.4
     ],
     "size": [
@@ -95997,8 +95997,8 @@
     "bone": "armor_right_shoulder_valkyrie",
     "cube_index": 5,
     "origin": [
-      -10.8,
-      26.8,
+      -12.8,
+      27.8,
       2.2
     ],
     "size": [
@@ -97413,8 +97413,8 @@
     "bone": "armor_left_shoulder_valkyrie",
     "cube_index": 3,
     "origin": [
-      11.5,
-      27.2,
+      13.5,
+      28.2,
       -3.0
     ],
     "size": [
@@ -97472,8 +97472,8 @@
     "bone": "armor_right_shoulder_valkyrie",
     "cube_index": 3,
     "origin": [
-      -12.1,
-      27.2,
+      -14.1,
+      28.2,
       -3.0
     ],
     "size": [
@@ -120836,8 +120836,8 @@
     "bone": "weapon_riot_shield",
     "cube_index": 4,
     "origin": [
-      2.5,
-      29.0,
+      4.5,
+      28.0,
       -6.5
     ],
     "size": [
@@ -120895,8 +120895,8 @@
     "bone": "weapon_riot_shield",
     "cube_index": 5,
     "origin": [
-      2.5,
-      8.2,
+      4.5,
+      7.2,
       -6.5
     ],
     "size": [
@@ -120954,8 +120954,8 @@
     "bone": "weapon_riot_shield",
     "cube_index": 1,
     "origin": [
-      10.5,
-      9.0,
+      12.5,
+      8.0,
       -5.7
     ],
     "size": [
@@ -121013,8 +121013,8 @@
     "bone": "weapon_riot_shield",
     "cube_index": 2,
     "origin": [
-      2.7,
-      9.0,
+      4.7,
+      8.0,
       -5.7
     ],
     "size": [
@@ -121072,8 +121072,8 @@
     "bone": "weapon_riot_shield",
     "cube_index": 0,
     "origin": [
-      4.5,
-      9.0,
+      6.5,
+      8.0,
       -6.5
     ],
     "size": [
@@ -121367,8 +121367,8 @@
     "bone": "weapon_riot_shield",
     "cube_index": 6,
     "origin": [
-      6.0,
-      16.5,
+      8.0,
+      15.5,
       -4.5
     ],
     "size": [
@@ -121426,8 +121426,8 @@
     "bone": "weapon_riot_shield",
     "cube_index": 3,
     "origin": [
-      5.5,
-      23.0,
+      7.5,
+      22.0,
       -6.7
     ],
     "size": [

@@ -1,7 +1,7 @@
 """
 Offline IK Hold Reach & Clearance Verifier for OBSOLETE Exoframe Weapons.
 Checks that all weapons:
-1. Stay within arm reach (< 17.2 px) for both right hand (grip) and left hand (support)
+1. Stay within arm reach (<= 19.0 px, see MAX_REACH) for both right hand (grip) and left hand (support)
 2. Clear chest armor (fist z <= -6.8)
 3. Clear head (|fist x| >= 4.6)
 over the full look pitch range: -1.05 rad (-60 deg) to +1.15 rad (+66 deg).
@@ -11,12 +11,13 @@ import math
 MODEL_SCALE = 1.8
 
 # Shoulder pivots in render space (GeckoLib flips JSON X: -X -> +X)
-R_SHOULDER = (7.0, 30.0, -0.5)
-L_SHOULDER = (-7.0, 30.0, -0.5)
+R_SHOULDER = (9.0, 31.0, -0.5)
+L_SHOULDER = (-9.0, 31.0, -0.5)
 
 # Limits:
 # Physical justification:
-# 1. Arm reach: upper arm (5.4 px) + forearm (7.0 px) + hand/knuckles (4.0 px) with full wrist extension = 18.0 px. With articulated shoulder scapula and hand grasp, reach extends to 19.0 px.
+# 1. Arm reach: shoulder->elbow 6.4 px + elbow->fist centre 12.6 px = 19.0 px (geo pivots and ExoframeArmIK.RIGHT_FIST);
+#    the Java IK clamps at exactly this, so a target beyond it leaves the hand short of the gun.
 # 2. Chest clearance: front face of the thickest chest armor sits at z = -6.0 px; z <= -6.5 px guarantees >= 0.5 px clearance across all pitch angles.
 # 3. Head clearance: head armor envelope sits at |x| <= 4.2 px; |x| >= 4.6 px prevents clipping through sensor masts/canopies.
 MAX_REACH = 19.0
@@ -30,8 +31,8 @@ HOLDS = {
     # Existing
     "RIFLE": ((-8, 11.9, -1.1), (-8, 13.6, -5.5), (-1.5, 21.5, -7.2), 0.7, -0.4, (-5.6, 27.5, -6.8), 0.04, 1.0),
     "SNIPER": ((-8, 11.7, -2.3), (-8, 13.4, -6.5), (-1.5, 21.0, -7.2), 0.75, -0.45, (-5.6, 27.5, -6.8), 0.04, 1.0),
-    "MACHINE_GUN": ((-8, 10.8, -2.4), (-8, 13.6, -5.2), (-3.0, 21.5, -7.5), 0.45, -0.05, (-6.4, 22.5, -7.2), 0.04, 1.0),
-    "MINIGUN": ((-8, 11.5, -1.1), (-8, 15.0, -3.5), (-3.0, 21.5, -7.5), 0.3, -0.05, (-7.2, 24.0, -7.5), 0.02, 1.0),
+    "MACHINE_GUN": ((-8, 10.8, -2.4), (-8, 13.6, -3.6), (-3.0, 21.5, -7.5), 0.45, -0.05, (-6.0, 22.5, -7.6), 0.04, 1.0),
+    "MINIGUN": ((-8, 11.5, -1.1), (-8, 15.0, -1.9), (-3.0, 21.5, -7.5), 0.3, -0.05, (-6.8, 23.0, -7.6), 0.04, 0.6),
     "POD_LAUNCHER": ((-8, 9.4, -3.2), (-8, 10.6, -5.5), (-4.5, 21.0, -7.5), 0.4, -0.3, (-7.6, 28.0, -7.0), 0.02, 1.0),
     "RPG": ((-8, 10.9, 0.7), (-8, 10.9, -4.0), (-2.5, 21.5, -7.2), 0.65, -0.3, (-5.8, 27.5, -7.0), 0.04, 1.0),
     # New Weapons (calibrated to guarantee L_Reach < 17.2px, Z <= -6.8, |X| >= 4.6 across [-1.05..1.15] rad)

@@ -306,13 +306,13 @@ add(t,
     (-0.7, 28.4, -4.2, 1.4, 1.2, 3.6),                         # Slender forward neck boom to sensor head mount
     (-1.2, 25.0, 1.2, 2.4, 0.8, 3.6),                          # Seat back cradle lower
     (-1.8, 25.8, 0.6, 3.6, 1.2, 4.2),                          # Seat back cradle upper
-    # Arched Shoulder Yoke (one wide arched bar over top, outer span 14.4 = 1.60x hip 9.0!)
-    (-2.0, 32.4, -0.8, 4.0, 1.4, 1.8),                         # Center peak of upward arch (y reaches 33.8 - highest point!)
+    # Arched shoulder yoke: one wide bar whose ends carry the arms (shoulders at x +-9, see YOKE WIDTH below)
+    (-2.0, 32.4, -0.8, 4.0, 1.4, 1.8),                         # Centre peak of the arch, the highest point of the bare frame
     (-0.8, 30.6, -1.2, 1.6, 1.8, 1.6))                         # Center keel collar
 sym(t,
-    (1.8, 31.4, -0.8, 2.8, 1.4, 1.8),                          # Mid arch section rising from shoulders
-    (4.9, 30.4, -0.8, 1.5, 1.6, 1.8),                          # Shoulder bracket
-    (6.4, 29.3, -0.9, 0.8, 1.8, 2.0),                          # Outermost shoulder yoke cap (outer X = 7.2 -> outer span 14.4!)
+    (1.8, 31.6, -0.8, 3.2, 1.4, 1.8),                          # Mid arch section falling towards the shoulders
+    (4.8, 30.8, -0.8, 2.2, 1.6, 1.8),                          # Shoulder bracket
+    (6.8, 30.2, -0.9, 0.8, 2.0, 2.0),                          # Yoke end cap, meets the shoulder joint disc
     *piston_y(1.2, 20.4, 28.0, -0.4, 0.6),                     # Spine lateral hydraulic dampers
     (1.4, 21.6, 1.2, 0.6, 5.4, 0.6),                           # Seat back diagonal truss
     (2.6, 26.6, 4.8, 0.6, 2.8, 0.6))
@@ -1026,15 +1026,15 @@ L = {
     ],
     "left_forearm": [
         *disc_x(5.5, 24.6, -0.5, 1.4, 2.0),                   # Elbow joint disk
-        (5.1, 18.0, -1.8, 3.0, 6.2, 3.0),                     # Heavy industrial forearm (thickness 3.0 = 1.50x upper, length 7.0 = 1.30x upper!)
-        (7.7, 18.6, -1.4, 0.4, 5.0, 2.4),                     # Outer armored forearm rib
-        *piston_y(6.0, 17.8, 23.6, 0.6, 0.7),                  # Forearm main hydraulic piston
-        (5.1, 17.4, -1.9, 3.0, 1.0, 3.2)                      # Wrist cuff flange
+        (5.1, 17.0, -1.8, 3.0, 7.2, 3.0),                     # Heavy industrial forearm (1.5x the upper arm's thickness)
+        (7.7, 17.6, -1.4, 0.4, 6.0, 2.4),                     # Outer armored forearm rib
+        *piston_y(6.0, 16.8, 23.6, 0.6, 0.7),                  # Forearm main hydraulic piston
+        (5.1, 16.4, -1.9, 3.0, 1.0, 3.2)                      # Wrist cuff flange (wrist pivot drops to 16.6 below)
     ],
     "left_hand": [
         (5.5, 15.6, -1.7, 2.0, 1.8, 2.6),                     # Wrist joint block
         (5.3, 12.8, -2.0, 2.4, 2.8, 3.2),                     # Large blocky fist palm
-        *[(5.5, 10.0, z, 2.0, 2.8, 0.65) for z in (-1.8, -1.0, -0.2, 0.6)], # Heavy blocky knuckles (hang to y = 10.0 = knee top!)
+        *[(5.5, 10.0, z, 2.0, 2.8, 0.65) for z in (-1.8, -1.0, -0.2, 0.6)], # Heavy blocky knuckles (shifted to the knee, y 9, below)
         (5.0, 11.6, -2.2, 0.6, 2.2, 1.0)                      # Thumb block
     ]
 }
@@ -1459,6 +1459,28 @@ def cube(b, uv):
         "uv": uv
     }
 
+# ==================== YOKE WIDTH & ARM REACH ====================
+# The arms hang off the ends of the wide yoke (outer span ~1.6x the hips) and must reach 6.4 + 12.0 px so the
+# support hand still finds every weapon: shoulders out 2 px and up 1 px, wrists (and fists) down 1 px to the knee.
+# Weapons stay where they are: ExoframeArmIK seats each gun by its grip point, not by the mount pivot.
+ARM_DX, SHOULDER_DY, WRIST_DY = 2.0, 1.0, -1.0
+PARENT = {n: p for n, p, _, _ in BONES}
+
+def under(n, root):
+    while n and n != root:
+        n = PARENT[n]
+    return n == root
+
+for name, _, pivot, _ in BONES:
+    side = 1 if under(name, "left_arm") else -1 if under(name, "right_arm") else 0
+    if not side or under(name, "right_hand_weapon_mount"):
+        continue
+    dy = WRIST_DY if under(name, "left_hand") or under(name, "right_hand") else 0.0 if name.endswith("forearm") else SHOULDER_DY
+    pivot[0] = round(pivot[0] + side * ARM_DX, 3)
+    pivot[1] = round(pivot[1] + dy, 3)
+    if name in C:
+        C[name] = [(round(x + side * ARM_DX, 4), round(y + dy, 4), z, sx, sy, sz) for x, y, z, sx, sy, sz in C[name]]
+
 # ==================== SEAT & CAPSULE FIT ====================
 MODEL_SCALE = 1.8
 SEAT_DROP = -6.0
@@ -1560,8 +1582,8 @@ assert not crouch_clashes, "crouch rider clashes: " + ", ".join(f"{n}{tuple(roun
 AIM_HOLDS = {
     "weapon_assault_rifle": ((-8, 11.9, -1.1), (-5.6, 27.5, -6.8), 0.04, 1.0),
     "weapon_sniper_amr": ((-8, 11.7, -2.3), (-5.6, 27.5, -6.8), 0.04, 1.0),
-    "weapon_machine_gun": ((-8, 10.8, -2.4), (-6.4, 22.5, -7.0), 0.04, 1.0),
-    "weapon_minigun_m134": ((-8, 11.5, -1.1), (-7.2, 24.0, -7.5), 0.02, 1.0),
+    "weapon_machine_gun": ((-8, 10.8, -2.4), (-6.0, 22.5, -7.6), 0.04, 1.0),
+    "weapon_minigun_m134": ((-8, 11.5, -1.1), (-6.8, 23.0, -7.6), 0.04, 0.6),
     "weapon_rocket_launcher": ((-8, 9.4, -3.2), (-7.6, 28.0, -7.0), 0.02, 1.0),
     "weapon_rpg7_heavy": ((-8, 10.9, 0.7), (-5.8, 27.5, -7.0), 0.04, 1.0),
     # 8 New Weapons

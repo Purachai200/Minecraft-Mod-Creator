@@ -1298,52 +1298,48 @@ public final class ClientAutoTest {
             Zombie radarTarget = EntityType.ZOMBIE.create(level);
             if (radarTarget != null) {
                 radarTarget.setNoAi(true);
-                radarTarget.setPos(exoX, exoY + 1.0D, exoZ - 18.0D);
+                radarTarget.setPos(exoX, exoY + 1.0D, exoZ - 12.0D);
                 level.addFreshEntity(radarTarget);
             }
         })));
         steps.add(new Step(wt + 195, mc -> serverExoById(mc, (p, exo) -> {
-            // Trigger radar sweep
-            var monsters = p.serverLevel().getEntitiesOfClass(Zombie.class, exo.getBoundingBox().inflate(32.0D));
-            for (var m : monsters) {
-                m.addEffect(new net.minecraft.world.effect.MobEffectInstance(MobEffects.GLOWING, 60, 0));
-            }
-            // Trigger fishing cast
+            // Dry land first: the rod must refuse to fish without water nearby.
+            int before = countFish(p);
             exo.performFishing(p);
-        })));
-        steps.add(new Step(wt + 205, mc -> serverLevel(mc, (p, level) -> {
-            var monsters = level.getEntitiesOfClass(Zombie.class, new AABB(exoX - 5, exoY - 2, exoZ - 25, exoX + 5, exoY + 5, exoZ - 10));
-            boolean radarPass = false;
-            for (var m : monsters) {
-                if (m.hasEffect(MobEffects.GLOWING)) {
-                    ObsoleteMod.LOGGER.info("[autotest] RADAR SCOUT PASS: Hostile target detected and illuminated with Glowing effect!");
-                    radarPass = true;
-                }
-                m.discard();
+            if (countFish(p) != before) {
+                ObsoleteMod.LOGGER.error("[autotest] HARBOUR FISHING FAIL: Caught fish on dry land!");
             }
-            if (!radarPass) {
+            BlockPos pond = BlockPos.containing(exoX + 3, exoY - 1, exoZ);
+            for (int dx = 0; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
+                p.serverLevel().setBlockAndUpdate(pond.offset(dx, 0, dz), Blocks.WATER.defaultBlockState());
+            }
+            exo.performFishing(p);
+            int caught = countFish(p) - before;
+            var drops = p.serverLevel().getEntitiesOfClass(ItemEntity.class, exo.getBoundingBox().inflate(6.0D),
+                    e -> e.getItem().is(Items.COD) || e.getItem().is(Items.SALMON) || e.getItem().is(Items.TROPICAL_FISH) || e.getItem().is(Items.PUFFERFISH));
+            if (caught > 0 && drops.isEmpty()) {
+                ObsoleteMod.LOGGER.info("[autotest] HARBOUR FISHING PASS: Caught {} fish beside water, none duplicated on the ground", caught);
+            } else {
+                ObsoleteMod.LOGGER.error("[autotest] HARBOUR FISHING FAIL: caught={}, ground drops={}", caught, drops.size());
+            }
+            for (int dx = 0; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
+                p.serverLevel().setBlockAndUpdate(pond.offset(dx, 0, dz), Blocks.STONE.defaultBlockState());
+            }
+        })));
+        // The radar pulses every 60 ticks on its own; nothing here applies Glowing.
+        steps.add(new Step(wt + 265, mc -> serverLevel(mc, (p, level) -> {
+            var monsters = level.getEntitiesOfClass(Zombie.class, new AABB(exoX - 5, exoY - 2, exoZ - 20, exoX + 5, exoY + 5, exoZ - 5));
+            boolean radarPass = monsters.stream().anyMatch(m -> m.hasEffect(MobEffects.GLOWING));
+            if (radarPass) {
+                ObsoleteMod.LOGGER.info("[autotest] RADAR SCOUT PASS: Radar pulse made the hostile target glow");
+            } else {
                 ObsoleteMod.LOGGER.error("[autotest] RADAR SCOUT FAIL: Target was not illuminated with Glowing!");
             }
-
-            var items = level.getEntitiesOfClass(ItemEntity.class, new AABB(exoX - 6, exoY - 2, exoZ - 6, exoX + 6, exoY + 5, exoZ + 6));
-            boolean hasFishInInv = false;
-            for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
-                var it = p.getInventory().getItem(i).getItem();
-                if (it == Items.COD || it == Items.SALMON || it == Items.TROPICAL_FISH || it == Items.PUFFERFISH) {
-                    hasFishInInv = true;
-                    break;
-                }
-            }
-            if (!items.isEmpty() || hasFishInInv) {
-                ObsoleteMod.LOGGER.info("[autotest] HARBOUR FISHING PASS: Exoframe heavy fishing rod caught and retrieved fish!");
-            } else {
-                ObsoleteMod.LOGGER.error("[autotest] HARBOUR FISHING FAIL: No catch retrieved!");
-            }
-            items.forEach(Entity::discard);
+            monsters.forEach(Entity::discard);
         })));
-        steps.add(new Step(wt + 210, mc -> shot(mc, "g_role_radar_and_fishing_pass")));
+        steps.add(new Step(wt + 270, mc -> shot(mc, "g_role_radar_and_fishing_pass")));
 
-        wt += 220;
+        wt += 280;
 
         steps.add(new Step(wt + 10, mc -> {
             ObsoleteMod.LOGGER.info("[autotest] gameplay scenario completed with all checks passing!");
@@ -1351,6 +1347,15 @@ public final class ClientAutoTest {
         }));
 
         return steps.toArray(Step[]::new);
+    }
+
+    private static int countFish(ServerPlayer p) {
+        int n = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+            ItemStack st = p.getInventory().getItem(i);
+            if (st.is(Items.COD) || st.is(Items.SALMON) || st.is(Items.TROPICAL_FISH) || st.is(Items.PUFFERFISH)) n += st.getCount();
+        }
+        return n;
     }
 
     private static Step[] buildArmorSteps() {

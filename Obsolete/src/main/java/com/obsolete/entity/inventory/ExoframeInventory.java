@@ -5,6 +5,7 @@ import com.obsolete.item.ExoframeArmorItem;
 import com.obsolete.item.ExoframeWeaponItem;
 import com.obsolete.item.ExoframeRocketLauncherItem;
 import com.obsolete.item.ExoframeRPG7Item;
+import com.obsolete.registry.ExoframeVariantRegistry;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Container;
@@ -43,12 +44,18 @@ public class ExoframeInventory extends ItemStackHandler implements Container {
                         || stack.is(com.obsolete.item.ModItems.MODULE_SHOULDER_MISSILE.get())
                         || stack.getItem() instanceof ExoframeRocketLauncherItem
                         || stack.getItem() instanceof ExoframeRPG7Item
-                        || !(stack.getItem() instanceof ExoframeArmorItem) && !(stack.getItem() instanceof ExoframeWeaponItem);
+                        || !(stack.getItem() instanceof ExoframeArmorItem) && !(stack.getItem() instanceof ExoframeWeaponItem) && !isHandTool(stack);
             case MAIN_WEAPON:
-                return stack.getItem() instanceof ExoframeWeaponItem;
+                return stack.getItem() instanceof ExoframeWeaponItem || isHandTool(stack);
             default:
                 return false;
         }
+    }
+
+    /** Plain items the registry lists as right-hand tools (stun baton, fishing rod); the riot shield stays a utility item. */
+    private static boolean isHandTool(ItemStack stack) {
+        var data = ExoframeVariantRegistry.getWeaponData(stack.getItem());
+        return data != null && !data.isShield();
     }
 
     @Override

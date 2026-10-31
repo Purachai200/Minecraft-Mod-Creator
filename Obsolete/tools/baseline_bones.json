@@ -192,8 +192,8 @@
     "left_arm",
     "torso",
     [
-      7.0,
-      30.0,
+      9.0,
+      31.0,
       -0.5
     ]
   ],
@@ -201,8 +201,8 @@
     "armor_left_shoulder",
     "left_arm",
     [
-      7.0,
-      30.0,
+      9.0,
+      31.0,
       -0.5
     ]
   ],
@@ -210,8 +210,8 @@
     "armor_left_shoulder_usmc",
     "left_arm",
     [
-      7.0,
-      30.0,
+      9.0,
+      31.0,
       -0.5
     ]
   ],
@@ -219,8 +219,8 @@
     "armor_left_shoulder_cerberus",
     "left_arm",
     [
-      7.0,
-      30.0,
+      9.0,
+      31.0,
       -0.5
     ]
   ],
@@ -228,7 +228,7 @@
     "left_forearm",
     "left_arm",
     [
-      7.0,
+      9.0,
       24.6,
       -0.5
     ]
@@ -237,8 +237,8 @@
     "left_hand",
     "left_forearm",
     [
-      7.0,
-      17.6,
+      9.0,
+      16.6,
       -0.5
     ]
   ],
@@ -246,8 +246,8 @@
     "right_arm",
     "torso",
     [
-      -7.0,
-      30.0,
+      -9.0,
+      31.0,
       -0.5
     ]
   ],
@@ -255,8 +255,8 @@
     "armor_right_shoulder",
     "right_arm",
     [
-      -7.0,
-      30.0,
+      -9.0,
+      31.0,
       -0.5
     ]
   ],
@@ -264,8 +264,8 @@
     "armor_right_shoulder_usmc",
     "right_arm",
     [
-      -7.0,
-      30.0,
+      -9.0,
+      31.0,
       -0.5
     ]
   ],
@@ -273,8 +273,8 @@
     "armor_right_shoulder_cerberus",
     "right_arm",
     [
-      -7.0,
-      30.0,
+      -9.0,
+      31.0,
       -0.5
     ]
   ],
@@ -282,8 +282,8 @@
     "armor_right_shoulder_red",
     "right_arm",
     [
-      -7.0,
-      30.0,
+      -9.0,
+      31.0,
       -0.5
     ]
   ],
@@ -291,7 +291,7 @@
     "right_forearm",
     "right_arm",
     [
-      -7.0,
+      -9.0,
       24.6,
       -0.5
     ]
@@ -300,8 +300,8 @@
     "right_hand",
     "right_forearm",
     [
-      -7.0,
-      17.6,
+      -9.0,
+      16.6,
       -0.5
     ]
   ],
@@ -543,8 +543,8 @@
     "armor_left_shoulder_polar",
     "left_arm",
     [
-      7.0,
-      30.0,
+      9.0,
+      31.0,
       -0.5
     ]
   ],
@@ -552,8 +552,8 @@
     "armor_right_shoulder_polar",
     "right_arm",
     [
-      -7.0,
-      30.0,
+      -9.0,
+      31.0,
       -0.5
     ]
   ],
@@ -561,8 +561,8 @@
     "armor_left_shoulder_outlander",
     "left_arm",
     [
-      7.0,
-      30.0,
+      9.0,
+      31.0,
       -0.5
     ]
   ],
@@ -570,8 +570,8 @@
     "armor_right_shoulder_outlander",
     "right_arm",
     [
-      -7.0,
-      30.0,
+      -9.0,
+      31.0,
       -0.5
     ]
   ],
