@@ -1,0 +1,15 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "minecraft:lapis_lazuli"
+    }
+  ],
+  "result": {
+    "item": "obsolete:armor_police_chest",
+    "count": 1
+  }
+}

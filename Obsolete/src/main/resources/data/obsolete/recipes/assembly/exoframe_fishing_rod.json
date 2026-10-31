@@ -1,0 +1,15 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:hydraulic_cylinder"
+    },
+    {
+      "item": "minecraft:fishing_rod"
+    }
+  ],
+  "result": {
+    "item": "obsolete:exoframe_fishing_rod",
+    "count": 1
+  }
+}

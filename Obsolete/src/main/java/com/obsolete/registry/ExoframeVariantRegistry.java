@@ -106,6 +106,15 @@ public final class ExoframeVariantRegistry {
                 List.of("armor_head_valkyrie"), List.of("armor_head_valkyrie"), true,
                 new SensorProfile("VALKYRIE OMNI-ARRAY", "QUANTUM PHASED SCANNER", 0xFF00FFFF, 0xFF00FFFF));
 
+        // Role Variants - Head
+        registerArmor(ModItems.ARMOR_POLICE_HEAD.get(), ExoframeArmorSlot.HEAD, "Police",
+                List.of("armor_head_police"), List.of("armor_head_police"), false,
+                new SensorProfile("POLICE TACTICAL VISOR", "WIDE-ANGLE CROWD SCANNER", 0xFF00AAFF, 0xFF00AAFF));
+
+        registerArmor(ModItems.ARMOR_RESCUE_HEAD.get(), ExoframeArmorSlot.HEAD, "Rescue",
+                List.of("armor_head_rescue"), List.of("armor_head_rescue"), false,
+                new SensorProfile("RESCUE THERMAL DOMEPOD", "LIFE-SIGN INFRARED SCANNER", 0xFFFF9900, 0xFFFF9900));
+
         // ==================== 2. CHEST ARMOR VARIANTS ====================
         registerArmor(ModItems.ARMOR_SAND_CHEST.get(), ExoframeArmorSlot.CHEST, "Sand",
                 List.of("armor_chest"), Collections.emptyList(), false, null);
@@ -145,6 +154,13 @@ public final class ExoframeVariantRegistry {
 
         registerArmor(ModItems.ARMOR_VALKYRIE_CHEST.get(), ExoframeArmorSlot.CHEST, "Valkyrie",
                 List.of("armor_chest_valkyrie", "canopy_valkyrie"), List.of("canopy_valkyrie"), true, null);
+
+        // Role Variants - Chest
+        registerArmor(ModItems.ARMOR_POLICE_CHEST.get(), ExoframeArmorSlot.CHEST, "Police",
+                List.of("armor_chest_police", "canopy_police"), List.of("canopy_police"), false, null);
+
+        registerArmor(ModItems.ARMOR_RESCUE_CHEST.get(), ExoframeArmorSlot.CHEST, "Rescue",
+                List.of("armor_chest_rescue", "canopy_rescue"), List.of("canopy_rescue"), false, null);
 
         // ==================== 3. ARMS & SHOULDER VARIANTS ====================
         registerArmor(ModItems.ARMOR_SAND_ARMS.get(), ExoframeArmorSlot.ARMS, "Sand",
@@ -219,6 +235,10 @@ public final class ExoframeVariantRegistry {
         registerArmor(ModItems.ARMOR_VALKYRIE_LEGS.get(), ExoframeArmorSlot.LEGS, "Valkyrie",
                 List.of("armor_left_leg_valkyrie", "armor_right_leg_valkyrie", "armor_left_shin_valkyrie", "armor_right_shin_valkyrie"), Collections.emptyList(), false, null);
 
+        // Role Variants - Legs
+        registerArmor(ModItems.ARMOR_FLOAT_RING.get(), ExoframeArmorSlot.LEGS, "Amphibious",
+                List.of("armor_float_ring"), Collections.emptyList(), false, null);
+
         // ==================== 5. UTILITY & BACKPACK MODULES ====================
         registerArmor(ModItems.MODULE_USMC_COMMS.get(), ExoframeArmorSlot.UTILITY, "USMC",
                 List.of("backpack_usmc"), Collections.emptyList(), false, null);
@@ -250,6 +270,14 @@ public final class ExoframeVariantRegistry {
 
         registerArmor(ModItems.MODULE_VALKYRIE_SENSOR.get(), ExoframeArmorSlot.UTILITY, "Valkyrie",
                 List.of("backpack_valkyrie"), Collections.emptyList(), false, null);
+
+        // Role Variants - Utility
+        registerArmor(ModItems.MODULE_RESCUE_WINCH.get(), ExoframeArmorSlot.UTILITY, "Rescue",
+                List.of("backpack_rescue"), Collections.emptyList(), false, null);
+
+        registerArmor(ModItems.MODULE_SEARCH_RADAR.get(), ExoframeArmorSlot.UTILITY, "Radar",
+                List.of("backpack_radar"), Collections.emptyList(), false,
+                new SensorProfile("TACTICAL SEARCH RADAR", "PHASED-ARRAY ACTIVE PULSER", 0xFF00FF66, 0xFF00FF66));
 
         registerSensorProfile(ModItems.MODULE_NIGHT_VISION_OPTIC.get(),
                 new SensorProfile("CERBERUS 360° DOME", "FLIR THERMAL PASS-THROUGH", 0xFF00FF66, 0xFF00FF66));
@@ -284,6 +312,11 @@ public final class ExoframeVariantRegistry {
         registerWeapon(ModItems.EXOFRAME_ATGM_GUIDED.get(), "weapon_atgm_guided", ExoframeArmIK.Hold.ATGM_GUIDED, false, false);
         registerWeapon(ModItems.EXOFRAME_FLAMETHROWER.get(), "weapon_flamethrower", ExoframeArmIK.Hold.FLAMETHROWER, false, false);
         registerWeapon(ModItems.EXOFRAME_VIBRO_BLADE.get(), "weapon_vibro_blade", ExoframeArmIK.Hold.VIBRO_BLADE, true, false);
+
+        // Role Weapons & Equipment
+        registerWeapon(ModItems.EXOFRAME_RIOT_SHIELD.get(), "weapon_riot_shield", ExoframeArmIK.Hold.RIFLE, false, true);
+        registerWeapon(ModItems.EXOFRAME_STUN_BATON.get(), "weapon_stun_baton", ExoframeArmIK.Hold.STUN_BATON, true, false);
+        registerWeapon(ModItems.EXOFRAME_FISHING_ROD.get(), "weapon_fishing_rod", ExoframeArmIK.Hold.FISHING_ROD, false, false);
     }
 
     public static void registerArmor(Item item, ExoframeArmorSlot slot, String faction,

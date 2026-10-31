@@ -1,0 +1,15 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "minecraft:leather"
+    },
+    {
+      "item": "minecraft:dried_kelp_block"
+    }
+  ],
+  "result": {
+    "item": "obsolete:armor_float_ring",
+    "count": 1
+  }
+}

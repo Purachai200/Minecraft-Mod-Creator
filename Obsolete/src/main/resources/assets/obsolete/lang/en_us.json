@@ -143,5 +143,15 @@
   "item.obsolete.ammo_napalm_canister": "Pressurized Liquid Napalm Fuel Canister",
   "item.obsolete.exoframe_kit_salvage": "Salvage Exoframe Deployment Kit",
   "item.obsolete.exoframe_kit_advanced": "Advanced Military Exoframe Deployment Kit",
-  "item.obsolete.exoframe_kit_elite": "Elite Spec-Ops Exoframe Deployment Kit"
+  "item.obsolete.exoframe_kit_elite": "Elite Spec-Ops Exoframe Deployment Kit",
+  "item.obsolete.armor_police_head": "Tactical Police Strobe-Bar Helmet",
+  "item.obsolete.armor_police_chest": "Tactical Police Ballistic Vest & Capsule",
+  "item.obsolete.exoframe_riot_shield": "Reinforced Ballistic Riot Shield",
+  "item.obsolete.exoframe_stun_baton": "Pneumatic High-Voltage Stun Baton",
+  "item.obsolete.armor_rescue_head": "Disaster Relief Floodlight Canopy Dome",
+  "item.obsolete.armor_rescue_chest": "Disaster Relief Sealed High-Vis Chest",
+  "item.obsolete.module_rescue_winch": "Disaster Relief Evacuation Winch & Rebreather",
+  "item.obsolete.armor_float_ring": "Expeditionary Inflatable Buoyancy Float Ring",
+  "item.obsolete.module_search_radar": "Tactical Phased-Array Search Radar Mast",
+  "item.obsolete.exoframe_fishing_rod": "Heavy Dockyard Winch Fishing Rod"
 }

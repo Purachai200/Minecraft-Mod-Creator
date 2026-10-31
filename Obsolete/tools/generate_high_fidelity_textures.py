@@ -191,6 +191,32 @@ for item in PACKED_MANIFEST:
                     else:
                         MARKING_MAP[(px, py)] = (20, 20, 22, 255)
 
+        # 5. Tactical Police: POLICE lettering on chest & shield
+        if bone == "armor_chest_police" and fname == "north" and fw >= 8 and fh >= 6:
+            cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
+            for (dx, dy) in [(-6, 0), (-6, 1), (-6, 2), (-5, 0), (-5, 1),
+                             (-3, 0), (-3, 1), (-3, 2), (-2, 0), (-2, 2), (-1, 0), (-1, 1), (-1, 2),
+                             (1, 0), (1, 1), (1, 2), (2, 2),
+                             (4, 0), (4, 1), (4, 2),
+                             (6, 0), (6, 1), (6, 2)]:
+                if x0 <= cx + dx < x1 and y0 <= cy + dy < y1:
+                    MARKING_MAP[(cx + dx, cy + dy)] = (245, 248, 252, 255)
+
+        if bone == "weapon_riot_shield" and fname == "north" and fw >= 8 and fh >= 6:
+            cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
+            for (dx, dy) in [(-4, 0), (-4, 1), (-4, 2), (-3, 0), (-3, 1),
+                             (-1, 0), (-1, 1), (-1, 2), (0, 0), (0, 2), (1, 0), (1, 1), (1, 2),
+                             (3, 0), (3, 1), (3, 2), (4, 2)]:
+                if x0 <= cx + dx < x1 and y0 <= cy + dy < y1:
+                    MARKING_MAP[(cx + dx, cy + dy)] = (255, 255, 255, 255)
+
+        # 6. Disaster Rescue: Diagonal safety chevron stripes
+        if bone == "armor_chest_rescue" and fname == "north":
+            for py in range(y0, y1):
+                for px in range(x0, x1):
+                    if (px + py) // 4 % 2 == 0:
+                        MARKING_MAP[(px, py)] = (245, 248, 252, 255)
+
 
 def faction_livery(x, y):
     """Factory colours mapped per bone from packed manifest, with block fallbacks."""
@@ -233,8 +259,48 @@ def faction_livery(x, y):
                 if cidx % 9 == 4:
                     return (218, 175, 45) # Gold trim, sparse (every other cube read as bee stripes)
             return (235, 240, 245) # Royal titanium white
+        elif fac == "Police":
+            if "canopy" in bone or "head" in bone:
+                if cidx in (2, 7): return (20, 140, 240) # Visor tint
+                if cidx in (3, 8): return (30, 120, 255) # Blue strobe
+                if cidx in (4, 9): return (230, 30, 30) # Red strobe
+            return (24, 32, 45) # Tactical police navy blue
+        elif fac == "Rescue":
+            if "head" in bone and cidx in (2, 4):
+                return (255, 250, 220) # Halogen floodlight lens
+            if "backpack" in bone:
+                if cidx in (0, 1, 2, 3, 4, 5):
+                    return (210, 215, 225) # Silver oxygen cylinders
+                return (235, 185, 30) # Winch yellow
+            if "chest" in bone and cidx == 1:
+                return (240, 245, 250) # Medical kit white
+            return (255, 102, 0) # High-vis emergency orange
+        elif fac == "Amphibious":
+            if cidx in (4, 5):
+                return (180, 190, 200) # Silver CO2 inflation canisters
+            return (240, 160, 20) # Marine pontoon orange-yellow
+        elif fac == "Radar":
+            if cidx in (3, 4):
+                return (218, 175, 45) # Gold phased-array element
+            return (48, 52, 56) # Tactical graphite mast
+        elif fac == "RoleWeapons":
+            if "shield" in bone:
+                if cidx == 3: return (40, 180, 240) # Viewport glass
+                return (26, 30, 36) # Ballistic polymer black
+            if "baton" in bone:
+                if cidx in (3, 4, 5, 6): return (0, 220, 255) # High-voltage arc
+                return (35, 38, 42)
+            if "fishing" in bone:
+                if cidx == 1: return (180, 130, 50) # Bronze winch spool
+                if cidx == 9: return (225, 40, 35) # Red tackle bobber
+                return (42, 46, 52) # Carbon blank rod
 
     # Fallback by UV block
+    if 0 <= x < 250 and 660 <= y < 840: return (24, 32, 45) # Police
+    if 250 <= x < 500 and 660 <= y < 840: return (255, 102, 0) # Rescue
+    if 500 <= x < 750 and 660 <= y < 840: return (240, 160, 20) # Amphibious
+    if 750 <= x < 1000 and 660 <= y < 840: return (48, 52, 56) # Radar
+    if 0 <= x < 600 and 840 <= y < 1024: return (35, 38, 42) # Role Weapons
     if 330 <= x < 400 and y < 315:
         if 120 <= y < 170: return (176, 32, 30)
         if 220 <= y < 315: return (70, 82, 50)

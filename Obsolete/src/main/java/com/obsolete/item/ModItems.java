@@ -306,6 +306,37 @@ public class ModItems {
     public static final RegistryObject<Item> EXOFRAME_VIBRO_BLADE =
             ITEMS.register("exoframe_vibro_blade", () -> new ExoframeVibroBladeItem(new Item.Properties()));
 
+    // ==================== 9C. ROLE VARIANTS ITEMS ====================
+    public static final RegistryObject<Item> ARMOR_POLICE_HEAD =
+            ITEMS.register("armor_police_head", () -> new ExoframeArmorItem(
+                    new Item.Properties().durability(350), ExoframeArmorSlot.HEAD, 0.20F, "Tactical Police"));
+    public static final RegistryObject<Item> ARMOR_POLICE_CHEST =
+            ITEMS.register("armor_police_chest", () -> new ExoframeArmorItem(
+                    new Item.Properties().durability(550), ExoframeArmorSlot.CHEST, 0.42F, "Tactical Police"));
+    public static final RegistryObject<Item> EXOFRAME_RIOT_SHIELD =
+            ITEMS.register("exoframe_riot_shield", () -> new Item(new Item.Properties().durability(650)));
+    public static final RegistryObject<Item> EXOFRAME_STUN_BATON =
+            ITEMS.register("exoframe_stun_baton", () -> new Item(new Item.Properties().durability(450)));
+
+    public static final RegistryObject<Item> ARMOR_RESCUE_HEAD =
+            ITEMS.register("armor_rescue_head", () -> new ExoframeArmorItem(
+                    new Item.Properties().durability(380), ExoframeArmorSlot.HEAD, 0.22F, "Disaster Relief NGO"));
+    public static final RegistryObject<Item> ARMOR_RESCUE_CHEST =
+            ITEMS.register("armor_rescue_chest", () -> new ExoframeArmorItem(
+                    new Item.Properties().durability(560), ExoframeArmorSlot.CHEST, 0.40F, "Disaster Relief NGO"));
+    public static final RegistryObject<Item> MODULE_RESCUE_WINCH =
+            ITEMS.register("module_rescue_winch", () -> new Item(new Item.Properties().stacksTo(1)));
+
+    public static final RegistryObject<Item> ARMOR_FLOAT_RING =
+            ITEMS.register("armor_float_ring", () -> new ExoframeArmorItem(
+                    new Item.Properties().durability(400), ExoframeArmorSlot.LEGS, 0.15F, "Amphibious Buoyancy Ring"));
+
+    public static final RegistryObject<Item> MODULE_SEARCH_RADAR =
+            ITEMS.register("module_search_radar", () -> new Item(new Item.Properties().stacksTo(1)));
+
+    public static final RegistryObject<Item> EXOFRAME_FISHING_ROD =
+            ITEMS.register("exoframe_fishing_rod", () -> new Item(new Item.Properties().durability(300)));
+
     // ==================== 10. AMMUNITION ====================
     public static final RegistryObject<Item> AMMO_20MM =
             ITEMS.register("ammo_20mm", () -> new ExoframeAmmoItem(new Item.Properties(), ExoframeAmmoItem.AmmoType.CALIBER_20MM));

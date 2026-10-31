@@ -110,8 +110,13 @@ public class ExoframeModel extends GeoModel<ExoframeEntity> {
             }
         }
 
+        boolean hasShield = exoframe.hasShieldEquipped();
         for (String wBone : com.obsolete.registry.ExoframeVariantRegistry.getAllKnownWeaponBones()) {
-            setHidden(wBone, !wBone.equals(activeWeaponBone));
+            if ("weapon_riot_shield".equals(wBone)) {
+                setHidden(wBone, !hasShield);
+            } else {
+                setHidden(wBone, !wBone.equals(activeWeaponBone));
+            }
         }
 
         // Pitch tracking: Minecraft pitch is negative looking up, positive looking down.
@@ -139,13 +144,16 @@ public class ExoframeModel extends GeoModel<ExoframeEntity> {
         // ==================== 8. WEAPON HANDLING ====================
         // Poses are hand targets + gun direction; both arms are solved so the grip sits in the right fist
         // and the left hand lands on the weapon's support point (see ExoframeArmIK).
+        boolean emoting = exoframe.getAnimatableInstanceCache().getManagerForId(instanceId)
+                .getAnimationControllers().get(ExoframeEntity.EMOTE_CONTROLLER).isPlayingTriggeredAnimation();
         if (!weaponStack.isEmpty()) {
-            boolean emoting = exoframe.getAnimatableInstanceCache().getManagerForId(instanceId)
-                    .getAnimationControllers().get(ExoframeEntity.EMOTE_CONTROLLER).isPlayingTriggeredAnimation();
             ExoframeArmIK.pose(this::bone, exoframe, weaponStack.getItem(), state.getPartialTick(),
                     state.getLimbSwingAmount(), targetPitch, recoilKick, recoilTickDiff >= 0 && recoilTickDiff < 8, emoting);
         } else {
             ExoframeArmIK.clearMount(bone("right_hand_weapon_mount"));
+            if (hasShield && !emoting) {
+                ExoframeArmIK.poseShield(this::bone);
+            }
         }
     }
 

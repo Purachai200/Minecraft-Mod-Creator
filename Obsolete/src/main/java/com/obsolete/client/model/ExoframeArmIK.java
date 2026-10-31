@@ -42,7 +42,9 @@ public final class ExoframeArmIK {
         RECOILLESS_RIFLE(v(-8, 11.0F, 0.5F), v(-8, 11.8F, -2.8F), v(-2.5F, 21.5F, -7.2F), 0.60F, -0.25F, v(-5.8F, 27.0F, -7.2F), 0.04F, 0.85F),
         ATGM_GUIDED( v(-8, 10.0F, -2.0F), v(-8, 11.2F, -3.8F), v(-4.0F, 21.0F, -7.5F), 0.35F, -0.20F, v(-7.0F, 27.5F, -7.3F), 0.02F, 0.80F),
         FLAMETHROWER(v(-8, 11.0F, -1.8F), v(-8, 12.2F, -3.0F), v(-3.0F, 21.0F, -7.4F), 0.45F, -0.15F, v(-6.4F, 24.0F, -7.4F), 0.03F, 0.75F),
-        VIBRO_BLADE( v(-8, 12.0F, -1.0F), v(-8, 12.0F, -1.0F), v(-4.5F, 18.0F, -7.0F), 0.20F, -0.40F, v(-5.5F, 24.0F, -7.0F), 0.02F, 0.50F);
+        VIBRO_BLADE( v(-8, 12.0F, -1.0F), v(-8, 12.0F, -1.0F), v(-4.5F, 18.0F, -7.0F), 0.20F, -0.40F, v(-5.5F, 24.0F, -7.0F), 0.02F, 0.50F),
+        STUN_BATON(  v(-8, 12.0F, -1.0F), v(-8, 12.0F, -1.0F), v(-4.5F, 18.0F, -7.0F), 0.20F, -0.40F, v(-5.5F, 24.0F, -7.0F), 0.02F, 0.50F),
+        FISHING_ROD( v(-8, 12.0F, -1.0F), v(-8, 12.0F, -1.0F), v(-4.5F, 20.0F, -7.0F), 0.20F, -0.30F, v(-5.5F, 25.0F, -7.0F), 0.02F, 0.50F);
 
         public final Vector3f grip, support, restFist, aimFist;
         public final float restYaw, restPitch, aimYaw, pitchShare;
@@ -75,6 +77,15 @@ public final class ExoframeArmIK {
         mount.setPosX(0);
         mount.setPosY(0);
         mount.setPosZ(0);
+    }
+
+    public static void poseShield(Function<String, CoreGeoBone> bones) {
+        CoreGeoBone lArm = bones.apply("left_arm"), lFore = bones.apply("left_forearm"), lHand = bones.apply("left_hand");
+        if (lArm == null || lFore == null || lHand == null) return;
+        Vector3f rFist = render(RIGHT_FIST);
+        Vector3f shieldTarget = render(new Vector3f(5.5F, 20.0F, -7.0F));
+        solveArm(lArm, lFore, new Vector3f(-rFist.x, rFist.y, rFist.z), shieldTarget);
+        zero(lHand);
     }
 
     public static void pose(Function<String, CoreGeoBone> bones, ExoframeEntity exo, Item item, float partialTick,
@@ -129,6 +140,13 @@ public final class ExoframeArmIK {
 
         // ---- left hand onto the support point (emotes own the left arm while armed) ----
         if (emoting) return;
+        if (exo.hasShieldEquipped()) {
+            // Detach left hand from two-handed gun aim; hold riot shield forward in protective stance
+            Vector3f shieldTarget = render(new Vector3f(5.5F, 20.0F, -7.0F));
+            solveArm(lArm, lFore, new Vector3f(-rFist.x, rFist.y, rFist.z), shieldTarget);
+            zero(lHand);
+            return;
+        }
         Vector3f realFist = fk(rArm, rFore, rFist);
         Vector3f support = gun.transform(new Vector3f(hold.support).sub(hold.grip)).add(realFist);
         solveArm(lArm, lFore, new Vector3f(-rFist.x, rFist.y, rFist.z), support);

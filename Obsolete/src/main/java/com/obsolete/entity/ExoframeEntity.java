@@ -13,7 +13,10 @@ import com.obsolete.network.ExoframeInventorySyncS2CPacket;
 import com.obsolete.network.ModNetworking;
 import com.obsolete.sound.ModSounds;
 import com.obsolete.util.InputHelper;
+import com.obsolete.item.ExoframeMiningDrillItem;
+import com.obsolete.item.ExoframeChainsawItem;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -25,6 +28,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
@@ -36,15 +40,26 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.storage.loot.BuiltInLootTables;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -96,6 +111,7 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     private int meleeCooldown = 0;
     private int deathTimer = -1;
     private static final int DEATH_ANIMATION_TICKS = 50; // 2.5 seconds collapse
+    private BlockPos lastLightPos = null;
 
     // Raw Animations
     protected static final RawAnimation ANIM_IDLE = RawAnimation.begin().thenLoop("animation.exoframe.idle");
@@ -317,16 +333,29 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     @Override
     protected void positionRider(Entity passenger, Entity.MoveFunction moveFunction) {
         if (this.hasPassenger(passenger)) {
-            // Pilot's thighs rest on the seat cushion (model y30.8, z4.3); the capsules in
-            // tools/build_exoframe_geo.py (RIDER envelope) are fitted to exactly this seat.
             float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
-            double forwardOffset = -4.3D * MODEL_SCALE / 16.0D;
+            boolean isFirstPassenger = this.getPassengers().indexOf(passenger) == 0;
+            double seat = (30.8D * MODEL_SCALE - 10.0D) / 16.0D;
+            double forwardOffset;
+            double yOffset;
+            if (isFirstPassenger) {
+                forwardOffset = -4.3D * MODEL_SCALE / 16.0D;
+                yOffset = isMechCrouching() ? seat - 6.0D * MODEL_SCALE / 16.0D : seat;
+            } else {
+                // Secondary evacuee secured on rear winch cargo mount
+                forwardOffset = 18.0D * MODEL_SCALE / 16.0D;
+                yOffset = seat + 0.1D;
+            }
             double xOffset = -Mth.sin(yawRad) * forwardOffset;
             double zOffset = Mth.cos(yawRad) * forwardOffset;
-            double seat = (30.8D * MODEL_SCALE - 10.0D) / 16.0D;          // feet = cushion top minus the seated thigh height
-            double yOffset = isMechCrouching() ? seat - 6.0D * MODEL_SCALE / 16.0D : seat; // crouch pelvis drop is 6 model px
             moveFunction.accept(passenger, this.getX() + xOffset, this.getY() + yOffset, this.getZ() + zOffset);
         }
+    }
+
+    @Override
+    public boolean canAddPassenger(Entity passenger) {
+        int max = hasItemEquipped(ModItems.MODULE_RESCUE_WINCH.get()) ? 2 : 1;
+        return this.getPassengers().size() < max;
     }
 
     @Nullable
@@ -382,6 +411,15 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             speed *= 1.35F; // Sprint boost
         }
 
+        // Amphibious float ring: surface paddling & buoyancy
+        if (hasItemEquipped(ModItems.ARMOR_FLOAT_RING.get()) && this.isInWater()) {
+            double fluidHeight = this.getFluidHeight(FluidTags.WATER);
+            if (fluidHeight > 0.4D) {
+                this.setDeltaMovement(this.getDeltaMovement().x, Math.max(this.getDeltaMovement().y, 0.22D), this.getDeltaMovement().z);
+            }
+            speed *= 1.35F; // Surface paddling boost
+        }
+
         // Space bar jump handling
         if (InputHelper.isJumping(rider) && this.onGround()) {
             this.setDeltaMovement(this.getDeltaMovement().x, 0.62D, this.getDeltaMovement().z);
@@ -426,6 +464,34 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             }
         }
 
+        // Floodlight handling (Rescue Head, Rescue Chest, Roll Cage)
+        if (!this.level().isClientSide) {
+            boolean hasFloodlights = hasItemEquipped(ModItems.ARMOR_RESCUE_HEAD.get())
+                    || hasItemEquipped(ModItems.ARMOR_RESCUE_CHEST.get())
+                    || hasItemEquipped(ModItems.ARMOR_ROLL_CAGE.get());
+            if (hasFloodlights && this.isAlive() && !isDying()) {
+                BlockPos currentLightPos = this.blockPosition().above(2);
+                if (!currentLightPos.equals(lastLightPos)) {
+                    if (lastLightPos != null && this.level().getBlockState(lastLightPos).is(Blocks.LIGHT)) {
+                        this.level().setBlock(lastLightPos, Blocks.AIR.defaultBlockState(), 3);
+                    }
+                    if (this.level().getBlockState(currentLightPos).isAir()) {
+                        this.level().setBlock(currentLightPos, Blocks.LIGHT.defaultBlockState().setValue(BlockStateProperties.LEVEL, 15), 3);
+                        lastLightPos = currentLightPos;
+                    } else {
+                        lastLightPos = null;
+                    }
+                } else if (lastLightPos != null && !this.level().getBlockState(lastLightPos).is(Blocks.LIGHT) && this.level().getBlockState(lastLightPos).isAir()) {
+                    this.level().setBlock(lastLightPos, Blocks.LIGHT.defaultBlockState().setValue(BlockStateProperties.LEVEL, 15), 3);
+                }
+            } else if (lastLightPos != null) {
+                if (this.level().getBlockState(lastLightPos).is(Blocks.LIGHT)) {
+                    this.level().setBlock(lastLightPos, Blocks.AIR.defaultBlockState(), 3);
+                }
+                lastLightPos = null;
+            }
+        }
+
         // Active module effects for pilot
         if (this.isVehicle()) {
             LivingEntity rider = this.getControllingPassenger();
@@ -441,12 +507,47 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
                     }
                 }
 
-                // 2. Night vision optic module or Cerberus helmet: provides FLIR thermal night-vision
+                // 2. Rescue sealed capsule: life support (water breathing + fire resistance)
+                boolean sealedRescue = hasItemEquipped(ModItems.ARMOR_RESCUE_HEAD.get()) && hasItemEquipped(ModItems.ARMOR_RESCUE_CHEST.get());
+                if (sealedRescue && !this.level().isClientSide) {
+                    rider.addEffect(new MobEffectInstance(MobEffects.WATER_BREATHING, 40, 0, false, false, true));
+                    rider.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 40, 0, false, false, true));
+                }
+
+                // 3. Night vision optic module or Cerberus helmet: provides FLIR thermal night-vision
                 if (hasItemEquipped(ModItems.MODULE_NIGHT_VISION_OPTIC.get()) || getEquippedSlot(ExoframeArmorSlot.HEAD).is(ModItems.ARMOR_CERBERUS_HEAD.get())) {
                     if (!this.level().isClientSide) {
                         rider.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 220, 0, false, false, false));
                     }
                 }
+            }
+        }
+
+        // Amphibious float ring passive buoyancy (floats mech to water surface even when unpiloted)
+        if (hasItemEquipped(ModItems.ARMOR_FLOAT_RING.get()) && this.isInWater()) {
+            double fluidHeight = this.getFluidHeight(FluidTags.WATER);
+            if (fluidHeight > 0.4D) {
+                this.setDeltaMovement(this.getDeltaMovement().x, Math.max(this.getDeltaMovement().y, 0.22D), this.getDeltaMovement().z);
+            }
+        }
+
+        // Radar scout pulse every 60 ticks
+        if (!this.level().isClientSide && this.tickCount % 60 == 0 && hasItemEquipped(ModItems.MODULE_SEARCH_RADAR.get())) {
+            int tier = getFrameTier();
+            double range = switch (tier) {
+                case 0 -> 16.0D;
+                case 1 -> 28.0D;
+                case 2 -> 40.0D;
+                default -> 54.0D;
+            };
+            AABB radarBox = this.getBoundingBox().inflate(range);
+            List<net.minecraft.world.entity.monster.Monster> monsters = this.level().getEntitiesOfClass(net.minecraft.world.entity.monster.Monster.class, radarBox,
+                    m -> m.isAlive() && !this.isAlliedTo(m));
+            for (var monster : monsters) {
+                monster.addEffect(new MobEffectInstance(MobEffects.GLOWING, 60, 0, false, false, false));
+            }
+            if (!monsters.isEmpty()) {
+                this.level().playSound(null, this.blockPosition(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.PLAYERS, 0.8F, 1.8F);
             }
         }
     }
@@ -545,8 +646,34 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
 
+        // Worksite block placement while piloting
+        if (this.isVehicle() && this.hasPassenger(player) && hasItemEquipped(ModItems.ARMOR_ROLL_CAGE.get())) {
+            ItemStack heldItem = player.getItemInHand(hand);
+            if (heldItem.getItem() instanceof BlockItem blockItem) {
+                Vec3 eyePos = player.getEyePosition();
+                Vec3 look = player.getLookAngle();
+                Vec3 end = eyePos.add(look.scale(5.5D));
+                BlockHitResult hit = this.level().clip(new ClipContext(eyePos, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+                if (hit.getType() == HitResult.Type.BLOCK) {
+                    BlockPos targetPos = hit.getBlockPos().relative(hit.getDirection());
+                    if (this.level().getBlockState(targetPos).canBeReplaced()) {
+                        if (!this.level().isClientSide) {
+                            BlockState placeState = blockItem.getBlock().defaultBlockState();
+                            this.level().setBlock(targetPos, placeState, 3);
+                            SoundType soundType = placeState.getSoundType();
+                            this.level().playSound(null, targetPos, soundType.getPlaceSound(), SoundSource.BLOCKS, (soundType.getVolume() + 1.0F) / 2.0F, soundType.getPitch() * 0.8F);
+                            if (!player.getAbilities().instabuild) {
+                                heldItem.shrink(1);
+                            }
+                        }
+                        return InteractionResult.sidedSuccess(this.level().isClientSide);
+                    }
+                }
+            }
+        }
+
         // Mount / Ride Mech
-        if (!this.isVehicle() && !player.isPassenger()) {
+        if (!player.isPassenger() && this.canAddPassenger(player)) {
             if (!this.level().isClientSide) {
                 player.startRiding(this);
                 this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_SERVO.get(), SoundSource.PLAYERS, 1.5F, 1.1F);
@@ -566,10 +693,22 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         if (weaponCooldown > 0 || isDying()) return false;
 
         ItemStack weaponStack = modularInventory.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
+        if (weaponStack.is(ModItems.EXOFRAME_STUN_BATON.get())) {
+            performMeleeAttack(pilot);
+            return true;
+        }
+        if (weaponStack.is(ModItems.EXOFRAME_FISHING_ROD.get())) {
+            return performFishing(pilot);
+        }
         if (weaponStack.getItem() instanceof ExoframeWeaponItem weaponItem) {
             boolean fired = weaponItem.performFire(this, pilot);
             if (fired) {
-                weaponCooldown = weaponItem.getFireCooldownTicks();
+                int cd = weaponItem.getFireCooldownTicks();
+                if (hasItemEquipped(ModItems.ARMOR_ROLL_CAGE.get()) &&
+                        (weaponItem instanceof ExoframeMiningDrillItem || weaponItem instanceof ExoframeChainsawItem)) {
+                    cd = Math.max(2, (int) (cd / 2.5F));
+                }
+                weaponCooldown = cd;
                 return true;
             }
         } else {
@@ -669,7 +808,10 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     public void performMeleeAttack(ServerPlayer pilot) {
         if (meleeCooldown > 0 || isDying()) return;
 
-        meleeCooldown = 15; // 0.75 second attack cooldown
+        ItemStack mainWpn = modularInventory.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
+        boolean isStunBaton = mainWpn.is(ModItems.EXOFRAME_STUN_BATON.get());
+
+        meleeCooldown = isStunBaton ? 12 : 15;
         this.entityData.set(DATA_IS_MELEEING, true);
 
         // Find enemies in front cone (sweep hitbox ~2.8 blocks)
@@ -682,25 +824,90 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         List<LivingEntity> targets = this.level().getEntitiesOfClass(LivingEntity.class, strikeBox,
                 e -> e != this && e != pilot && !this.isAlliedTo(e));
 
-        float meleeDamage = 22.0F;
+        float meleeDamage = isStunBaton ? 18.0F : 22.0F;
         for (LivingEntity target : targets) {
             target.hurt(this.damageSources().mobAttack(this), meleeDamage);
-            Vec3 kb = forward.scale(1.2D).add(0, 0.35D, 0);
+            if (isStunBaton) {
+                target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 1, false, true, true));
+                target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, false, true, true));
+            }
+            Vec3 kb = forward.scale(isStunBaton ? 0.7D : 1.2D).add(0, 0.35D, 0);
             target.setDeltaMovement(kb);
             target.hurtMarked = true;
         }
 
         Level level = this.level();
-        level.playSound(null, this.blockPosition(), ModSounds.EXOFRAME_MELEE.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
+        if (isStunBaton) {
+            level.playSound(null, this.blockPosition(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 1.2F, 1.8F);
+        } else {
+            level.playSound(null, this.blockPosition(), ModSounds.EXOFRAME_MELEE.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
+        }
 
         if (level instanceof ServerLevel serverLevel) {
-            serverLevel.sendParticles(ParticleTypes.SWEEP_ATTACK,
-                    strikeCenter.x, strikeCenter.y, strikeCenter.z, 2, 0.2D, 0.2D, 0.2D, 0.0D);
+            serverLevel.sendParticles(isStunBaton ? ParticleTypes.ELECTRIC_SPARK : ParticleTypes.SWEEP_ATTACK,
+                    strikeCenter.x, strikeCenter.y, strikeCenter.z, isStunBaton ? 8 : 2, 0.2D, 0.2D, 0.2D, 0.0D);
         }
+    }
+
+    public boolean performFishing(ServerPlayer pilot) {
+        Level level = this.level();
+        if (level instanceof ServerLevel serverLevel) {
+            ItemStack weaponStack = modularInventory.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
+            List<ItemStack> catches = null;
+            try {
+                LootParams params = new LootParams.Builder(serverLevel)
+                        .withParameter(LootContextParams.ORIGIN, this.position())
+                        .withParameter(LootContextParams.TOOL, weaponStack)
+                        .withParameter(LootContextParams.THIS_ENTITY, this)
+                        .withLuck(pilot.getLuck() + 2.0F)
+                        .create(LootContextParamSets.FISHING);
+                catches = serverLevel.getServer().getLootData().getLootTable(BuiltInLootTables.FISHING).getRandomItems(params);
+            } catch (Throwable ignored) {}
+
+            if (catches == null || catches.isEmpty()) {
+                Item[] fishPool = {net.minecraft.world.item.Items.COD, net.minecraft.world.item.Items.SALMON, net.minecraft.world.item.Items.TROPICAL_FISH, net.minecraft.world.item.Items.PUFFERFISH};
+                catches = List.of(new ItemStack(fishPool[this.random.nextInt(fishPool.length)], 1 + this.random.nextInt(2)));
+            }
+
+            for (ItemStack loot : catches) {
+                ItemEntity itemEntity = new ItemEntity(serverLevel, this.getX(), this.getY() + 1.2D, this.getZ(), loot.copy());
+                itemEntity.setPickUpDelay(40);
+                Vec3 dir = pilot.getLookAngle().scale(-0.2D).add(0, 0.35D, 0);
+                itemEntity.setDeltaMovement(dir);
+                serverLevel.addFreshEntity(itemEntity);
+                pilot.getInventory().add(loot.copy());
+            }
+            serverLevel.playSound(null, this.blockPosition(), SoundEvents.FISHING_BOBBER_RETRIEVE, SoundSource.PLAYERS, 1.5F, 1.0F);
+            serverLevel.sendParticles(ParticleTypes.SPLASH, this.getX(), this.getY() + 0.5D, this.getZ(), 15, 0.5D, 0.2D, 0.5D, 0.1D);
+        }
+        this.weaponCooldown = 25;
+        return true;
     }
 
     public void triggerRecoilAnim() {
         this.entityData.set(DATA_RECOIL_TICK, this.tickCount);
+    }
+
+    public boolean hasShieldEquipped() {
+        return hasItemEquipped(ModItems.EXOFRAME_RIOT_SHIELD.get());
+    }
+
+    private void damageShieldDurability(float amount) {
+        if (this.level().isClientSide) return;
+        for (int i = 0; i < modularInventory.getSlots(); i++) {
+            ItemStack stack = modularInventory.getStackInSlot(i);
+            if (stack.is(ModItems.EXOFRAME_RIOT_SHIELD.get())) {
+                int newDamage = stack.getDamageValue() + Math.max(1, (int) amount);
+                if (newDamage >= stack.getMaxDamage()) {
+                    modularInventory.setStackInSlot(i, ItemStack.EMPTY);
+                    this.level().playSound(null, this.blockPosition(), SoundEvents.SHIELD_BREAK, SoundSource.PLAYERS, 2.0F, 0.8F);
+                    syncArmorMaskAndNotify();
+                } else {
+                    stack.setDamageValue(newDamage);
+                }
+                break;
+            }
+        }
     }
 
     /**
@@ -709,6 +916,31 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     @Override
     public boolean hurt(@NotNull DamageSource source, float amount) {
         if (isDying()) return false;
+
+        // Rescue sealed capsule fire immunity
+        boolean sealedRescue = hasItemEquipped(ModItems.ARMOR_RESCUE_HEAD.get()) && hasItemEquipped(ModItems.ARMOR_RESCUE_CHEST.get());
+        if (sealedRescue && source.is(DamageTypeTags.IS_FIRE)) {
+            return false;
+        }
+
+        // Frontal shield block
+        if (hasShieldEquipped()) {
+            Vec3 damagePos = source.getSourcePosition();
+            if (damagePos == null && source.getEntity() != null) {
+                damagePos = source.getEntity().position();
+            }
+            if (damagePos != null) {
+                Vec3 toSource = damagePos.subtract(this.position()).normalize();
+                float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
+                Vec3 lookHoriz = new Vec3(-Mth.sin(yawRad), 0, Mth.cos(yawRad)).normalize();
+                double dot = toSource.x * lookHoriz.x + toSource.z * lookHoriz.z;
+                if (dot > 0.3D) {
+                    this.level().playSound(null, this.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 2.0F, 0.9F + this.random.nextFloat() * 0.2F);
+                    damageShieldDurability(amount);
+                    return false;
+                }
+            }
+        }
 
         boolean isProjectile = source.is(DamageTypeTags.IS_PROJECTILE) || source.getDirectEntity() instanceof net.minecraft.world.entity.projectile.Projectile;
 
@@ -778,6 +1010,7 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     public void die(@NotNull DamageSource source) {
         super.die(source);
         if (!this.level().isClientSide) {
+            cleanUpLight();
             this.entityData.set(DATA_IS_DYING, true);
             this.deathTimer = DEATH_ANIMATION_TICKS;
 
@@ -790,6 +1023,23 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             }
 
             this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_DEATH.get(), SoundSource.PLAYERS, 2.5F, 0.9F);
+        }
+    }
+
+    @Override
+    public void remove(@NotNull RemovalReason reason) {
+        if (!this.level().isClientSide) {
+            cleanUpLight();
+        }
+        super.remove(reason);
+    }
+
+    private void cleanUpLight() {
+        if (lastLightPos != null) {
+            if (this.level().getBlockState(lastLightPos).is(Blocks.LIGHT)) {
+                this.level().setBlock(lastLightPos, Blocks.AIR.defaultBlockState(), 3);
+            }
+            lastLightPos = null;
         }
     }
 

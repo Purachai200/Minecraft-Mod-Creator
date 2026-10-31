@@ -39,8 +39,8 @@ public class ExoframeMiningDrillItem extends ExoframeWeaponItem {
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
         if (!(exoframe.level() instanceof ServerLevel serverLevel)) return false;
 
-        Vec3 eyePos = pilot.getEyePosition();
-        Vec3 look = pilot.getLookAngle();
+        Vec3 eyePos = pilot != null ? pilot.getEyePosition() : exoframe.getEyePosition();
+        Vec3 look = pilot != null ? pilot.getLookAngle() : exoframe.getLookAngle();
         double reach = 10.0D;
         Vec3 reachEnd = eyePos.add(look.scale(reach));
 
@@ -51,16 +51,34 @@ public class ExoframeMiningDrillItem extends ExoframeWeaponItem {
                 exoframe
         ));
 
+        // Frontal cone sweep if raycast didn't hit a collider block directly
+        if (hit.getType() != HitResult.Type.BLOCK) {
+            Vec3 forward = exoframe.getLookAngle().normalize();
+            for (double d = 1.0D; d <= 5.0D; d += 0.5D) {
+                for (double dy = -0.5D; dy <= 2.5D; dy += 0.5D) {
+                    BlockPos checkPos = BlockPos.containing(exoframe.getX() + forward.x * d, exoframe.getY() + dy, exoframe.getZ() + forward.z * d);
+                    BlockState bs = serverLevel.getBlockState(checkPos);
+                    if (!bs.isAir() && !bs.is(Blocks.BEDROCK)) {
+                        hit = new BlockHitResult(Vec3.atCenterOf(checkPos), net.minecraft.core.Direction.UP, checkPos, false);
+                        break;
+                    }
+                }
+                if (hit.getType() == HitResult.Type.BLOCK) break;
+            }
+        }
+
         if (hit.getType() == HitResult.Type.BLOCK) {
             BlockPos center = hit.getBlockPos();
             boolean mined = false;
-            int radius = 1;
+            boolean hasWorksite = exoframe.hasItemEquipped(ModItems.ARMOR_ROLL_CAGE.get());
+            int radius = hasWorksite ? 2 : 1;
+            double maxDist = hasWorksite ? 5.5D : 2.6D;
 
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dy = -radius; dy <= radius; dy++) {
                     for (int dz = -radius; dz <= radius; dz++) {
                         BlockPos target = center.offset(dx, dy, dz);
-                        if (target.distSqr(center) > 2.6D) continue;
+                        if (target.distSqr(center) > maxDist) continue;
                         BlockState state = serverLevel.getBlockState(target);
                         if (state.isAir()) continue;
 

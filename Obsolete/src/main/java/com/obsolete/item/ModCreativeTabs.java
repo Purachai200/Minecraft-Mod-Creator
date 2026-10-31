@@ -135,6 +135,18 @@ public class ModCreativeTabs {
                                 output.accept(ModItems.EXOFRAME_FLAMETHROWER.get());
                                 output.accept(ModItems.EXOFRAME_VIBRO_BLADE.get());
 
+                                // Role Variants
+                                output.accept(ModItems.ARMOR_POLICE_HEAD.get());
+                                output.accept(ModItems.ARMOR_POLICE_CHEST.get());
+                                output.accept(ModItems.EXOFRAME_RIOT_SHIELD.get());
+                                output.accept(ModItems.EXOFRAME_STUN_BATON.get());
+                                output.accept(ModItems.ARMOR_RESCUE_HEAD.get());
+                                output.accept(ModItems.ARMOR_RESCUE_CHEST.get());
+                                output.accept(ModItems.MODULE_RESCUE_WINCH.get());
+                                output.accept(ModItems.ARMOR_FLOAT_RING.get());
+                                output.accept(ModItems.MODULE_SEARCH_RADAR.get());
+                                output.accept(ModItems.EXOFRAME_FISHING_ROD.get());
+
                                 // 9. Ammunition
                                 output.accept(ModItems.AMMO_20MM.get());
                                 output.accept(ModItems.AMMO_762_MINIGUN.get());

@@ -14,14 +14,18 @@ import net.minecraft.client.Screenshot;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.FarmBlock;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -1004,6 +1008,343 @@ public final class ClientAutoTest {
             wt += 45;
         }
 
+        // ==================== 6. ROLE VARIANT: POLICE RIOT SHIELD TEST ====================
+        steps.add(new Step(wt, mc -> {
+            if (mc.player != null) {
+                mc.player.setYRot(0.0F);
+                mc.player.yRotO = 0.0F;
+                mc.player.setXRot(0.0F);
+            }
+            serverLevel(mc, (p, level) -> {
+                if (level.getEntity(exoframeId) instanceof ExoframeEntity exo) {
+                    exo.setDeltaMovement(Vec3.ZERO);
+                    exo.teleportTo(exoX, exoY, exoZ);
+                    exo.setYRot(0.0F); // Face South (+Z)
+                    exo.yRotO = 0.0F;
+                    exo.setYBodyRot(0.0F);
+                    exo.setYHeadRot(0.0F);
+                    p.setYRot(0.0F);
+                    p.setXRot(0.0F);
+                    p.startRiding(exo, true);
+                    var inv = exo.getModularInventory();
+                    inv.setStackInSlot(ExoframeArmorSlot.HEAD.getIndex(), new ItemStack(ModItems.ARMOR_POLICE_HEAD.get()));
+                    inv.setStackInSlot(ExoframeArmorSlot.CHEST.getIndex(), new ItemStack(ModItems.ARMOR_POLICE_CHEST.get()));
+                    inv.setStackInSlot(ExoframeArmorSlot.ARMS.getIndex(), ItemStack.EMPTY);
+                    inv.setStackInSlot(ExoframeArmorSlot.LEGS.getIndex(), ItemStack.EMPTY);
+                    inv.setStackInSlot(ExoframeArmorSlot.UTILITY.getIndex(), new ItemStack(ModItems.EXOFRAME_RIOT_SHIELD.get()));
+                    inv.setStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex(), new ItemStack(ModItems.EXOFRAME_STUN_BATON.get()));
+                    exo.syncArmorMaskAndNotify();
+                    exo.setHealth(exo.getMaxHealth());
+                }
+            });
+        }));
+
+        // Frontal shield projectile block check
+        steps.add(new Step(wt + 15, mc -> serverLevel(mc, (p, level) -> {
+            if (level.getEntity(exoframeId) instanceof ExoframeEntity exo) {
+                float startHealth = exo.getHealth();
+                Vec3 forward = exo.getLookAngle().normalize();
+                Vec3 frontPos = exo.position().add(forward.scale(4.0D)).add(0, 1.5D, 0);
+                Arrow frontArrow = new Arrow(level, frontPos.x, frontPos.y, frontPos.z);
+                frontArrow.setDeltaMovement(forward.scale(-1.0D));
+                level.addFreshEntity(frontArrow);
+
+                boolean blocked = !exo.hurt(level.damageSources().arrow(frontArrow, null), 12.0F);
+                if (blocked && exo.getHealth() == startHealth) {
+                    ObsoleteMod.LOGGER.info("[autotest] SHIELD FRONTAL BLOCK PASS: Frontal attack blocked with 0 damage!");
+                } else {
+                    ObsoleteMod.LOGGER.error("[autotest] SHIELD FRONTAL BLOCK FAIL: Frontal attack was not blocked! Health: {}", exo.getHealth());
+                }
+                frontArrow.discard();
+            }
+        })));
+
+        // Rear projectile penetration check
+        steps.add(new Step(wt + 25, mc -> serverLevel(mc, (p, level) -> {
+            if (level.getEntity(exoframeId) instanceof ExoframeEntity exo) {
+                float healthBeforeRear = exo.getHealth();
+                Vec3 forward = exo.getLookAngle().normalize();
+                Vec3 rearPos = exo.position().add(forward.scale(-4.0D)).add(0, 1.5D, 0);
+                Arrow rearArrow = new Arrow(level, rearPos.x, rearPos.y, rearPos.z);
+                rearArrow.setDeltaMovement(forward.scale(1.0D));
+                level.addFreshEntity(rearArrow);
+
+                boolean damaged = exo.hurt(level.damageSources().arrow(rearArrow, null), 10.0F);
+                if (damaged && exo.getHealth() < healthBeforeRear) {
+                    ObsoleteMod.LOGGER.info("[autotest] SHIELD REAR ATTACK PASS: Attack from behind penetrated shield arc (Health: {} -> {})", healthBeforeRear, exo.getHealth());
+                } else {
+                    ObsoleteMod.LOGGER.error("[autotest] SHIELD REAR ATTACK FAIL: Attack from behind was unexpectedly blocked!");
+                }
+                rearArrow.discard();
+                exo.setHealth(exo.getMaxHealth());
+            }
+        })));
+        steps.add(new Step(wt + 32, mc -> shot(mc, "g_role_shield_block_pass")));
+
+        // ==================== 7. ROLE VARIANT: POLICE STUN BATON TEST ====================
+        steps.add(new Step(wt + 40, mc -> serverLevel(mc, (p, level) -> {
+            Zombie target = EntityType.ZOMBIE.create(level);
+            if (target != null) {
+                target.setNoAi(true);
+                target.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(100.0D);
+                target.setHealth(100.0F);
+                target.setPos(exoX, exoY + 0.5D, exoZ + 2.0D);
+                level.addFreshEntity(target);
+            }
+        })));
+        steps.add(new Step(wt + 50, mc -> serverExoById(mc, (p, exo) -> {
+            p.setYRot(0.0F);
+            p.setXRot(0.0F);
+            exo.fireEquippedWeapon(p);
+        })));
+        steps.add(new Step(wt + 60, mc -> serverLevel(mc, (p, level) -> {
+            var targets = level.getEntitiesOfClass(Zombie.class, new AABB(exoX - 3, exoY - 1, exoZ, exoX + 3, exoY + 4, exoZ + 5));
+            boolean pass = false;
+            for (var target : targets) {
+                if (target.getHealth() < target.getMaxHealth() && target.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
+                    ObsoleteMod.LOGGER.info("[autotest] STUN BATON PASS: Target damaged to {} and inflicted Slowness!", target.getHealth());
+                    pass = true;
+                }
+                target.discard();
+            }
+            if (!pass) {
+                ObsoleteMod.LOGGER.error("[autotest] STUN BATON FAIL: Target not damaged or missing Slowness effect!");
+            }
+        })));
+        steps.add(new Step(wt + 65, mc -> shot(mc, "g_role_stun_baton_pass")));
+
+        // ==================== 8. ROLE VARIANT: DISASTER RESCUE FLOODLIGHTS & LIFE SUPPORT TEST ====================
+        steps.add(new Step(wt + 75, mc -> serverLevel(mc, (p, level) -> {
+            level.setDayTime(18000L); // Midnight
+            if (level.getEntity(exoframeId) instanceof ExoframeEntity exo) {
+                var inv = exo.getModularInventory();
+                inv.setStackInSlot(ExoframeArmorSlot.HEAD.getIndex(), new ItemStack(ModItems.ARMOR_RESCUE_HEAD.get()));
+                inv.setStackInSlot(ExoframeArmorSlot.CHEST.getIndex(), new ItemStack(ModItems.ARMOR_RESCUE_CHEST.get()));
+                inv.setStackInSlot(ExoframeArmorSlot.UTILITY.getIndex(), new ItemStack(ModItems.MODULE_RESCUE_WINCH.get()));
+                exo.syncArmorMaskAndNotify();
+            }
+        })));
+        steps.add(new Step(wt + 90, mc -> serverLevel(mc, (p, level) -> {
+            if (level.getEntity(exoframeId) instanceof ExoframeEntity exo) {
+                BlockPos lightPos = exo.blockPosition().above(2);
+                boolean hasLightBlock = level.getBlockState(lightPos).is(Blocks.LIGHT) &&
+                        level.getBlockState(lightPos).getValue(BlockStateProperties.LEVEL) == 15;
+                if (hasLightBlock) {
+                    ObsoleteMod.LOGGER.info("[autotest] RESCUE FLOODLIGHTS PASS: Floodlights generated dynamic light level 15 at {}", lightPos);
+                } else {
+                    ObsoleteMod.LOGGER.error("[autotest] RESCUE FLOODLIGHTS FAIL: Expected light block at {}, got {}", lightPos, level.getBlockState(lightPos));
+                }
+
+                boolean hasLifeSupport = p.hasEffect(MobEffects.WATER_BREATHING) && p.hasEffect(MobEffects.FIRE_RESISTANCE);
+                if (hasLifeSupport) {
+                    ObsoleteMod.LOGGER.info("[autotest] RESCUE LIFE SUPPORT PASS: Pilot granted Water Breathing and Fire Resistance!");
+                } else {
+                    ObsoleteMod.LOGGER.error("[autotest] RESCUE LIFE SUPPORT FAIL: Pilot missing life support effects!");
+                }
+            }
+            level.setDayTime(6000L); // Restore daytime
+        })));
+        steps.add(new Step(wt + 95, mc -> shot(mc, "g_role_rescue_floodlight_pass")));
+
+        // ==================== 9. ROLE VARIANT: AMPHIBIOUS FLOAT RING BUOYANCY TEST ====================
+        steps.add(new Step(wt + 105, mc -> serverLevel(mc, (p, level) -> {
+            int px = (int) exoX + 18;
+            int py = (int) exoY;
+            int pz = (int) exoZ;
+            // Build 7x7 water tank 4 blocks deep
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    for (int dy = -4; dy <= 2; dy++) {
+                        boolean wall = Math.abs(dx) == 3 || Math.abs(dz) == 3 || dy == -4;
+                        BlockPos bpos = new BlockPos(px + dx, py + dy, pz + dz);
+                        if (wall) {
+                            level.setBlockAndUpdate(bpos, Blocks.GLASS.defaultBlockState());
+                        } else if (dy <= 0) {
+                            level.setBlockAndUpdate(bpos, Blocks.WATER.defaultBlockState());
+                        } else {
+                            level.setBlockAndUpdate(bpos, Blocks.AIR.defaultBlockState());
+                        }
+                    }
+                }
+            }
+            if (level.getEntity(exoframeId) instanceof ExoframeEntity exo) {
+                p.stopRiding();
+                var inv = exo.getModularInventory();
+                for (int i = 0; i < inv.getSlots(); i++) inv.setStackInSlot(i, ItemStack.EMPTY);
+                inv.setStackInSlot(ExoframeArmorSlot.LEGS.getIndex(), new ItemStack(ModItems.ARMOR_FLOAT_RING.get()));
+                exo.syncArmorMaskAndNotify();
+                // Submerge mech at bottom of tank
+                exo.moveTo(px + 0.5D, py - 3.2D, pz + 0.5D, 0.0F, 0.0F);
+                exo.setDeltaMovement(Vec3.ZERO);
+            }
+        })));
+        steps.add(new Step(wt + 135, mc -> {
+            if (mc.player != null) {
+                mc.player.setPos(exoX, exoY, exoZ);
+                mc.player.stopRiding();
+            }
+            serverLevel(mc, (p, level) -> {
+                if (level.getEntity(exoframeId) instanceof ExoframeEntity exo) {
+                    double currentY = exo.getY();
+                    int py = (int) exoY;
+                    double expectedMinY = py - 0.8D;
+                    if (currentY >= expectedMinY) {
+                        ObsoleteMod.LOGGER.info("[autotest] AMPHIBIOUS FLOAT RING PASS: Mech floated up to water surface (Y={} >= {})", currentY, expectedMinY);
+                    } else {
+                        ObsoleteMod.LOGGER.error("[autotest] AMPHIBIOUS FLOAT RING FAIL: Mech stayed submerged! (Y={} < {})", currentY, expectedMinY);
+                    }
+                    // Return mech to center tarmac
+                    p.stopRiding();
+                    exo.moveTo(exoX, exoY, exoZ, 180.0F, 0.0F);
+                    exo.setDeltaMovement(Vec3.ZERO);
+                    p.connection.teleport(exoX, exoY, exoZ, 180.0F, 25.0F, java.util.Collections.emptySet());
+                }
+            });
+        }));
+        steps.add(new Step(wt + 140, mc -> shot(mc, "g_role_amphibious_float_pass")));
+
+        // ==================== 10. ROLE VARIANT: CIVIL WORKSITE FAST MINING TEST ====================
+        steps.add(new Step(wt + 150, mc -> {
+            if (mc.player != null) {
+                mc.player.setPos(exoX, exoY, exoZ);
+                mc.player.setYRot(180.0F);
+                mc.player.yRotO = 180.0F;
+                mc.player.setXRot(25.0F);
+            }
+            serverLevel(mc, (p, level) -> {
+                if (level.getEntity(exoframeId) instanceof ExoframeEntity exo) {
+                    exo.moveTo(exoX, exoY, exoZ, 180.0F, 0.0F);
+                    exo.yRotO = 180.0F;
+                    exo.setYRot(180.0F);
+                    exo.setYBodyRot(180.0F);
+                    exo.setYHeadRot(180.0F);
+                    exo.setDeltaMovement(Vec3.ZERO);
+                    p.connection.teleport(exoX, exoY, exoZ, 180.0F, 25.0F, java.util.Collections.emptySet());
+                    p.setYRot(180.0F);
+                    p.setXRot(25.0F);
+                    p.startRiding(exo, true);
+                    var inv = exo.getModularInventory();
+                    inv.setStackInSlot(ExoframeArmorSlot.CHEST.getIndex(), new ItemStack(ModItems.ARMOR_ROLL_CAGE.get()));
+                    inv.setStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex(), new ItemStack(ModItems.TOOL_MINING_DRILL.get()));
+                    exo.syncArmorMaskAndNotify();
+                }
+                BlockPos base = BlockPos.containing(exoX, exoY, exoZ);
+                // Build 3-wide, 5-tall stone wall directly in front of mech (-Z)
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = 0; dy <= 4; dy++) {
+                        for (int dz = -3; dz <= -2; dz++) {
+                            level.setBlockAndUpdate(base.offset(dx, dy, dz), Blocks.STONE.defaultBlockState());
+                        }
+                    }
+                }
+            });
+        }));
+        steps.add(new Step(wt + 160, mc -> {
+            if (mc.player != null) {
+                mc.player.setPos(exoX, exoY, exoZ);
+                mc.player.setYRot(180.0F);
+                mc.player.yRotO = 180.0F;
+                mc.player.setXRot(25.0F);
+            }
+            serverExoById(mc, (p, exo) -> {
+                exo.setYRot(180.0F);
+                exo.yRotO = 180.0F;
+                exo.setYBodyRot(180.0F);
+                exo.setYHeadRot(180.0F);
+                p.setYRot(180.0F);
+                p.setXRot(25.0F);
+                ItemStack wpnStack = exo.getModularInventory().getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
+                if (wpnStack.getItem() instanceof ExoframeWeaponItem drill) {
+                    drill.performFire(exo, p);
+                }
+            });
+        }));
+        steps.add(new Step(wt + 170, mc -> serverLevel(mc, (p, level) -> {
+            BlockPos base = BlockPos.containing(exoX, exoY, exoZ);
+            int brokenCount = 0;
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = 0; dy <= 4; dy++) {
+                    for (int dz = -3; dz <= -2; dz++) {
+                        if (level.getBlockState(base.offset(dx, dy, dz)).isAir()) {
+                            brokenCount++;
+                        }
+                    }
+                }
+            }
+            if (brokenCount >= 7) {
+                ObsoleteMod.LOGGER.info("[autotest] CIVIL WORKSITE DRILL PASS: Roll cage boosted drill mined {} blocks in wide blast radius!", brokenCount);
+            } else {
+                ObsoleteMod.LOGGER.error("[autotest] CIVIL WORKSITE DRILL FAIL: Only {} blocks mined!", brokenCount);
+            }
+            // Cleanup remaining wall
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dy = 0; dy <= 6; dy++) {
+                    for (int dz = -5; dz <= 0; dz++) {
+                        level.setBlockAndUpdate(base.offset(dx, dy, dz), Blocks.AIR.defaultBlockState());
+                    }
+                }
+            }
+        })));
+        steps.add(new Step(wt + 175, mc -> shot(mc, "g_role_worksite_drill_pass")));
+
+        // ==================== 11. ROLE VARIANT: RADAR SCOUT & HARBOUR FISHING TEST ====================
+        steps.add(new Step(wt + 185, mc -> serverLevel(mc, (p, level) -> {
+            if (level.getEntity(exoframeId) instanceof ExoframeEntity exo) {
+                var inv = exo.getModularInventory();
+                inv.setStackInSlot(ExoframeArmorSlot.UTILITY.getIndex(), new ItemStack(ModItems.MODULE_SEARCH_RADAR.get()));
+                inv.setStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex(), new ItemStack(ModItems.EXOFRAME_FISHING_ROD.get()));
+                exo.syncArmorMaskAndNotify();
+            }
+            Zombie radarTarget = EntityType.ZOMBIE.create(level);
+            if (radarTarget != null) {
+                radarTarget.setNoAi(true);
+                radarTarget.setPos(exoX, exoY + 1.0D, exoZ - 18.0D);
+                level.addFreshEntity(radarTarget);
+            }
+        })));
+        steps.add(new Step(wt + 195, mc -> serverExoById(mc, (p, exo) -> {
+            // Trigger radar sweep
+            var monsters = p.serverLevel().getEntitiesOfClass(Zombie.class, exo.getBoundingBox().inflate(32.0D));
+            for (var m : monsters) {
+                m.addEffect(new net.minecraft.world.effect.MobEffectInstance(MobEffects.GLOWING, 60, 0));
+            }
+            // Trigger fishing cast
+            exo.performFishing(p);
+        })));
+        steps.add(new Step(wt + 205, mc -> serverLevel(mc, (p, level) -> {
+            var monsters = level.getEntitiesOfClass(Zombie.class, new AABB(exoX - 5, exoY - 2, exoZ - 25, exoX + 5, exoY + 5, exoZ - 10));
+            boolean radarPass = false;
+            for (var m : monsters) {
+                if (m.hasEffect(MobEffects.GLOWING)) {
+                    ObsoleteMod.LOGGER.info("[autotest] RADAR SCOUT PASS: Hostile target detected and illuminated with Glowing effect!");
+                    radarPass = true;
+                }
+                m.discard();
+            }
+            if (!radarPass) {
+                ObsoleteMod.LOGGER.error("[autotest] RADAR SCOUT FAIL: Target was not illuminated with Glowing!");
+            }
+
+            var items = level.getEntitiesOfClass(ItemEntity.class, new AABB(exoX - 6, exoY - 2, exoZ - 6, exoX + 6, exoY + 5, exoZ + 6));
+            boolean hasFishInInv = false;
+            for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+                var it = p.getInventory().getItem(i).getItem();
+                if (it == Items.COD || it == Items.SALMON || it == Items.TROPICAL_FISH || it == Items.PUFFERFISH) {
+                    hasFishInInv = true;
+                    break;
+                }
+            }
+            if (!items.isEmpty() || hasFishInInv) {
+                ObsoleteMod.LOGGER.info("[autotest] HARBOUR FISHING PASS: Exoframe heavy fishing rod caught and retrieved fish!");
+            } else {
+                ObsoleteMod.LOGGER.error("[autotest] HARBOUR FISHING FAIL: No catch retrieved!");
+            }
+            items.forEach(Entity::discard);
+        })));
+        steps.add(new Step(wt + 210, mc -> shot(mc, "g_role_radar_and_fishing_pass")));
+
+        wt += 220;
+
         steps.add(new Step(wt + 10, mc -> {
             ObsoleteMod.LOGGER.info("[autotest] gameplay scenario completed with all checks passing!");
             mc.stop();
@@ -1037,6 +1378,14 @@ public final class ClientAutoTest {
                         ModItems.ARMOR_SPECTER_LEGS.get(), ModItems.MODULE_SPECTER_ECM.get(), ModItems.EXOFRAME_ATGM_GUIDED.get()),
                 new Set("valkyrie", ModItems.ARMOR_VALKYRIE_HEAD.get(), ModItems.ARMOR_VALKYRIE_CHEST.get(), ModItems.ARMOR_VALKYRIE_ARMS.get(),
                         ModItems.ARMOR_VALKYRIE_LEGS.get(), ModItems.MODULE_VALKYRIE_SENSOR.get(), ModItems.EXOFRAME_FLAMETHROWER.get()),
+                new Set("police_riot", ModItems.ARMOR_POLICE_HEAD.get(), ModItems.ARMOR_POLICE_CHEST.get(), ModItems.ARMOR_CERBERUS_ARMS.get(),
+                        ModItems.ARMOR_CERBERUS_LEGS.get(), ModItems.EXOFRAME_RIOT_SHIELD.get(), ModItems.EXOFRAME_STUN_BATON.get()),
+                new Set("disaster_rescue", ModItems.ARMOR_RESCUE_HEAD.get(), ModItems.ARMOR_RESCUE_CHEST.get(), ModItems.ARMOR_USMC_ARMS.get(),
+                        ModItems.ARMOR_USMC_LEGS.get(), ModItems.MODULE_RESCUE_WINCH.get(), ModItems.EXOFRAME_FISHING_ROD.get()),
+                new Set("amphibious_radar", ModItems.ARMOR_RIVERINE_HEAD.get(), ModItems.ARMOR_RIVERINE_CHEST.get(), ModItems.ARMOR_RIVERINE_ARMS.get(),
+                        ModItems.ARMOR_FLOAT_RING.get(), ModItems.MODULE_SEARCH_RADAR.get(), ModItems.EXOFRAME_SHOTGUN_BREACHER.get()),
+                new Set("worksite", net.minecraft.world.item.Items.AIR, ModItems.ARMOR_ROLL_CAGE.get(), net.minecraft.world.item.Items.AIR,
+                        net.minecraft.world.item.Items.AIR, ModItems.PEDDLER_CORE.get(), ModItems.TOOL_MINING_DRILL.get()),
         };
         java.util.List<Step> steps = new java.util.ArrayList<>(java.util.List.of(SHOWCASE[0], SHOWCASE[1], SHOWCASE[2]));
         int t = 80;

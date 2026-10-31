@@ -197,6 +197,25 @@ BONES = [
     ("weapon_atgm_guided", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [600, 520]),
     ("weapon_flamethrower", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [720, 520]),
     ("weapon_vibro_blade", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [840, 520]),
+
+    # ==================== ROLE VARIANTS ====================
+    # 1. Riot Police
+    ("armor_head_police", "head", [0, 32, -1], [0, 660]),
+    ("canopy_police", "torso", [0, 20, 0], [0, 660]),
+    ("armor_chest_police", "torso", [0, 20, 0], [0, 660]),
+    ("weapon_riot_shield", "left_hand", [7.0, 17.6, -0.5], [0, 840]),
+    ("weapon_stun_baton", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [120, 840]),
+    # 2. Disaster Rescue NGO
+    ("armor_head_rescue", "head", [0, 32, -1], [250, 660]),
+    ("canopy_rescue", "torso", [0, 20, 0], [250, 660]),
+    ("armor_chest_rescue", "torso", [0, 20, 0], [250, 660]),
+    ("backpack_rescue", "torso", [0, 24, 8], [250, 660]),
+    # 3. Amphibious Assault
+    ("armor_float_ring", "pelvis", [0, 17, 0], [500, 660]),
+    # 5. Radar Scout
+    ("backpack_radar", "torso", [0, 24, 8], [750, 660]),
+    # 6. Harbour Fishing Rod
+    ("weapon_fishing_rod", "right_hand_weapon_mount", [-7.0, 16.0, -2.0], [240, 840]),
 ]
 
 C = {}
@@ -372,7 +391,8 @@ for z in (-3.4, 7.2):
 add(r, (-0.35, 60.2, -3.4, 0.7, 0.7, 11.3),
     (-5.0, 44.0, 7.2, 10.0, 0.7, 0.7),
     (-1.8, 60.9, -3.6, 3.6, 0.7, 0.7),
-    (-1.4, 61.0, -3.8, 0.8, 0.5, 0.2), (0.6, 61.0, -3.8, 0.8, 0.5, 0.2))
+    (-1.4, 61.0, -3.8, 0.8, 0.5, 0.2), (0.6, 61.0, -3.8, 0.8, 0.5, 0.2),
+    (-3.0, 61.2, -3.8, 2.0, 1.4, 1.2), (1.0, 61.2, -3.8, 2.0, 1.4, 1.2))
 sym(r, (4.6, 29.0, 7.2, 0.7, 30.0, 0.7),
     (4.6, 31.0, -3.4, 0.7, 28.0, 0.7),
     (4.2, 59.0, 7.2, 0.7, 1.2, 0.7), (3.8, 59.8, 7.2, 0.7, 1.1, 0.7),
@@ -380,7 +400,8 @@ sym(r, (4.6, 29.0, 7.2, 0.7, 30.0, 0.7),
     (3.8, 60.2, -3.4, 0.7, 0.7, 11.3),
     *stepped(4.6, 58.0, -3.0, 45.0, 7.2, 0.5, 0.5, 6),
     (4.4, 30.0, 6.9, 1.1, 0.6, 1.3),
-    (4.4, 31.0, -3.7, 1.1, 0.6, 1.3))
+    (4.4, 31.0, -3.7, 1.1, 0.6, 1.3),
+    (5.4, 42.0, 0.0, 0.8, 6.0, 1.6))
 
 # ==================== 4. BACKPACKS & REAR MODULES ====================
 MOUNT = [(-3.6, 21.6, 6.6, 7.2, 9.8, 0.8),
@@ -1317,6 +1338,120 @@ add(g,
     (X - 0.25, 13.0, -30.0, 0.5, 1.6, 2.0),
     (X - 0.4, 14.8, -24.0, 0.8, 0.4, 18.0))
 
+# ==================== ROLE VARIANTS GEOMETRY ====================
+# 1. Tactical Police
+add("armor_head_police",
+    (-2.4, 31.0, -4.8, 4.8, 3.2, 4.0), # Police sensor helmet base
+    (-2.3, 33.0, -5.2, 4.6, 1.0, 0.6), # Brow visor cowl
+    (-2.2, 34.2, -4.8, 2.0, 1.0, 1.0), # Strobe beacon left (blue)
+    (0.2, 34.2, -4.8, 2.0, 1.0, 1.0),  # Strobe beacon right (red)
+    (-0.4, 34.2, -5.2, 0.8, 1.0, 1.0), # Siren horn center
+    (2.2, 32.5, -2.0, 0.5, 3.5, 0.5))  # Comms antenna
+
+c = "canopy_police"
+add(c,
+    *round_ring(33.0, 14.0, 9.6, -9.6, 10.4, r=3.0),
+    *round_ring(47.0, 2.0, 9.6, -9.6, 10.4, r=3.0, front=False), # Visor slot
+    *round_ring(49.0, 6.0, 9.4, -9.0, 10.2, r=3.0),
+    *round_ring(55.0, 3.0, 8.0, -6.0, 10.0, r=2.6),
+    *round_ring(58.0, 2.0, 6.0, -3.0, 9.8, r=2.2),
+    (-4.8, 60.0, -2.0, 9.6, 0.8, 11.0), # Roof plate
+    (-6.0, 47.0, -9.4, 12.0, 2.0, 0.3), # Polycarbonate visor pane
+    (-4.0, 60.8, 2.0, 2.0, 1.0, 1.4),  # Blue emergency bar
+    (2.0, 60.8, 2.0, 2.0, 1.0, 1.4))   # Red emergency bar
+
+add("armor_chest_police",
+    (-5.0, 22.0, -6.2, 10.0, 8.0, 1.2), # Main chest plate
+    (-4.5, 23.0, -6.8, 3.8, 3.0, 0.7),  # Tactical pouch left
+    (0.7, 23.0, -6.8, 3.8, 3.0, 0.7),   # Tactical pouch right
+    (-3.5, 17.0, -5.8, 7.0, 4.8, 0.8))  # Abdominal groin flap
+
+add("weapon_riot_shield",
+    (4.5, 9.0, -6.5, 6.0, 20.0, 0.8),   # Center shield body
+    (10.5, 9.0, -5.7, 1.8, 20.0, 1.2),  # Left curved wing
+    (2.7, 9.0, -5.7, 1.8, 20.0, 1.2),   # Right curved wing
+    (5.5, 23.0, -6.7, 4.0, 2.0, 0.4),   # Transparent viewport insert
+    (2.5, 29.0, -6.5, 10.0, 0.8, 2.0),  # Heavy top strike edge
+    (2.5, 8.2, -6.5, 10.0, 0.8, 2.0),   # Bottom strike rim
+    (6.0, 16.5, -4.5, 2.0, 2.0, 4.0))   # Forearm clamp bracket
+
+add("weapon_stun_baton",
+    (X - 0.5, 11.0, -3.0, 1.0, 5.0, 1.0),  # Rubberized grip handle
+    (X - 1.0, 16.0, -3.5, 2.0, 0.6, 2.0),  # Shock guard disc
+    (X - 0.4, 16.6, -2.9, 0.8, 16.0, 0.8), # Polycarbonate core shaft
+    (X - 0.6, 32.6, -3.1, 1.2, 3.0, 1.2),  # Stun electrode tip
+    (X - 0.6, 20.0, -3.1, 1.2, 0.5, 1.2),  # Arc ring 1
+    (X - 0.6, 24.0, -3.1, 1.2, 0.5, 1.2),  # Arc ring 2
+    (X - 0.6, 28.0, -3.1, 1.2, 0.5, 1.2))  # Arc ring 3
+
+# 2. Disaster Rescue NGO
+add("armor_head_rescue",
+    (-2.4, 31.0, -4.8, 4.8, 3.2, 4.0),  # Main rescue dome base
+    (-2.3, 32.2, -5.2, 1.8, 1.8, 1.2),  # Left floodlight housing
+    *disc_z(-1.4, 33.1, -5.3, 0.7, 0.2), # Left floodlight lens
+    (0.5, 32.2, -5.2, 1.8, 1.8, 1.2),   # Right floodlight housing
+    *disc_z(1.4, 33.1, -5.3, 0.7, 0.2),  # Right floodlight lens
+    (-0.6, 31.2, -5.2, 1.2, 1.0, 0.8))  # Infrared thermal life-detector
+
+c = "canopy_rescue"
+add(c,
+    *round_ring(33.0, 15.0, 9.8, -9.6, 10.4, r=3.2),
+    *round_ring(48.0, 5.0, 9.4, -9.0, 10.4, r=3.2),
+    *round_ring(53.0, 3.0, 8.4, -7.0, 10.2, r=2.8),
+    *round_ring(56.0, 2.4, 7.0, -4.0, 10.2, r=2.2),
+    *round_ring(58.4, 2.0, 5.4, -1.0, 10.2, r=1.8),
+    (-4.2, 60.4, -0.5, 8.4, 0.6, 10.6), # Roof plate
+    (-8.0, 42.0, -9.8, 1.0, 16.0, 1.0), # Crash cage left
+    (7.0, 42.0, -9.8, 1.0, 16.0, 1.0),  # Crash cage right
+    (-8.0, 50.0, -9.8, 16.0, 1.0, 1.0)) # Crash crossbar
+
+add("armor_chest_rescue",
+    (-4.8, 22.0, -6.0, 9.6, 7.5, 1.2),  # Main chest shell
+    (-3.8, 23.0, -6.8, 7.6, 4.5, 0.9),  # Paramedic kit container
+    (-4.0, 18.0, -5.6, 8.0, 3.8, 0.8))  # Lower crash bumper
+
+add("backpack_rescue",
+    *MOUNT,
+    *disc_y(-4.0, 24.0, 8.5, 1.5, 13.0),
+    (-4.0, 37.0, 8.5, 1.0, 1.0, 1.0),   # Valve top left
+    *disc_y(2.5, 24.0, 8.5, 1.5, 13.0),
+    (2.5, 37.0, 8.5, 1.0, 1.0, 1.0),    # Valve top right
+    *ring_x(-2.5, 28.0, 11.5, 2.0, 5.0), # Winch drum
+    (-0.6, 25.0, 12.5, 1.2, 5.0, 1.2),  # Cable guide arm
+    (-0.8, 23.5, 12.5, 1.6, 1.5, 1.6))  # Heavy forged steel rescue hook
+
+# 3. Amphibious Assault
+add("armor_float_ring",
+    (-8.0, 16.0, -8.0, 16.0, 4.0, 3.5), # Front pontoon
+    (6.5, 16.0, -8.0, 3.5, 4.0, 16.0),  # Left pontoon
+    (-10.0, 16.0, -8.0, 3.5, 4.0, 16.0),# Right pontoon
+    (-8.0, 16.0, 4.5, 16.0, 4.0, 3.5),  # Rear pontoon
+    *disc_x(-10.8, 18.0, 0.0, 1.0, 1.8),# Flank CO2 canister L
+    *disc_x(8.8, 18.0, 0.0, 1.0, 1.8))  # Flank CO2 canister R
+
+# 5. Radar Scout
+add("backpack_radar",
+    *MOUNT,
+    (-0.8, 24.0, 8.0, 1.6, 20.0, 1.6),  # Articulated mast
+    (-1.5, 44.0, 7.5, 3.0, 2.0, 2.6),   # Rotator drive gearbox
+    (-1.0, 46.0, 7.0, 2.0, 8.0, 1.2),   # Center hub
+    (-8.0, 47.0, 6.5, 7.0, 6.0, 0.8),   # Left reflector panel
+    (1.0, 47.0, 6.5, 7.0, 6.0, 0.8),    # Right reflector panel
+    (-0.6, 49.0, 4.8, 1.2, 1.2, 2.0))   # Feed horn transmitter
+
+# 6. Harbour Fishing Rod
+add("weapon_fishing_rod",
+    (X - 0.8, 12.0, -3.0, 1.6, 4.0, 1.6), # Mounting collar
+    *ring_x(X - 1.2, 14.0, -4.5, 1.8, 2.4),# Winch spool
+    (X - 0.5, 16.0, -4.0, 1.0, 12.0, 1.0), # Base rod section
+    (X - 0.4, 28.0, -4.0, 0.8, 12.0, 0.8), # Mid telescoping rod
+    (X - 0.3, 40.0, -4.0, 0.6, 12.0, 0.6), # Tip carbon rod
+    (X - 0.3, 22.0, -4.8, 0.6, 0.6, 0.8),  # Guide ring 1
+    (X - 0.3, 34.0, -4.8, 0.6, 0.6, 0.8),  # Guide ring 2
+    (X - 0.3, 46.0, -4.8, 0.6, 0.6, 0.8),  # Guide ring 3
+    (X - 0.3, 51.5, -4.8, 0.6, 0.6, 0.8),  # Guide ring 4
+    (X - 0.5, 48.0, -6.0, 1.0, 1.6, 1.0))  # Bobber tackle
+
 def cube(b, uv):
     return {
         "origin": [round(v, 3) for v in b[:3]],
@@ -1331,11 +1466,13 @@ AUTHORED = (0.0, 21.6, 5.1)
 SEATED = (0.0, (30.8 * MODEL_SCALE - 10.0) / MODEL_SCALE, 4.3)
 HEAD_GROUP = (
     "head", "armor_head", "armor_head_usmc", "armor_head_dome", "armor_head_votoms", "armor_head_hood", "armor_head_polar",
-    "armor_head_salvage", "armor_head_shiden", "armor_head_khamsin", "armor_head_riverine", "armor_head_specter", "armor_head_valkyrie"
+    "armor_head_salvage", "armor_head_shiden", "armor_head_khamsin", "armor_head_riverine", "armor_head_specter", "armor_head_valkyrie",
+    "armor_head_police", "armor_head_rescue"
 )
 CANOPIES = (
     "canopy_usmc", "canopy_cerberus", "canopy_polar", "canopy_hood",
-    "canopy_salvage", "canopy_shiden", "canopy_khamsin", "canopy_riverine", "canopy_specter", "canopy_valkyrie"
+    "canopy_salvage", "canopy_shiden", "canopy_khamsin", "canopy_riverine", "canopy_specter", "canopy_valkyrie",
+    "canopy_police", "canopy_rescue"
 )
 
 def to_seat(b):
@@ -1436,6 +1573,8 @@ AIM_HOLDS = {
     "weapon_atgm_guided": ((-8, 10.0, -2.0), (-7.0, 27.5, -7.3), 0.02, 0.80),
     "weapon_flamethrower": ((-8, 11.0, -1.8), (-6.4, 24.0, -7.4), 0.03, 0.75),
     "weapon_vibro_blade": ((-8, 12.0, -1.0), (-5.5, 24.0, -7.0), 0.02, 0.50),
+    "weapon_stun_baton": ((-8, 12.0, -1.0), (-5.5, 24.0, -7.0), 0.02, 0.50),
+    "weapon_fishing_rod": ((-8, 12.0, -1.0), (-5.5, 25.0, -7.0), 0.02, 0.50),
 }
 
 gun_head_clashes = []
@@ -1541,6 +1680,27 @@ FACTION_UV_REGIONS = {
     "Valkyrie": (
         ["armor_head_valkyrie", "armor_chest_valkyrie", "canopy_valkyrie", "armor_left_shoulder_valkyrie", "armor_right_shoulder_valkyrie", "armor_left_leg_valkyrie", "armor_right_leg_valkyrie", "backpack_valkyrie", "armor_left_shin_valkyrie", "armor_right_shin_valkyrie"],
         [(937, 0, 85, 340)]
+    ),
+    # Role Variants in 1024 space (y >= 660)
+    "Police": (
+        ["armor_head_police", "canopy_police", "armor_chest_police"],
+        [(0, 660, 250, 180)]
+    ),
+    "Rescue": (
+        ["armor_head_rescue", "canopy_rescue", "armor_chest_rescue", "backpack_rescue"],
+        [(250, 660, 250, 180)]
+    ),
+    "Amphibious": (
+        ["armor_float_ring"],
+        [(500, 660, 250, 180)]
+    ),
+    "Radar": (
+        ["backpack_radar"],
+        [(750, 660, 250, 180)]
+    ),
+    "RoleWeapons": (
+        ["weapon_riot_shield", "weapon_stun_baton", "weapon_fishing_rod"],
+        [(0, 840, 600, 180)]
     )
 }
 

@@ -1,0 +1,15 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "minecraft:blue_stained_glass"
+    }
+  ],
+  "result": {
+    "item": "obsolete:armor_police_head",
+    "count": 1
+  }
+}

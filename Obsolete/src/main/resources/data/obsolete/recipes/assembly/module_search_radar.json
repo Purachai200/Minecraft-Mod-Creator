@@ -1,0 +1,15 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:servo_motor"
+    },
+    {
+      "item": "minecraft:lightning_rod"
+    }
+  ],
+  "result": {
+    "item": "obsolete:module_search_radar",
+    "count": 1
+  }
+}
