@@ -62,7 +62,7 @@ public class ExoframeSniperRifleItem extends ExoframeWeaponItem {
         bullet.shoot(shootDir.x, shootDir.y, shootDir.z, 9.0F, 0.05F);
         level.addFreshEntity(bullet);
 
-        spawnMuzzleFlashAndCasing(level, muzzlePos, forward, right, false);
+        spawnMuzzleFlashAndCasing(level, muzzlePos, forward, right, true);
 
         // Loud sniper firing report
         level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_SNIPER_FIRE.get(), SoundSource.PLAYERS, 3.5F, 1.0F);

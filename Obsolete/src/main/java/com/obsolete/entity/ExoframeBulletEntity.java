@@ -17,9 +17,12 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 
+import java.util.List;
+
 public class ExoframeBulletEntity extends ThrowableProjectile {
     private float bulletDamage = 26.0F;
     private int lifeTicks = 0;
+    private boolean hasPlayedFlyby = false;
 
     public ExoframeBulletEntity(EntityType<? extends ThrowableProjectile> entityType, Level level) {
         super(entityType, level);
@@ -68,14 +71,31 @@ public class ExoframeBulletEntity extends ThrowableProjectile {
             return;
         }
 
-        // Trace kinetic contrail
+        // Supersonic bullet flyby snap sound when screaming past living entities
+        if (!this.level().isClientSide && !hasPlayedFlyby && lifeTicks > 1) {
+            Entity shooter = this.getOwner();
+            List<LivingEntity> nearby = this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(3.5D),
+                    e -> e != shooter && (shooter == null || e != shooter.getVehicle()));
+            if (!nearby.isEmpty()) {
+                hasPlayedFlyby = true;
+                float whizPitch = 1.85F + this.random.nextFloat() * 0.25F;
+                this.level().playSound(null, this.blockPosition(), SoundEvents.ARROW_SHOOT, SoundSource.PLAYERS, 1.8F, whizPitch);
+            }
+        }
+
+        // Trace kinetic contrail with glowing rear tracer flame
         if (this.level().isClientSide) {
             Vec3 pos = this.position();
             Vec3 delta = this.getDeltaMovement();
             this.level().addParticle(ParticleTypes.CRIT,
-                    pos.x - delta.x * 0.4D,
-                    pos.y - delta.y * 0.4D,
-                    pos.z - delta.z * 0.4D,
+                    pos.x - delta.x * 0.35D,
+                    pos.y - delta.y * 0.35D,
+                    pos.z - delta.z * 0.35D,
+                    0, 0, 0);
+            this.level().addParticle(ParticleTypes.SMALL_FLAME,
+                    pos.x - delta.x * 0.55D,
+                    pos.y - delta.y * 0.55D,
+                    pos.z - delta.z * 0.55D,
                     0, 0, 0);
         }
     }
@@ -103,8 +123,11 @@ public class ExoframeBulletEntity extends ThrowableProjectile {
                         target.getX(), target.getY() + target.getEyeHeight() * 0.6D, target.getZ(),
                         8, 0.2D, 0.2D, 0.2D, 0.1D);
             }
-            float pitch = 0.9F + this.random.nextFloat() * 0.2F;
-            this.level().playSound(null, this.blockPosition(), com.obsolete.sound.ModSounds.WEAPON_IMPACT_METAL.get(), SoundSource.PLAYERS, 1.4F, pitch);
+
+            // Punchy kinetic impact sound: heavy metal clang + critical hit crunch
+            float pitch = 0.95F + this.random.nextFloat() * 0.15F;
+            this.level().playSound(null, this.blockPosition(), com.obsolete.sound.ModSounds.WEAPON_IMPACT_METAL.get(), SoundSource.PLAYERS, 1.5F, pitch);
+            this.level().playSound(null, this.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 1.2F, 1.15F);
             this.discard();
         }
     }
@@ -116,13 +139,16 @@ public class ExoframeBulletEntity extends ThrowableProjectile {
             if (this.level() instanceof ServerLevel serverLevel) {
                 serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
                         result.getLocation().x, result.getLocation().y, result.getLocation().z,
-                        4, 0.1D, 0.1D, 0.1D, 0.08D);
+                        6, 0.12D, 0.12D, 0.12D, 0.1D);
                 serverLevel.sendParticles(ParticleTypes.SMOKE,
                         result.getLocation().x, result.getLocation().y, result.getLocation().z,
                         6, 0.1D, 0.1D, 0.1D, 0.05D);
             }
-            float pitch = 1.0F + this.random.nextFloat() * 0.2F;
-            this.level().playSound(null, this.blockPosition(), com.obsolete.sound.ModSounds.WEAPON_IMPACT_METAL.get(), SoundSource.PLAYERS, 1.0F, pitch);
+
+            // High-velocity ricochet / ceramic shatter sound: metal impact + anvil ping
+            float pitch = 1.05F + this.random.nextFloat() * 0.2F;
+            this.level().playSound(null, this.blockPosition(), com.obsolete.sound.ModSounds.WEAPON_IMPACT_METAL.get(), SoundSource.PLAYERS, 1.3F, pitch);
+            this.level().playSound(null, this.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.7F, 1.85F + this.random.nextFloat() * 0.2F);
             this.discard();
         }
     }

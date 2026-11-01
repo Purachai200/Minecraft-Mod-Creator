@@ -37,6 +37,14 @@ public class ModEntities {
                             .updateInterval(1)
                             .build("exoframe_rocket"));
 
+    public static final RegistryObject<EntityType<ExoframeCasingEntity>> CASING =
+            ENTITIES.register("exoframe_casing", () ->
+                    EntityType.Builder.<ExoframeCasingEntity>of(ExoframeCasingEntity::new, MobCategory.MISC)
+                            .sized(0.25F, 0.25F)
+                            .clientTrackingRange(8)
+                            .updateInterval(1)
+                            .build("exoframe_casing"));
+
     public static void register(IEventBus bus) {
         ENTITIES.register(bus);
     }

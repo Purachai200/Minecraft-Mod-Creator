@@ -42,8 +42,9 @@ public abstract class ExoframeWeaponItem extends Item {
             serverLevel.sendParticles(ParticleTypes.FLAME, muzzlePos.x, muzzlePos.y, muzzlePos.z, 2, forward.x * 0.1, forward.y * 0.1, forward.z * 0.1, 0.05);
             serverLevel.sendParticles(ParticleTypes.SMOKE, muzzlePos.x, muzzlePos.y, muzzlePos.z, 4, forward.x * 0.05, forward.y * 0.05, forward.z * 0.05, 0.02);
             if (ejectCasing) {
-                Vec3 casingPos = muzzlePos.subtract(forward.scale(0.35D)).add(right.scale(0.25D));
-                serverLevel.sendParticles(ParticleTypes.CRIT, casingPos.x, casingPos.y, casingPos.z, 1, right.x * 0.2, 0.12, right.z * 0.2, 0.02);
+                Vec3 casingPos = muzzlePos.subtract(forward.scale(0.38D)).add(right.scale(0.30D));
+                com.obsolete.entity.ExoframeCasingEntity casing = new com.obsolete.entity.ExoframeCasingEntity(serverLevel, casingPos, forward, right);
+                serverLevel.addFreshEntity(casing);
             }
         }
     }

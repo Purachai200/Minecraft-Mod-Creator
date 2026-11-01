@@ -5,6 +5,7 @@ import com.obsolete.client.gui.ExoframeHudOverlay;
 import com.obsolete.client.gui.ExoframeScreen;
 import com.obsolete.client.gui.MechAssemblyScreen;
 import com.obsolete.client.renderer.ExoframeBulletRenderer;
+import com.obsolete.client.renderer.ExoframeCasingRenderer;
 import com.obsolete.client.renderer.ExoframeRenderer;
 import com.obsolete.client.renderer.ExoframeRocketRenderer;
 import com.obsolete.entity.ModEntities;
@@ -35,6 +36,7 @@ public class ClientSetup {
         event.registerEntityRenderer(ModEntities.EXOFRAME.get(), ExoframeRenderer::new);
         event.registerEntityRenderer(ModEntities.BULLET.get(), ExoframeBulletRenderer::new);
         event.registerEntityRenderer(ModEntities.ROCKET.get(), ExoframeRocketRenderer::new);
+        event.registerEntityRenderer(ModEntities.CASING.get(), ExoframeCasingRenderer::new);
     }
 
     @SubscribeEvent
