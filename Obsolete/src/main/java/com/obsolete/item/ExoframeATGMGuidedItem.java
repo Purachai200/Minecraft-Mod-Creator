@@ -23,31 +23,24 @@ public class ExoframeATGMGuidedItem extends ExoframeWeaponItem {
     }
 
     @Override
-    public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        ItemStack util = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
-        if (util.getItem() instanceof ExoframeAmmoItem ammo && ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.ATGM_MISSILE) {
-            if (consume) {
-                util.shrink(1);
-                exoframe.getModularInventory().setStackInSlot(ExoframeArmorSlot.UTILITY.getIndex(), util);
-            }
-            return true;
-        }
-        for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
-            ItemStack s = pilot.getInventory().getItem(i);
-            if (s.getItem() instanceof ExoframeAmmoItem ammo && ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.ATGM_MISSILE) {
-                if (consume) s.shrink(1);
-                return true;
-            }
-        }
-        return false;
+    public int getMagazineCapacity() {
+        return 2;
+    }
+
+    @Override
+    public int getReloadDurationTicks() {
+        return 85;
+    }
+
+    @Override
+    public ExoframeAmmoItem.AmmoType getRequiredAmmoType() {
+        return ExoframeAmmoItem.AmmoType.ATGM_MISSILE;
     }
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
         Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
-            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.2F, 1.0F);
-            pilot.displayClientMessage(Component.literal("§c[Munitions Depleted] Required: Tandem-Warhead Guided ATGM Missile"), true);
             return false;
         }
 

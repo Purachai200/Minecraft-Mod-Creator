@@ -215,6 +215,14 @@ public class ExoframeHudOverlay {
                 renderSubmarineWidget(graphics, font, rightX, currentRightY, exoframe, mc.player);
                 currentRightY -= 68;
             }
+            if (exoframe.hasFlightBooster()) {
+                renderFlightBoosterWidget(graphics, font, rightX, currentRightY, exoframe, mc.player);
+                currentRightY -= 56;
+            }
+            if (exoframe.hasCloakAbility() || exoframe.isCloaked()) {
+                renderCloakWidget(graphics, font, rightX, currentRightY, exoframe);
+                currentRightY -= 48;
+            }
         }
     };
 
@@ -473,21 +481,155 @@ public class ExoframeHudOverlay {
         if (font.width(wName) > 160) wName = wName.substring(0, 22) + "...";
         g.drawString(font, wName, x, y + 12, 0xFFFFFFFF, false);
 
-        int ammoCount = countAmmo(player, exoframe);
-        String ammoText = ammoCount > 0 ? "MUNITIONS: " + ammoCount + " RDS" : "MUNITIONS: DEPLETED";
-        int ammoCol = ammoCount > 0 ? 0xFFFFCC00 : 0xFFFF2222;
-        g.drawString(font, ammoText, x, y + 24, ammoCol, false);
+        boolean isReloading = exoframe.isWeaponReloading();
+        if (isReloading) {
+            int prog = exoframe.getReloadProgress();
+            int max = Math.max(1, exoframe.getReloadMax());
+            int pct = Math.round(100.0F * (max - prog) / max);
+            String reloadText = String.format("RELOADING... %d%%", pct);
+            g.drawString(font, reloadText, x, y + 24, 0xFFFFBB00, false);
 
-        // Fire Mode
-        String mode = exoframe.isAiming() ? "AIM STANCE: PRECISION ADS" : "AIM STANCE: RAPID FIRE";
-        g.drawString(font, mode, x, y + 36, 0xAAFFFFFF, false);
+            String mode = "WEAPON OFFLINE [CYCLING]";
+            g.drawString(font, mode, x, y + 36, 0xAAFF8800, false);
 
-        // Small visual ammo level bar
+            int barW = 158;
+            int barH = 4;
+            g.fill(x, y + 48, x + barW, y + 48 + barH, 0xFF332200);
+            int fill = Math.round(barW * ((float) (max - prog) / max));
+            g.fill(x, y + 48, x + fill, y + 48 + barH, 0xFFFFBB00);
+        } else if (weaponStack.getItem() instanceof ExoframeWeaponItem weapon && weapon.getMagazineCapacity() > 0) {
+            int loaded = ExoframeWeaponItem.getLoadedAmmo(weaponStack);
+            int cap = weapon.getMagazineCapacity();
+            int reserve = countReserveRounds(exoframe, player, weapon);
+
+            String ammoText = String.format("MAG: %d / %d  |  RESV: %d", loaded, cap, reserve);
+            int ammoCol = loaded > 0 ? (loaded > cap / 4 ? 0xFFFFCC00 : 0xFFFF8800) : 0xFFFF2222;
+            g.drawString(font, ammoText, x, y + 24, ammoCol, false);
+
+            String mode = loaded > 0
+                    ? (exoframe.isAiming() ? "AIM: PRECISION ADS" : "AIM: RAPID FIRE")
+                    : "[EMPTY] PRESS 'R' TO RELOAD";
+            int modeCol = loaded > 0 ? 0xAAFFFFFF : 0xFFFF4444;
+            g.drawString(font, mode, x, y + 36, modeCol, false);
+
+            int barW = 158;
+            int barH = 4;
+            g.fill(x, y + 48, x + barW, y + 48 + barH, 0xFF331111);
+            int fill = Math.round(barW * ((float) loaded / cap));
+            int fillCol = loaded > (cap / 4) ? 0xFFFF7722 : 0xFFFF2222;
+            g.fill(x, y + 48, x + fill, y + 48 + barH, fillCol);
+        } else {
+            int ammoCount = countAmmo(player, exoframe);
+            String ammoText = ammoCount > 0 ? "MUNITIONS: " + ammoCount + " RDS" : "MELEE / NO AMMO";
+            g.drawString(font, ammoText, x, y + 24, 0xAAFFFFFF, false);
+
+            String mode = exoframe.isAiming() ? "AIM STANCE: PRECISION ADS" : "AIM STANCE: READY";
+            g.drawString(font, mode, x, y + 36, 0xAAFFFFFF, false);
+
+            int barW = 158;
+            int barH = 4;
+            g.fill(x, y + 48, x + barW, y + 48 + barH, 0xFF222222);
+            g.fill(x, y + 48, x + barW, y + 48 + barH, 0xFF00AAFF);
+        }
+    }
+
+    private static int countReserveRounds(ExoframeEntity exo, Player player, ExoframeWeaponItem weapon) {
+        ExoframeAmmoItem.AmmoType type = weapon.getRequiredAmmoType();
+        if (type == null) return 999;
+        int count = 0;
+        int mult = weapon.getRoundsPerAmmoItem();
+        int slots = exo.getModularInventory().getSlots();
+        for (int i = 0; i < slots; i++) {
+            ItemStack st = exo.getModularInventory().getStackInSlot(i);
+            if (st.getItem() instanceof ExoframeAmmoItem a && a.getAmmoType() == type) {
+                count += st.getCount() * mult;
+            }
+        }
+        if (player != null) {
+            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                ItemStack st = player.getInventory().getItem(i);
+                if (st.getItem() instanceof ExoframeAmmoItem a && a.getAmmoType() == type) {
+                    count += st.getCount() * mult;
+                }
+            }
+        }
+        return count;
+    }
+
+    // ==================== FLIGHT BOOSTER & FE ENERGY GAUGE ====================
+    private static void renderFlightBoosterWidget(GuiGraphics g, Font font, int x, int y, ExoframeEntity exoframe, Player player) {
+        ItemStack backStack = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.BACK.getIndex());
+        if (backStack.isEmpty()) return;
+
+        int w = 170;
+        int h = 48;
+        g.fill(x - 4, y - 4, x + w, y + h, 0xDD0E1520);
+        g.renderOutline(x - 4, y - 4, w + 4, h + 4, 0xFF00AAFF);
+
+        String bName = backStack.getHoverName().getString();
+        if (font.width(bName) > 160) bName = bName.substring(0, 22) + "...";
+        g.drawString(font, bName, x, y, 0xFF00AAFF, false);
+
+        int curFE = ExoframeFlightBoosterItem.getEnergyStored(backStack);
+        int maxFE = ExoframeFlightBoosterItem.getMaxEnergy(backStack);
+        int pct = Math.round(100.0F * curFE / maxFE);
+
+        boolean flying = exoframe.isFlying();
+        boolean boosting = exoframe.isFlightBoosting();
+        String status = !flying ? "THRUSTERS: STANDBY" : (boosting ? "THRUST: SUPERSONIC BOOST" : "THRUST: AERIAL CRUISE");
+        int statusCol = curFE <= 0 ? 0xFFFF2222 : (boosting ? 0xFF00FFFF : (flying ? 0xFF00FF88 : 0xAAFFFFFF));
+        g.drawString(font, status, x, y + 12, statusCol, false);
+
+        String feText = String.format("⚡ FE: %,d / %,d (%d%%)", curFE, maxFE, pct);
+        int feCol = pct > 50 ? 0xFF00FF88 : (pct > 20 ? 0xFFFFCC00 : 0xFFFF2222);
+        g.drawString(font, feText, x, y + 24, feCol, false);
+
         int barW = 158;
         int barH = 4;
-        g.fill(x, y + 48, x + barW, y + 48 + barH, 0xFF331111);
-        int fill = Math.min(barW, ammoCount * 2);
-        g.fill(x, y + 48, x + fill, y + 48 + barH, 0xFFFF7722);
+        g.fill(x, y + 36, x + barW, y + 36 + barH, 0xFF101B2B);
+        int fill = Math.round(barW * ((float) curFE / maxFE));
+        g.fill(x, y + 36, x + fill, y + 36 + barH, feCol);
+    }
+
+    // ==================== TACTICAL OPTICAL CAMOUFLAGE STATUS ====================
+    private static void renderCloakWidget(GuiGraphics g, Font font, int x, int y, ExoframeEntity exoframe) {
+        int w = 170;
+        int h = 40;
+        boolean cloaked = exoframe.isCloaked();
+        int timer = exoframe.getCloakTimer();
+        int cooldown = exoframe.getCloakCooldown();
+
+        int bgCol = cloaked ? 0xDD082228 : 0xDD101418;
+        int borderCol = cloaked ? 0xFF00FFFF : (cooldown > 0 ? 0xFFFF8800 : 0xFF00AA88);
+        g.fill(x - 4, y - 4, x + w, y + h, bgCol);
+        g.renderOutline(x - 4, y - 4, w + 4, h + 4, borderCol);
+
+        g.drawString(font, "OPTICAL CAMOUFLAGE // STEALTH", x, y, borderCol, false);
+
+        if (cloaked) {
+            float sec = timer / 20.0F;
+            String text = String.format("ACTIVE: %.1fs (INVISIBILITY ENGAGED)", sec);
+            g.drawString(font, text, x, y + 12, 0xFF00FFFF, false);
+
+            int barW = 158;
+            int barH = 3;
+            g.fill(x, y + 26, x + barW, y + 26 + barH, 0xFF082228);
+            int fill = Math.round(barW * ((float) timer / 300.0F));
+            g.fill(x, y + 26, x + fill, y + 26 + barH, 0xFF00FFFF);
+        } else if (cooldown > 0) {
+            float sec = cooldown / 20.0F;
+            String text = String.format("RECHARGING: %.1fs", sec);
+            g.drawString(font, text, x, y + 12, 0xFFFF8800, false);
+
+            int barW = 158;
+            int barH = 3;
+            g.fill(x, y + 26, x + barW, y + 26 + barH, 0xFF221100);
+            int fill = Math.round(barW * (1.0F - (float) cooldown / 500.0F));
+            g.fill(x, y + 26, x + fill, y + 26 + barH, 0xFFFF8800);
+        } else {
+            g.drawString(font, "STATUS: READY [PRESS 'X']", x, y + 12, 0xFF00FF88, false);
+            g.drawString(font, "Aggro dump & optical shroud", x, y + 24, 0x88AAAAAA, false);
+        }
     }
 
     // ==================== ROLE 2: GEOLOGICAL PROXIMITY MINING SONAR ====================

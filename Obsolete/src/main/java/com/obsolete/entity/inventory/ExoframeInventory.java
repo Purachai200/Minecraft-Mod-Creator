@@ -40,6 +40,7 @@ public class ExoframeInventory extends ItemStackHandler implements Container {
                 return stack.getItem() instanceof ExoframeArmorItem armor && armor.getTargetSlot() == ExoframeArmorSlot.LEGS;
             case UTILITY:
                 return stack.getItem() instanceof ExoframeAmmoItem
+                        || stack.is(com.obsolete.item.ModItems.MODULE_ACTIVE_CLOAK.get())
                         || stack.is(com.obsolete.item.ModItems.MODULE_USMC_COMMS.get())
                         || stack.is(com.obsolete.item.ModItems.MODULE_CERBERUS_PACKS.get())
                         || stack.is(com.obsolete.item.ModItems.MODULE_SHOULDER_MISSILE.get())
@@ -51,6 +52,9 @@ public class ExoframeInventory extends ItemStackHandler implements Container {
             case BACK:
                 return stack.getItem() instanceof ExoframeFlightBoosterItem
                         || stack.is(com.obsolete.item.ModItems.MODULE_FLIGHT_BOOSTER.get())
+                        || stack.is(com.obsolete.item.ModItems.MODULE_VTOL_WINGS.get())
+                        || stack.is(com.obsolete.item.ModItems.MODULE_DRONE_LIFTER.get())
+                        || stack.is(com.obsolete.item.ModItems.MODULE_ACTIVE_CLOAK.get())
                         || stack.getItem().getClass().getName().contains("FlightUnitItem")
                         || stack.getItem().getDescriptionId().contains("flight_unit");
             default:

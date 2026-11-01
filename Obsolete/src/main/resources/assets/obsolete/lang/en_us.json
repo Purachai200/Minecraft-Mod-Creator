@@ -156,6 +156,11 @@
   "item.obsolete.armor_float_ring": "Expeditionary Inflatable Buoyancy Float Ring",
   "item.obsolete.module_search_radar": "Tactical Phased-Array Search Radar Mast",
   "item.obsolete.exoframe_fishing_rod": "Heavy Dockyard Winch Fishing Rod",
-  "item.obsolete.module_flight_booster": "Gundam Aerial Flight Booster Pack",
-  "gui.obsolete.slot_back": "Back (Flight Booster)"
+  "item.obsolete.module_flight_booster": "Jump-Jet Twin Rocket Pack",
+  "item.obsolete.module_vtol_wings": "VTOL Aero-Glide Wings",
+  "item.obsolete.module_drone_lifter": "Heavy Lifter Quad-Rotor Drone",
+  "item.obsolete.module_active_cloak": "Active Optical Camouflage Module",
+  "key.obsolete.reload_weapon": "Reload Exoframe Weapon",
+  "key.obsolete.mech_cloak": "Activate Optical Camouflage",
+  "gui.obsolete.slot_back": "Back (Flight / Stealth Module)"
 }

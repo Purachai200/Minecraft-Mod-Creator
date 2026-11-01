@@ -17,32 +17,24 @@ public class ExoframeSniperRifleItem extends ExoframeWeaponItem {
     }
 
     @Override
-    public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        ItemStack utilStack = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
-        if (utilStack.getItem() instanceof ExoframeAmmoItem ammo && ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.CALIBER_20MM) {
-            if (consume) {
-                utilStack.shrink(1);
-            }
-            return true;
-        }
+    public int getMagazineCapacity() {
+        return 5;
+    }
 
-        for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
-            ItemStack stack = pilot.getInventory().getItem(i);
-            if (stack.getItem() instanceof ExoframeAmmoItem ammo && ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.CALIBER_20MM) {
-                if (consume) {
-                    stack.shrink(1);
-                }
-                return true;
-            }
-        }
-        return false;
+    @Override
+    public int getReloadDurationTicks() {
+        return 60;
+    }
+
+    @Override
+    public ExoframeAmmoItem.AmmoType getRequiredAmmoType() {
+        return ExoframeAmmoItem.AmmoType.CALIBER_20MM;
     }
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
         Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
-            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.2F, 1.0F);
             return false;
         }
 

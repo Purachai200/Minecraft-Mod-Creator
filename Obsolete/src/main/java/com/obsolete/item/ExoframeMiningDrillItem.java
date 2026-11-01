@@ -35,9 +35,13 @@ public class ExoframeMiningDrillItem extends ExoframeWeaponItem {
     }
 
     @Override
-    public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        // Mining drill operates on mech kinetic power / no ammo needed
-        return true;
+    public int getMagazineCapacity() {
+        return 0;
+    }
+
+    @Override
+    public ExoframeAmmoItem.AmmoType getRequiredAmmoType() {
+        return null;
     }
 
     @Override

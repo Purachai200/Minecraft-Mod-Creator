@@ -77,6 +77,18 @@ public class ModNetworking {
                 .encoder(ExoframeFlightC2SPacket::toBytes)
                 .consumerMainThread(ExoframeFlightC2SPacket::handle)
                 .add();
+
+        INSTANCE.messageBuilder(ExoframeReloadC2SPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(ExoframeReloadC2SPacket::new)
+                .encoder(ExoframeReloadC2SPacket::toBytes)
+                .consumerMainThread(ExoframeReloadC2SPacket::handle)
+                .add();
+
+        INSTANCE.messageBuilder(ExoframeCloakC2SPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(ExoframeCloakC2SPacket::new)
+                .encoder(ExoframeCloakC2SPacket::toBytes)
+                .consumerMainThread(ExoframeCloakC2SPacket::handle)
+                .add();
     }
 
     public static <MSG> void sendToServer(MSG message) {

@@ -36,8 +36,13 @@ public class ExoframeChainsawItem extends ExoframeWeaponItem {
     }
 
     @Override
-    public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        return true;
+    public int getMagazineCapacity() {
+        return 0;
+    }
+
+    @Override
+    public ExoframeAmmoItem.AmmoType getRequiredAmmoType() {
+        return null;
     }
 
     @Override

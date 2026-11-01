@@ -101,6 +101,18 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Boolean> DATA_IS_BOOSTING =
             SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Boolean> DATA_IS_RELOADING =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Integer> DATA_RELOAD_PROGRESS =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> DATA_RELOAD_MAX =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Boolean> DATA_IS_CLOAKED =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Integer> DATA_CLOAK_TIMER =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> DATA_CLOAK_COOLDOWN =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.INT);
 
     // Chassis momentum response
     private float smoothedForward = 0.0F;
@@ -181,6 +193,36 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         this.entityData.define(DATA_FRAME_TIER, 1);
         this.entityData.define(DATA_IS_FLYING, false);
         this.entityData.define(DATA_IS_BOOSTING, false);
+        this.entityData.define(DATA_IS_RELOADING, false);
+        this.entityData.define(DATA_RELOAD_PROGRESS, 0);
+        this.entityData.define(DATA_RELOAD_MAX, 0);
+        this.entityData.define(DATA_IS_CLOAKED, false);
+        this.entityData.define(DATA_CLOAK_TIMER, 0);
+        this.entityData.define(DATA_CLOAK_COOLDOWN, 0);
+    }
+
+    public boolean isWeaponReloading() {
+        return this.entityData.get(DATA_IS_RELOADING);
+    }
+
+    public int getReloadProgress() {
+        return this.entityData.get(DATA_RELOAD_PROGRESS);
+    }
+
+    public int getReloadMax() {
+        return this.entityData.get(DATA_RELOAD_MAX);
+    }
+
+    public boolean isCloaked() {
+        return this.entityData.get(DATA_IS_CLOAKED);
+    }
+
+    public int getCloakTimer() {
+        return this.entityData.get(DATA_CLOAK_TIMER);
+    }
+
+    public int getCloakCooldown() {
+        return this.entityData.get(DATA_CLOAK_COOLDOWN);
     }
 
     public boolean hasFlightBooster() {
@@ -472,6 +514,12 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         if (passenger != null) {
             passenger.resetFallDistance();
             passenger.fallDistance = 0.0F;
+            if (isCloaked()) {
+                passenger.setInvisible(false);
+            }
+        }
+        if (isCloaked()) {
+            decloak();
         }
         if (this.getPassengers().isEmpty()) {
             // When pilot dismounts, terminate all active flight and lower the mech into kneeling park crouch
@@ -567,12 +615,18 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
 
         // Flight booster mechanics (Gundam 3D Aerial Free Flight)
         if (hasFlightBooster()) {
+            ItemStack backStack = getModularInventory().getStackInSlot(com.obsolete.entity.inventory.ExoframeArmorSlot.BACK.getIndex());
             boolean jumping = InputHelper.isJumping(rider);
             // Dedicated descend key (C: Mech Crouch) or pitch dive, leaving Shift exclusively for ground dismount
             boolean crouching = isMechCrouching() || (rider.getXRot() > 25.0F && Math.abs(smoothedForward) > 0.15F);
 
             if (!isFlying() && !this.onGround() && jumping) {
-                setFlying(true);
+                if (com.obsolete.item.ExoframeFlightBoosterItem.getEnergyStored(backStack) > 50) {
+                    setFlying(true);
+                } else if (!this.level().isClientSide && this.tickCount % 20 == 0 && rider instanceof ServerPlayer sp) {
+                    sp.displayClientMessage(Component.literal("§c[FLIGHT MODULE OUT OF POWER - 0 FE]").withStyle(ChatFormatting.RED), true);
+                    this.level().playSound(null, this.blockPosition(), com.obsolete.sound.ModSounds.EXOFRAME_ALARM_LOW_HULL.get(), SoundSource.PLAYERS, 0.8F, 1.5F);
+                }
             }
 
             if (isFlying()) {
@@ -581,15 +635,38 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
                 boolean boosting = rider.isSprinting();
                 setFlightBoosting(boosting);
 
+                // FE Consumption check
+                if (!this.level().isClientSide) {
+                    boolean hasEnergy = com.obsolete.item.ExoframeFlightBoosterItem.consumeFlightEnergy(backStack, boosting);
+                    if (!hasEnergy) {
+                        setFlying(false);
+                        setFlightBoosting(false);
+                        this.level().playSound(null, this.blockPosition(), com.obsolete.sound.ModSounds.EXOFRAME_ALARM_LOW_HULL.get(), SoundSource.PLAYERS, 1.2F, 1.2F);
+                        if (rider instanceof ServerPlayer sp) {
+                            sp.displayClientMessage(Component.literal("§c⚠ [WARNING: FLIGHT MODULE FE DEPLETED - THRUSTERS OFFLINE]").withStyle(ChatFormatting.RED), true);
+                        }
+                        if (this.level() instanceof ServerLevel sl) {
+                            sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, this.getX(), this.getY() + 1.5, this.getZ(), 15, 0.4, 0.4, 0.4, 0.05);
+                        }
+                    }
+                }
+
                 Vec3 look = rider.getLookAngle();
                 float yawRad = this.getYRot() * ((float) Math.PI / 180.0F);
                 double sin = Math.sin(yawRad);
                 double cos = Math.cos(yawRad);
 
+                float speedMult = 1.0F;
+                float climbMult = 1.0F;
+                if (backStack.getItem() instanceof com.obsolete.item.ExoframeFlightBoosterItem booster) {
+                    speedMult = booster.getBoosterType().getSpeedMultiplier();
+                    climbMult = booster.getBoosterType().getClimbMultiplier();
+                }
+
                 // High performance Gundam flight speed
-                double baseFlightSpeed = 0.44D;
+                double baseFlightSpeed = 0.44D * speedMult;
                 if (boosting) {
-                    baseFlightSpeed = 0.88D; // Supersonic boost dash
+                    baseFlightSpeed = 0.88D * speedMult; // Supersonic boost dash
                 }
 
                 double fwdThrust = smoothedForward * baseFlightSpeed;
@@ -601,7 +678,7 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
                 // Vertical flight thrust & hover
                 double targetVy;
                 if (jumping) {
-                    targetVy = boosting ? 0.60D : 0.38D;
+                    targetVy = (boosting ? 0.60D : 0.38D) * climbMult;
                 } else if (crouching) {
                     targetVy = -0.42D;
                 } else {
@@ -674,6 +751,47 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
                 clientMeleeTicks++;
             } else {
                 clientMeleeTicks = 0;
+            }
+        }
+
+        // Weapon Reload Progress & State Handling
+        if (!this.level().isClientSide) {
+            if (isWeaponReloading()) {
+                int prog = getReloadProgress() - 1;
+                if (prog <= 0) {
+                    ItemStack weaponStack = modularInventory.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
+                    if (weaponStack.getItem() instanceof com.obsolete.item.ExoframeWeaponItem weapon) {
+                        int current = com.obsolete.item.ExoframeWeaponItem.getLoadedAmmo(weaponStack);
+                        int cap = weapon.getMagazineCapacity();
+                        int needed = cap - current;
+                        ServerPlayer pilot = getPilotingPlayer();
+                        int loaded = weapon.consumeReserveRounds(this, pilot, needed);
+                        com.obsolete.item.ExoframeWeaponItem.setLoadedAmmo(weaponStack, current + loaded);
+                        this.level().playSound(null, this.blockPosition(), SoundEvents.IRON_DOOR_CLOSE, SoundSource.PLAYERS, 1.0F, 1.8F);
+                    }
+                    this.entityData.set(DATA_IS_RELOADING, false);
+                    this.entityData.set(DATA_RELOAD_PROGRESS, 0);
+                } else {
+                    this.entityData.set(DATA_RELOAD_PROGRESS, prog);
+                }
+            }
+
+            // Tactical Optical Camouflage Cloak Handling
+            int cloakCd = getCloakCooldown();
+            if (cloakCd > 0) {
+                this.entityData.set(DATA_CLOAK_COOLDOWN, cloakCd - 1);
+            }
+
+            if (isCloaked()) {
+                int cTimer = getCloakTimer() - 1;
+                if (cTimer <= 0) {
+                    decloak();
+                } else {
+                    this.entityData.set(DATA_CLOAK_TIMER, cTimer);
+                    if (this.tickCount % 5 == 0) {
+                        clearNearbyMobAggro();
+                    }
+                }
             }
         }
 
@@ -1052,8 +1170,139 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         this.weaponCooldown = cd;
     }
 
+    @Nullable
+    public ServerPlayer getPilotingPlayer() {
+        LivingEntity rider = this.getControllingPassenger();
+        return rider instanceof ServerPlayer sp ? sp : null;
+    }
+
+    public boolean hasCloakAbility() {
+        ItemStack backStack = modularInventory.getStackInSlot(ExoframeArmorSlot.BACK.getIndex());
+        if (backStack.is(ModItems.MODULE_ACTIVE_CLOAK.get())) return true;
+        ItemStack utilStack = modularInventory.getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
+        if (utilStack.is(ModItems.MODULE_ACTIVE_CLOAK.get())) return true;
+        ItemStack head = modularInventory.getStackInSlot(ExoframeArmorSlot.HEAD.getIndex());
+        ItemStack chest = modularInventory.getStackInSlot(ExoframeArmorSlot.CHEST.getIndex());
+        ItemStack arms = modularInventory.getStackInSlot(ExoframeArmorSlot.ARMS.getIndex());
+        ItemStack legs = modularInventory.getStackInSlot(ExoframeArmorSlot.LEGS.getIndex());
+        return head.is(ModItems.ARMOR_SPECTER_HEAD.get())
+                && chest.is(ModItems.ARMOR_SPECTER_CHEST.get())
+                && arms.is(ModItems.ARMOR_SPECTER_ARMS.get())
+                && legs.is(ModItems.ARMOR_SPECTER_LEGS.get());
+    }
+
+    public void toggleActiveCloak(@Nullable ServerPlayer pilot) {
+        if (!hasCloakAbility()) {
+            if (pilot != null) {
+                pilot.displayClientMessage(Component.literal("§c[CLOAK SYSTEM NOT INSTALLED] Equip Optical Camouflage Module or Specter Stealth Armor").withStyle(ChatFormatting.RED), true);
+            }
+            return;
+        }
+
+        if (isCloaked()) {
+            decloak();
+            if (pilot != null) {
+                pilot.displayClientMessage(Component.literal("§7[OPTICAL CAMOUFLAGE DEACTIVATED]").withStyle(ChatFormatting.GRAY), true);
+            }
+            return;
+        }
+
+        if (getCloakCooldown() > 0) {
+            if (pilot != null) {
+                float sec = getCloakCooldown() / 20.0F;
+                pilot.displayClientMessage(Component.literal(String.format("§e[CAMOUFLAGE RECHARGING: %.1fs]", sec)).withStyle(ChatFormatting.YELLOW), true);
+                this.level().playSound(null, this.blockPosition(), SoundEvents.NOTE_BLOCK_BASEDRUM.get(), SoundSource.PLAYERS, 1.0F, 0.5F);
+            }
+            return;
+        }
+
+        this.entityData.set(DATA_IS_CLOAKED, true);
+        this.entityData.set(DATA_CLOAK_TIMER, 300); // 15s duration
+        this.entityData.set(DATA_CLOAK_COOLDOWN, 500); // 25s cooldown
+        this.setInvisible(true);
+        if (pilot != null) {
+            pilot.setInvisible(true);
+            pilot.displayClientMessage(Component.literal("§b⚡ [ACTIVE OPTICAL CAMOUFLAGE ENGAGED] Invisibility Active (15s)").withStyle(ChatFormatting.AQUA), true);
+        }
+        this.level().playSound(null, this.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.5F, 1.6F);
+        clearNearbyMobAggro();
+        if (this.level() instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(ParticleTypes.PORTAL, this.getX(), this.getY() + 1.2, this.getZ(), 40, 0.8, 1.2, 0.8, 0.2);
+        }
+    }
+
+    public void decloak() {
+        if (isCloaked()) {
+            this.entityData.set(DATA_IS_CLOAKED, false);
+            this.entityData.set(DATA_CLOAK_TIMER, 0);
+            this.setInvisible(false);
+            ServerPlayer pilot = getPilotingPlayer();
+            if (pilot != null) {
+                pilot.setInvisible(false);
+            }
+            this.level().playSound(null, this.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.2F, 1.2F);
+            if (this.level() instanceof ServerLevel serverLevel) {
+                serverLevel.sendParticles(ParticleTypes.SMOKE, this.getX(), this.getY() + 1.2, this.getZ(), 25, 0.6, 1.0, 0.6, 0.05);
+            }
+        }
+    }
+
+    public void clearNearbyMobAggro() {
+        LivingEntity rider = this.getControllingPassenger();
+        for (Mob mob : this.level().getEntitiesOfClass(Mob.class, this.getBoundingBox().inflate(32.0D))) {
+            if (mob.getTarget() == this || (rider != null && mob.getTarget() == rider)) {
+                mob.setTarget(null);
+            }
+        }
+    }
+
+    public void triggerReload(@Nullable ServerPlayer pilot) {
+        if (isWeaponReloading() || isDying()) return;
+
+        ItemStack weaponStack = modularInventory.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
+        if (weaponStack.isEmpty() || !(weaponStack.getItem() instanceof com.obsolete.item.ExoframeWeaponItem weapon)) {
+            return;
+        }
+
+        int cap = weapon.getMagazineCapacity();
+        if (cap <= 0) return;
+
+        int current = com.obsolete.item.ExoframeWeaponItem.getLoadedAmmo(weaponStack);
+        if (current >= cap) {
+            if (pilot != null) {
+                pilot.displayClientMessage(Component.literal("§7[MAGAZINE FULL]").withStyle(ChatFormatting.GRAY), true);
+            }
+            return;
+        }
+
+        int reserve = weapon.getReserveRoundsAvailable(this, pilot);
+        if (reserve <= 0) {
+            if (pilot != null) {
+                pilot.displayClientMessage(Component.literal("§c[NO AMMO IN INVENTORY TO RELOAD]").withStyle(ChatFormatting.RED), true);
+            }
+            this.level().playSound(null, this.blockPosition(), com.obsolete.sound.ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+            return;
+        }
+
+        int duration = weapon.getReloadDurationTicks();
+        this.entityData.set(DATA_IS_RELOADING, true);
+        this.entityData.set(DATA_RELOAD_PROGRESS, duration);
+        this.entityData.set(DATA_RELOAD_MAX, duration);
+        this.level().playSound(null, this.blockPosition(), com.obsolete.sound.ModSounds.WEAPON_RELOAD.get(), SoundSource.PLAYERS, 1.4F, 1.0F);
+        if (pilot != null) {
+            pilot.displayClientMessage(Component.literal("§e⟳ [RELOADING... " + String.format("%.1fs", duration / 20.0F) + "]").withStyle(ChatFormatting.YELLOW), true);
+        }
+    }
+
     public boolean fireEquippedWeapon(ServerPlayer pilot) {
         if (weaponCooldown > 1 || isDying()) return false;
+        if (isWeaponReloading()) {
+            pilot.displayClientMessage(Component.literal("§c[CANNOT FIRE - RELOADING IN PROGRESS]").withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+        if (isCloaked()) {
+            decloak();
+        }
 
         ItemStack weaponStack = modularInventory.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
         if (weaponStack.is(ModItems.EXOFRAME_STUN_BATON.get())) {
@@ -1289,6 +1538,10 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     @Override
     public boolean hurt(@NotNull DamageSource source, float amount) {
         if (isDying()) return false;
+
+        if (isCloaked() && amount > 0.0F) {
+            decloak();
+        }
 
         // Rescue sealed capsule fire immunity
         boolean sealedRescue = hasItemEquipped(ModItems.ARMOR_RESCUE_HEAD.get()) && hasItemEquipped(ModItems.ARMOR_RESCUE_CHEST.get());

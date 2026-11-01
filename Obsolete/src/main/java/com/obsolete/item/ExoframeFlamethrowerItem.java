@@ -22,7 +22,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class ExoframeFlamethrowerItem extends ExoframeWeaponItem {
-    private int burstCounter = 0;
 
     public ExoframeFlamethrowerItem(Properties properties) {
         super(properties.stacksTo(1), 2, "weapon_flamethrower");
@@ -34,41 +33,29 @@ public class ExoframeFlamethrowerItem extends ExoframeWeaponItem {
     }
 
     @Override
-    public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        ItemStack util = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
-        if (util.getItem() instanceof ExoframeAmmoItem ammo && ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.NAPALM_CANISTER) {
-            if (consume) {
-                burstCounter++;
-                if (burstCounter >= 8) {
-                    burstCounter = 0;
-                    util.shrink(1);
-                    exoframe.getModularInventory().setStackInSlot(ExoframeArmorSlot.UTILITY.getIndex(), util);
-                }
-            }
-            return true;
-        }
-        for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
-            ItemStack s = pilot.getInventory().getItem(i);
-            if (s.getItem() instanceof ExoframeAmmoItem ammo && ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.NAPALM_CANISTER) {
-                if (consume) {
-                    burstCounter++;
-                    if (burstCounter >= 8) {
-                        burstCounter = 0;
-                        s.shrink(1);
-                    }
-                }
-                return true;
-            }
-        }
-        return false;
+    public int getMagazineCapacity() {
+        return 60;
+    }
+
+    @Override
+    public int getReloadDurationTicks() {
+        return 60;
+    }
+
+    @Override
+    public ExoframeAmmoItem.AmmoType getRequiredAmmoType() {
+        return ExoframeAmmoItem.AmmoType.NAPALM_CANISTER;
+    }
+
+    @Override
+    public int getRoundsPerAmmoItem() {
+        return 10;
     }
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
         Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
-            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.2F, 1.0F);
-            pilot.displayClientMessage(Component.literal("§c[Munitions Depleted] Required: Liquid Napalm Canister"), true);
             return false;
         }
 

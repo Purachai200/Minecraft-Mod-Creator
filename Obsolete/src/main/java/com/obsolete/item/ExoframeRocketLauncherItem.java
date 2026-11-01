@@ -23,34 +23,24 @@ public class ExoframeRocketLauncherItem extends ExoframeWeaponItem {
     }
 
     @Override
-    public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        ItemStack utilityStack = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
-        if (utilityStack.getItem() instanceof ExoframeAmmoItem ammoItem && ammoItem.getAmmoType() == ExoframeAmmoItem.AmmoType.AT_ROCKET) {
-            if (consume) {
-                utilityStack.shrink(1);
-                exoframe.getModularInventory().setStackInSlot(ExoframeArmorSlot.UTILITY.getIndex(), utilityStack);
-            }
-            return true;
-        }
+    public int getMagazineCapacity() {
+        return 4;
+    }
 
-        for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
-            ItemStack stack = pilot.getInventory().getItem(i);
-            if (stack.getItem() instanceof ExoframeAmmoItem ammoItem && ammoItem.getAmmoType() == ExoframeAmmoItem.AmmoType.AT_ROCKET) {
-                if (consume) {
-                    stack.shrink(1);
-                }
-                return true;
-            }
-        }
-        return false;
+    @Override
+    public int getReloadDurationTicks() {
+        return 80;
+    }
+
+    @Override
+    public ExoframeAmmoItem.AmmoType getRequiredAmmoType() {
+        return ExoframeAmmoItem.AmmoType.AT_ROCKET;
     }
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
         Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
-            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.2F, 1.0F);
-            pilot.displayClientMessage(Component.translatable("message.obsolete.out_of_ammo_rocket").withStyle(ChatFormatting.RED), true);
             return false;
         }
 

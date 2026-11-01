@@ -4,12 +4,14 @@ import com.obsolete.ObsoleteMod;
 import com.obsolete.entity.ExoframeEntity;
 import com.obsolete.entity.inventory.ExoframeArmorSlot;
 import com.obsolete.network.ExoframeAimC2SPacket;
+import com.obsolete.network.ExoframeCloakC2SPacket;
 import com.obsolete.network.ExoframeCrouchC2SPacket;
 import com.obsolete.network.ExoframeEmoteC2SPacket;
 import com.obsolete.network.ExoframeFlightC2SPacket;
 import com.obsolete.network.ExoframeOpenMenuC2SPacket;
 import com.obsolete.network.ExoframeFireC2SPacket;
 import com.obsolete.network.ExoframeMeleeC2SPacket;
+import com.obsolete.network.ExoframeReloadC2SPacket;
 import com.obsolete.network.ModNetworking;
 import com.obsolete.item.ModItems;
 import com.obsolete.item.ExoframeRocketLauncherItem;
@@ -107,6 +109,16 @@ public class KeyInputHandler {
             // Dedicated Quick Melee Punch / Bash Keybind (F key)
             while (ModKeyMappings.KEY_MECH_MELEE.consumeClick()) {
                 ModNetworking.sendToServer(new ExoframeMeleeC2SPacket());
+            }
+
+            // Manual Weapon Reload Keybind (R key)
+            while (ModKeyMappings.KEY_RELOAD_WEAPON.consumeClick()) {
+                ModNetworking.sendToServer(new ExoframeReloadC2SPacket());
+            }
+
+            // Active Optical Cloak Toggle Keybind (X key)
+            while (ModKeyMappings.KEY_MECH_CLOAK.consumeClick()) {
+                ModNetworking.sendToServer(new ExoframeCloakC2SPacket());
             }
 
             for (int i = 0; i < ModKeyMappings.KEY_EMOTES.length; i++) {

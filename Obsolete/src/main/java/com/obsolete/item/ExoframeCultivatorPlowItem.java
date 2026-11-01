@@ -37,9 +37,13 @@ public class ExoframeCultivatorPlowItem extends ExoframeWeaponItem {
     }
 
     @Override
-    public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        // Agricultural tools operate on mech hydraulic torque
-        return true;
+    public int getMagazineCapacity() {
+        return 0;
+    }
+
+    @Override
+    public ExoframeAmmoItem.AmmoType getRequiredAmmoType() {
+        return null;
     }
 
     @Override

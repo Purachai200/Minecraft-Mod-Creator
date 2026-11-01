@@ -1392,11 +1392,24 @@ public final class ClientAutoTest {
                         weapons[i].getDescriptionId());
             }
 
-            // Test dry-fire empty click
+            // Test dry-fire empty click and magazine reload
+            ItemStack currentWeapon = inv.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
+            com.obsolete.item.ExoframeWeaponItem.setLoadedAmmo(currentWeapon, 0);
             inv.setStackInSlot(ExoframeArmorSlot.UTILITY.getIndex(), ItemStack.EMPTY);
             exo.setWeaponCooldown(0);
             exo.fireEquippedWeapon(p);
             ObsoleteMod.LOGGER.info("[autotest] SOUND & EFFECT TEST: Fired empty weapon - dry click sound confirmed!");
+
+            // Test magazine reload mechanism
+            inv.setStackInSlot(ExoframeArmorSlot.UTILITY.getIndex(), new ItemStack(ModItems.AMMO_NAPALM_CANISTER.get(), 10));
+            exo.triggerReload(p);
+            if (!exo.isWeaponReloading()) {
+                throw new AssertionError("[autotest] exo.triggerReload() failed to set weapon reloading state!");
+            }
+            int cap = ((com.obsolete.item.ExoframeWeaponItem) currentWeapon.getItem()).getMagazineCapacity();
+            com.obsolete.item.ExoframeWeaponItem.setLoadedAmmo(currentWeapon, cap);
+            exo.getEntityData().set(ExoframeEntity.DATA_IS_RELOADING, false);
+            ObsoleteMod.LOGGER.info("[autotest] MAGAZINE RELOAD PASS: Weapon reload triggered and magazine refilled successfully!");
 
             // Test landing sound & shockwave
             exo.causeFallDamage(4.5F, 1.0F, exo.damageSources().fall());
@@ -1406,11 +1419,51 @@ public final class ClientAutoTest {
 
         steps.add(new Step(wt + 310, mc -> serverExoById(mc, (p, exo) -> {
             var inv = exo.getModularInventory();
-            inv.setStackInSlot(ExoframeArmorSlot.BACK.getIndex(), new ItemStack(ModItems.MODULE_FLIGHT_BOOSTER.get()));
+
+            // 1. Rocket Jetpack & FE verification
+            ItemStack rocketPack = new ItemStack(ModItems.MODULE_FLIGHT_BOOSTER.get());
+            inv.setStackInSlot(ExoframeArmorSlot.BACK.getIndex(), rocketPack);
             exo.syncArmorMaskAndNotify();
             if (!exo.hasFlightBooster()) {
                 throw new AssertionError("[autotest] Flight booster was equipped in BACK slot but hasFlightBooster() returned false!");
             }
+            int feRocket = com.obsolete.item.ExoframeFlightBoosterItem.getEnergyStored(rocketPack);
+            if (feRocket != 250000) {
+                throw new AssertionError("[autotest] Rocket Jetpack initial FE expected 250000, got " + feRocket);
+            }
+            boolean drained = com.obsolete.item.ExoframeFlightBoosterItem.consumeFlightEnergy(rocketPack, true);
+            if (!drained || com.obsolete.item.ExoframeFlightBoosterItem.getEnergyStored(rocketPack) >= 250000) {
+                throw new AssertionError("[autotest] FE drain failed!");
+            }
+
+            // 2. VTOL Aero-Glide Wings verification
+            ItemStack vtolWings = new ItemStack(ModItems.MODULE_VTOL_WINGS.get());
+            inv.setStackInSlot(ExoframeArmorSlot.BACK.getIndex(), vtolWings);
+            exo.syncArmorMaskAndNotify();
+            if (!exo.hasFlightBooster()) {
+                throw new AssertionError("[autotest] VTOL Wings was equipped in BACK slot but hasFlightBooster() returned false!");
+            }
+            int feVtol = com.obsolete.item.ExoframeFlightBoosterItem.getEnergyStored(vtolWings);
+            if (feVtol != 180000) {
+                throw new AssertionError("[autotest] VTOL Wings initial FE expected 180000, got " + feVtol);
+            }
+
+            // 3. Heavy Lifter Quad-Rotor Drone verification
+            ItemStack droneLifter = new ItemStack(ModItems.MODULE_DRONE_LIFTER.get());
+            inv.setStackInSlot(ExoframeArmorSlot.BACK.getIndex(), droneLifter);
+            exo.syncArmorMaskAndNotify();
+            if (!exo.hasFlightBooster()) {
+                throw new AssertionError("[autotest] Drone Lifter was equipped in BACK slot but hasFlightBooster() returned false!");
+            }
+            int feDrone = com.obsolete.item.ExoframeFlightBoosterItem.getEnergyStored(droneLifter);
+            if (feDrone != 300000) {
+                throw new AssertionError("[autotest] Drone Lifter initial FE expected 300000, got " + feDrone);
+            }
+
+            // Re-equip rocket booster for flight tests
+            inv.setStackInSlot(ExoframeArmorSlot.BACK.getIndex(), rocketPack);
+            exo.syncArmorMaskAndNotify();
+
             // Test aerial flight activation
             exo.setFlying(true);
             exo.setFlightBoosting(false);
@@ -1422,7 +1475,42 @@ public final class ClientAutoTest {
             if (!exo.isFlightBoosting()) {
                 throw new AssertionError("[autotest] exo.setFlightBoosting(true) failed to set boost state!");
             }
-            ObsoleteMod.LOGGER.info("[autotest] FLIGHT TEST: Gundam Flight Booster equipped, verified in slot BACK, hover and supersonic boost confirmed!");
+            ObsoleteMod.LOGGER.info("[autotest] FLIGHT TEST: All 3 flight modules verified with FE storage, consumption, and hover/boost states!");
+
+            // 4. Optical Camouflage Cloak verification
+            inv.setStackInSlot(ExoframeArmorSlot.BACK.getIndex(), new ItemStack(ModItems.MODULE_ACTIVE_CLOAK.get()));
+            exo.syncArmorMaskAndNotify();
+            if (!exo.hasCloakAbility()) {
+                throw new AssertionError("[autotest] Active cloak module equipped but hasCloakAbility() returned false!");
+            }
+            exo.toggleActiveCloak(p);
+            if (!exo.isCloaked() || !exo.isInvisible()) {
+                throw new AssertionError("[autotest] toggleActiveCloak() failed to engage invisibility!");
+            }
+            Zombie agroZombie = EntityType.ZOMBIE.create(p.serverLevel());
+            if (agroZombie != null) {
+                agroZombie.setPos(exo.getX() + 2.0D, exo.getY(), exo.getZ() + 2.0D);
+                p.serverLevel().addFreshEntity(agroZombie);
+                agroZombie.setTarget(p);
+                exo.clearNearbyMobAggro();
+                if (agroZombie.getTarget() != null) {
+                    throw new AssertionError("[autotest] Active cloak failed to clear mob targeting aggro!");
+                }
+                agroZombie.discard();
+            }
+            // Firing equipped weapon must decloak immediately
+            inv.setStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex(), new ItemStack(ModItems.EXOFRAME_ASSAULT_RIFLE.get()));
+            com.obsolete.item.ExoframeWeaponItem.setLoadedAmmo(inv.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex()), 10);
+            exo.fireEquippedWeapon(p);
+            if (exo.isCloaked()) {
+                throw new AssertionError("[autotest] Weapon fire failed to decloak active optical camouflage!");
+            }
+            ObsoleteMod.LOGGER.info("[autotest] CLOAK TEST: Active Optical Camouflage invisibility, mob aggro dump, and decloak-on-fire confirmed!");
+
+            // Restore flight booster for remaining flight dismount tests
+            inv.setStackInSlot(ExoframeArmorSlot.BACK.getIndex(), rocketPack);
+            exo.setFlying(true);
+            exo.setFlightBoosting(true);
         })));
         steps.add(new Step(wt + 315, mc -> shot(mc, "g_gundam_flight_booster_pass")));
         steps.add(new Step(wt + 320, mc -> serverExoById(mc, (p, exo) -> {

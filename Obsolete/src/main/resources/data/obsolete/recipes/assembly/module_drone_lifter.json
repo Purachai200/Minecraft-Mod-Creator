@@ -1,0 +1,21 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "minecraft:iron_block"
+    },
+    {
+      "item": "obsolete:servo_motor"
+    },
+    {
+      "item": "obsolete:servo_motor"
+    }
+  ],
+  "result": {
+    "item": "obsolete:module_drone_lifter",
+    "count": 1
+  }
+}

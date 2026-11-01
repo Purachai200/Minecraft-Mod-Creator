@@ -26,9 +26,13 @@ public class ExoframeVibroBladeItem extends ExoframeWeaponItem {
     }
 
     @Override
-    public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        // Melee weapon requires no ammunition!
-        return true;
+    public int getMagazineCapacity() {
+        return 0;
+    }
+
+    @Override
+    public ExoframeAmmoItem.AmmoType getRequiredAmmoType() {
+        return null;
     }
 
     @Override

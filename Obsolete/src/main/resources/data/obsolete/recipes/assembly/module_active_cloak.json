@@ -1,0 +1,21 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "minecraft:ender_eye"
+    },
+    {
+      "item": "minecraft:amethyst_shard"
+    },
+    {
+      "item": "obsolete:peddler_core"
+    }
+  ],
+  "result": {
+    "item": "obsolete:module_active_cloak",
+    "count": 1
+  }
+}

@@ -254,7 +254,18 @@ public class ModItems {
 
     public static final RegistryObject<Item> MODULE_FLIGHT_BOOSTER =
             ITEMS.register("module_flight_booster", () -> new ExoframeFlightBoosterItem(
-                    new Item.Properties().stacksTo(1).durability(600), "Gundam Aerial Jump-Jet Flight Booster"));
+                    new Item.Properties().stacksTo(1), ExoframeFlightBoosterItem.BoosterType.ROCKET_JETPACK));
+
+    public static final RegistryObject<Item> MODULE_VTOL_WINGS =
+            ITEMS.register("module_vtol_wings", () -> new ExoframeFlightBoosterItem(
+                    new Item.Properties().stacksTo(1), ExoframeFlightBoosterItem.BoosterType.VTOL_WINGS));
+
+    public static final RegistryObject<Item> MODULE_DRONE_LIFTER =
+            ITEMS.register("module_drone_lifter", () -> new ExoframeFlightBoosterItem(
+                    new Item.Properties().stacksTo(1), ExoframeFlightBoosterItem.BoosterType.DRONE_LIFTER));
+
+    public static final RegistryObject<Item> MODULE_ACTIVE_CLOAK =
+            ITEMS.register("module_active_cloak", () -> new Item(new Item.Properties().stacksTo(1)));
 
     // ==================== 8. SPECIALIZED WORKING TOOLS ====================
     public static final RegistryObject<Item> TOOL_MINING_DRILL =

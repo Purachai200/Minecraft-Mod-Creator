@@ -33,11 +33,18 @@ public class ExoframeRenderer extends GeoEntityRenderer<ExoframeEntity> {
 
     @Override
     public RenderType getRenderType(ExoframeEntity animatable, ResourceLocation texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
+        if (animatable.isCloaked()) {
+            return RenderType.entityTranslucent(texture);
+        }
         return RenderType.entityCutoutNoCull(texture);
     }
 
     @Override
     public Color getRenderColor(ExoframeEntity animatable, float partialTick, int packedLight) {
+        if (animatable.isCloaked()) {
+            float shimmer = (float) (0.16F + 0.08F * Math.sin((animatable.tickCount + partialTick) * 0.4F));
+            return Color.ofRGBA(0.4F, 0.9F, 1.0F, shimmer);
+        }
         int color = animatable.getPrimaryColor();
         if (color == 0xFFFFFF) {
             return Color.WHITE;

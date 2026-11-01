@@ -29,6 +29,20 @@ public class ModKeyMappings {
             KEY_CATEGORY
     );
 
+    public static final KeyMapping KEY_RELOAD_WEAPON = new KeyMapping(
+            "key.obsolete.reload",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_R,
+            KEY_CATEGORY
+    );
+
+    public static final KeyMapping KEY_MECH_CLOAK = new KeyMapping(
+            "key.obsolete.cloak",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_X,
+            KEY_CATEGORY
+    );
+
     // Same order as ExoframeEntity.EMOTES
     public static final KeyMapping[] KEY_EMOTES = {
             new KeyMapping("key.obsolete.emote.salute", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, KEY_CATEGORY),
@@ -41,6 +55,8 @@ public class ModKeyMappings {
         event.register(KEY_FIRE_WEAPON);
         event.register(KEY_MECH_CROUCH);
         event.register(KEY_MECH_MELEE);
+        event.register(KEY_RELOAD_WEAPON);
+        event.register(KEY_MECH_CLOAK);
         for (KeyMapping key : KEY_EMOTES) {
             event.register(key);
         }
