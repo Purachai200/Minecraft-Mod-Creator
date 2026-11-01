@@ -1426,11 +1426,43 @@ public final class ClientAutoTest {
         })));
         steps.add(new Step(wt + 315, mc -> shot(mc, "g_gundam_flight_booster_pass")));
         steps.add(new Step(wt + 320, mc -> serverExoById(mc, (p, exo) -> {
-            exo.setFlying(false);
-            exo.setFlightBoosting(false);
+            // First dismount cycle
+            p.stopRiding();
+            if (p.isPassenger() || exo.hasPassenger(p)) {
+                throw new AssertionError("[autotest] Player failed to dismount from Exoframe on first cycle!");
+            }
+            if (exo.isFlying() || exo.isFlightBoosting()) {
+                throw new AssertionError("[autotest] Exoframe retained active flight state after pilot dismount!");
+            }
+            ObsoleteMod.LOGGER.info("[autotest] MOUNT-DISMOUNT TEST: First dismount cycle successful, flight state cleanly reset.");
         })));
 
-        wt += 330;
+        steps.add(new Step(wt + 325, mc -> serverExoById(mc, (p, exo) -> {
+            // Second mount cycle: remounting
+            p.startRiding(exo);
+            if (!p.isPassenger() || !exo.hasPassenger(p)) {
+                throw new AssertionError("[autotest] Player failed to remount Exoframe on second cycle!");
+            }
+            // Flight / movement reactivation
+            exo.setFlying(true);
+            exo.setFlightBoosting(true);
+            ObsoleteMod.LOGGER.info("[autotest] MOUNT-DISMOUNT TEST: Second mount cycle successful, flight reactivated.");
+        })));
+
+        steps.add(new Step(wt + 330, mc -> serverExoById(mc, (p, exo) -> {
+            // Second dismount cycle: must dismount cleanly without lockup or getting stuck
+            p.stopRiding();
+            if (p.isPassenger() || exo.hasPassenger(p)) {
+                throw new AssertionError("[autotest] Player stuck in mech on second dismount cycle!");
+            }
+            if (exo.isFlying() || exo.isFlightBoosting()) {
+                throw new AssertionError("[autotest] Exoframe retained active flight state after second pilot dismount!");
+            }
+            ObsoleteMod.LOGGER.info("[autotest] MOUNT-DISMOUNT TEST: Second dismount cycle PASS - no freeze, no stuck in mech!");
+        })));
+        steps.add(new Step(wt + 335, mc -> shot(mc, "g_flight_remount_dismount_pass")));
+
+        wt += 345;
 
         steps.add(new Step(wt + 10, mc -> {
             ObsoleteMod.LOGGER.info("[autotest] gameplay scenario completed with all checks passing!");

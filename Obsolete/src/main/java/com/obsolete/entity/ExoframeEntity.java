@@ -447,7 +447,48 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     @Override
     public boolean canAddPassenger(Entity passenger) {
         int max = hasItemEquipped(ModItems.MODULE_RESCUE_WINCH.get()) ? 2 : 1;
-        return this.getPassengers().size() < max;
+        return !this.hasPassenger(passenger) && this.getPassengers().size() < max;
+    }
+
+    @Override
+    protected void addPassenger(Entity passenger) {
+        super.addPassenger(passenger);
+        // Ensure clean stationary state when a pilot enters
+        this.setFlying(false);
+        this.setFlightBoosting(false);
+        this.setAiming(false);
+        this.setMechCrouching(false);
+        this.smoothedForward = 0.0F;
+        this.smoothedStrafe = 0.0F;
+    }
+
+    @Override
+    protected void removePassenger(Entity passenger) {
+        super.removePassenger(passenger);
+        if (this.getPassengers().isEmpty()) {
+            // When pilot dismounts, terminate all active flight and posture states cleanly
+            this.setFlying(false);
+            this.setFlightBoosting(false);
+            this.setAiming(false);
+            this.setMechCrouching(false);
+            this.smoothedForward = 0.0F;
+            this.smoothedStrafe = 0.0F;
+            this.setDeltaMovement(this.getDeltaMovement().multiply(0.2D, 1.0D, 0.2D));
+        }
+    }
+
+    @Override
+    public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
+        // Place dismounting pilot safely 1.35 blocks behind the rear entry of the chassis
+        float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
+        double rearDist = 1.35D;
+        double dx = Mth.sin(yawRad) * rearDist;
+        double dz = -Mth.cos(yawRad) * rearDist;
+        BlockPos rearPos = BlockPos.containing(this.getX() + dx, this.getY(), this.getZ() + dz);
+        if (!this.level().getBlockState(rearPos).isSolid() && !this.level().getBlockState(rearPos.above()).isSolid()) {
+            return new Vec3(this.getX() + dx, this.getY(), this.getZ() + dz);
+        }
+        return super.getDismountLocationForPassenger(passenger);
     }
 
     @Nullable
@@ -630,6 +671,10 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         double horizDistSqr = this.getDeltaMovement().horizontalDistanceSqr();
         boolean isMoving = horizDistSqr > 0.003D;
         boolean isPiloted = this.isVehicle() && this.isAlive() && !isDying();
+        if (!isPiloted && isFlying()) {
+            setFlying(false);
+            setFlightBoosting(false);
+        }
         LivingEntity rider = this.getControllingPassenger();
         boolean isSprinting = isMoving && (this.isSprinting() || (rider != null && rider.isSprinting()) || horizDistSqr > 0.035D);
 
