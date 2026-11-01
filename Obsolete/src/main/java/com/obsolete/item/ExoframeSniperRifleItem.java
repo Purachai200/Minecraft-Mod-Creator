@@ -64,10 +64,17 @@ public class ExoframeSniperRifleItem extends ExoframeWeaponItem {
 
         spawnMuzzleFlashAndCasing(level, muzzlePos, forward, right, true);
 
-        // Loud sniper firing report
-        level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_SNIPER_FIRE.get(), SoundSource.PLAYERS, 3.5F, 1.0F);
+        // Massive 20mm Anti-Materiel cannon blast: high-velocity railgun crack + deep concussive thunder
+        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.CAMPFIRE_COSY_SMOKE, muzzlePos.x, muzzlePos.y, muzzlePos.z, 16, forward.x * 0.4, forward.y * 0.4, forward.z * 0.4, 0.08);
+            serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION, muzzlePos.x, muzzlePos.y, muzzlePos.z, 1, 0, 0, 0, 0.0);
+            serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.FLASH, muzzlePos.x, muzzlePos.y, muzzlePos.z, 2, 0, 0, 0, 0.0);
+        }
+
+        level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_SNIPER_FIRE.get(), SoundSource.PLAYERS, 7.0F, 0.92F);
+        level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_RECOILLESS_FIRE.get(), SoundSource.PLAYERS, 5.0F, 0.65F);
         exoframe.triggerRecoilAnim();
-        exoframe.triggerPilotCameraShake(0.8F, 7);
+        exoframe.triggerPilotCameraShake(1.6F, 12);
         return true;
     }
 }

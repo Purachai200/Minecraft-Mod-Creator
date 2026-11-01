@@ -4,6 +4,8 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.obsolete.client.model.ExoframeModel;
 import com.obsolete.entity.ExoframeEntity;
+import com.obsolete.entity.inventory.ExoframeArmorSlot;
+import com.obsolete.item.ExoframeSniperRifleItem;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -19,6 +21,8 @@ public class ExoframeRenderer extends GeoEntityRenderer<ExoframeEntity> {
 
     /** When true, the client player is riding this exoframe in first-person view. */
     private boolean isFirstPersonPilot = false;
+    /** When true, pilot is actively aiming down the high-power telescopic sniper scope in first person. */
+    private boolean isSniperScoping = false;
 
     public ExoframeRenderer(EntityRendererProvider.Context renderManager) {
         super(renderManager, new ExoframeModel());
@@ -50,12 +54,16 @@ public class ExoframeRenderer extends GeoEntityRenderer<ExoframeEntity> {
         this.isFirstPersonPilot = mc.options.getCameraType() == CameraType.FIRST_PERSON
                 && mc.player != null && mc.player.getVehicle() == entity
                 && mc.screen == null;
+        this.isSniperScoping = this.isFirstPersonPilot
+                && entity.isAiming()
+                && entity.getModularInventory().getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex()).getItem() instanceof ExoframeSniperRifleItem;
 
         poseStack.pushPose();
         try {
             super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
         } finally {
             this.isFirstPersonPilot = false;
+            this.isSniperScoping = false;
         }
         poseStack.popPose();
     }
@@ -63,6 +71,10 @@ public class ExoframeRenderer extends GeoEntityRenderer<ExoframeEntity> {
     @Override
     public void renderCubesOfBone(PoseStack poseStack, GeoBone bone, VertexConsumer buffer, int packedLight, int packedOverlay,
                                   float red, float green, float blue, float alpha) {
+        if (this.isSniperScoping) {
+            // When looking through telescopic sniper scope, suppress mesh so the sight picture is unobstructed
+            return;
+        }
         if (this.isFirstPersonPilot && shouldHideCubesInFirstPerson(bone.getName())) {
             // Skip rendering blocking cockpit/head cubes in first person, but still traverse and render arms, hands, and weapons
             return;

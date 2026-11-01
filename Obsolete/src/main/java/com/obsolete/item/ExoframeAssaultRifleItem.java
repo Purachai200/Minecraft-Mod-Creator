@@ -19,7 +19,12 @@ import java.util.List;
 public class ExoframeAssaultRifleItem extends ExoframeWeaponItem {
 
     public ExoframeAssaultRifleItem(Properties properties) {
-        super(properties.stacksTo(1), 5, "exoframe_assault_rifle");
+        super(properties.stacksTo(1), 4, "exoframe_assault_rifle"); // Rapid 300 RPM full-auto
+    }
+
+    @Override
+    public boolean isAutomatic() {
+        return true;
     }
 
     @Override

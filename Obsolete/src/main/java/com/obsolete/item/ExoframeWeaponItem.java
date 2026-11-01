@@ -27,6 +27,13 @@ public abstract class ExoframeWeaponItem extends Item {
     }
 
     /**
+     * Whether holding down the attack/fire key triggers continuous automatic fire.
+     */
+    public boolean isAutomatic() {
+        return false;
+    }
+
+    /**
      * Checks if ammunition exists in either Exoframe's utility slots or pilot's inventory.
      * If consume is true, decrements 1 ammo item.
      */

@@ -987,7 +987,7 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     }
 
     public boolean fireEquippedWeapon(ServerPlayer pilot) {
-        if (weaponCooldown > 0 || isDying()) return false;
+        if (weaponCooldown > 1 || isDying()) return false;
 
         ItemStack weaponStack = modularInventory.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
         if (weaponStack.is(ModItems.EXOFRAME_STUN_BATON.get())) {

@@ -19,7 +19,12 @@ import java.util.List;
 public class ExoframeMachineGunItem extends ExoframeWeaponItem {
 
     public ExoframeMachineGunItem(Properties properties) {
-        super(properties.stacksTo(1), 2, "weapon_machine_gun");
+        super(properties.stacksTo(1), 3, "weapon_machine_gun"); // 400 RPM heavy automatic
+    }
+
+    @Override
+    public boolean isAutomatic() {
+        return true;
     }
 
     @Override

@@ -19,7 +19,12 @@ import java.util.List;
 public class ExoframeAutocannonItem extends ExoframeWeaponItem {
 
     public ExoframeAutocannonItem(Properties properties) {
-        super(properties.stacksTo(1), 8, "weapon_autocannon_30mm");
+        super(properties.stacksTo(1), 7, "weapon_autocannon_30mm"); // 170 RPM automatic 30mm cannon
+    }
+
+    @Override
+    public boolean isAutomatic() {
+        return true;
     }
 
     @Override

@@ -14,6 +14,8 @@ import com.obsolete.network.ModNetworking;
 import com.obsolete.item.ModItems;
 import com.obsolete.item.ExoframeRocketLauncherItem;
 import com.obsolete.item.ExoframeRPG7Item;
+import com.obsolete.item.ExoframeSniperRifleItem;
+import com.obsolete.item.ExoframeWeaponItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
@@ -29,9 +31,14 @@ public class KeyInputHandler {
     private static boolean lastAimState = false;
     private static boolean lastFlightState = false;
     private static boolean lastBoostState = false;
+    private static int clientFireCooldown = 0;
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (clientFireCooldown > 0) {
+            clientFireCooldown--;
+        }
+
         Minecraft mcStart = Minecraft.getInstance();
         if (event.phase == TickEvent.Phase.START) {
             // Inventory key while piloting opens the exoframe loadout (like a horse). START runs before vanilla's
@@ -50,6 +57,13 @@ public class KeyInputHandler {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && mc.player.getVehicle() instanceof ExoframeEntity exoframe) {
+            ItemStack weapon = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
+            ItemStack util = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
+            boolean hasShoulderWeapon = util.is(ModItems.MODULE_SHOULDER_MISSILE.get())
+                    || util.is(ModItems.MODULE_TWIN_MANPADS.get())
+                    || util.getItem() instanceof ExoframeRocketLauncherItem
+                    || util.getItem() instanceof ExoframeRPG7Item;
+
             // Mech Crouch Hold / Toggle
             boolean crouchDown = ModKeyMappings.KEY_MECH_CROUCH.isDown();
             if (crouchDown != lastCrouchState) {
@@ -57,7 +71,7 @@ public class KeyInputHandler {
                 ModNetworking.sendToServer(new ExoframeCrouchC2SPacket(crouchDown));
             }
 
-            // Right-Click ADS / Shoulder Aim Lock (ประทับเตรียมยิง)
+            // Right-Click ADS / Shoulder Aim Lock (ประทับเตรียมยิง / เล็งกล้อง Scope)
             boolean aimDown = mc.options.keyUse.isDown();
             if (aimDown != lastAimState) {
                 lastAimState = aimDown;
@@ -65,9 +79,29 @@ public class KeyInputHandler {
                 ModNetworking.sendToServer(new ExoframeAimC2SPacket(aimDown));
             }
 
-            // Fire Weapon Keybind
+            // Full-Auto Rapid Fire Handling: while holding down left click or KEY_FIRE_WEAPON
+            boolean attackDown = mc.options.keyAttack.isDown() || ModKeyMappings.KEY_FIRE_WEAPON.isDown();
+            if (attackDown && mc.screen == null) {
+                if (weapon.getItem() instanceof ExoframeWeaponItem weaponItem && weaponItem.isAutomatic()) {
+                    if (clientFireCooldown <= 0) {
+                        ModNetworking.sendToServer(new ExoframeFireC2SPacket());
+                        clientFireCooldown = weaponItem.getFireCooldownTicks();
+                    }
+                }
+            }
+
+            // Discrete Fire Weapon Keybind (for semi-auto or single-click fire)
             while (ModKeyMappings.KEY_FIRE_WEAPON.consumeClick()) {
-                ModNetworking.sendToServer(new ExoframeFireC2SPacket());
+                if (!(weapon.getItem() instanceof ExoframeWeaponItem weaponItem && weaponItem.isAutomatic())) {
+                    if (weapon.isEmpty() && !hasShoulderWeapon) {
+                        ModNetworking.sendToServer(new ExoframeMeleeC2SPacket());
+                    } else if (clientFireCooldown <= 0) {
+                        ModNetworking.sendToServer(new ExoframeFireC2SPacket());
+                        if (weapon.getItem() instanceof ExoframeWeaponItem wItem) {
+                            clientFireCooldown = wItem.getFireCooldownTicks();
+                        }
+                    }
+                }
             }
 
             // Dedicated Quick Melee Punch / Bash Keybind (F key)
@@ -115,6 +149,7 @@ public class KeyInputHandler {
             lastAimState = false;
             lastFlightState = false;
             lastBoostState = false;
+            clientFireCooldown = 0;
         }
     }
 
@@ -146,7 +181,14 @@ public class KeyInputHandler {
                 if (weapon.isEmpty() && !hasShoulderWeapon) {
                     ModNetworking.sendToServer(new ExoframeMeleeC2SPacket());
                 } else {
-                    ModNetworking.sendToServer(new ExoframeFireC2SPacket());
+                    if (clientFireCooldown <= 0) {
+                        ModNetworking.sendToServer(new ExoframeFireC2SPacket());
+                        if (weapon.getItem() instanceof ExoframeWeaponItem weaponItem) {
+                            clientFireCooldown = weaponItem.getFireCooldownTicks();
+                        } else {
+                            clientFireCooldown = 10;
+                        }
+                    }
                 }
             } else if (event.isUseItem()) {
                 // Prevent vanilla item interaction/eating/block placing while piloting combat vehicle
@@ -157,14 +199,19 @@ public class KeyInputHandler {
     }
 
     /**
-     * Tactical ADS optical zoom when aiming the exoframe weapon.
+     * Tactical ADS optical zoom and high-magnification sniper scope when aiming the exoframe weapon.
      */
     @SubscribeEvent
     public static void onComputeFov(ViewportEvent.ComputeFov event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && mc.player.getVehicle() instanceof ExoframeEntity exoframe) {
             if (exoframe.isAiming()) {
-                event.setFOV(event.getFOV() * 0.82D); // 18% ADS optical focus zoom
+                ItemStack weapon = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
+                if (weapon.getItem() instanceof ExoframeSniperRifleItem) {
+                    event.setFOV(event.getFOV() * 0.16D); // 6.25x High-power Sniper Scope Zoom
+                } else {
+                    event.setFOV(event.getFOV() * 0.82D); // 18% standard ADS tactical focus zoom
+                }
             }
         }
     }

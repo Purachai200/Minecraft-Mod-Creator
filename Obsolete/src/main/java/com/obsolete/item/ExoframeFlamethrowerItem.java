@@ -29,6 +29,11 @@ public class ExoframeFlamethrowerItem extends ExoframeWeaponItem {
     }
 
     @Override
+    public boolean isAutomatic() {
+        return true;
+    }
+
+    @Override
     public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
         ItemStack util = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
         if (util.getItem() instanceof ExoframeAmmoItem ammo && ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.NAPALM_CANISTER) {

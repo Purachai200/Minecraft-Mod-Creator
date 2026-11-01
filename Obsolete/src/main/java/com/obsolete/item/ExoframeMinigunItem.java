@@ -17,6 +17,11 @@ public class ExoframeMinigunItem extends ExoframeWeaponItem {
     }
 
     @Override
+    public boolean isAutomatic() {
+        return true;
+    }
+
+    @Override
     public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
         ItemStack utilStack = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
         if (utilStack.getItem() instanceof ExoframeAmmoItem ammo &&

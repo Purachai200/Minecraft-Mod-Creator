@@ -161,6 +161,13 @@ public class ExoframeHudOverlay {
             }
         }
 
+        // High-Magnification Telescopic Sniper Scope Overlay (Activates on right-click ADS with Sniper Rifle)
+        boolean isSniperScoping = exoframe.isAiming() && weaponStack.getItem() instanceof ExoframeSniperRifleItem;
+        if (isSniperScoping) {
+            renderSniperScopeOverlay(graphics, font, width, height, mc, exoframe);
+            return;
+        }
+
         // Widgets power on after initial cold-boot sequence
         if (!isFirstPerson || bootTime >= 24) {
             // ==================== 1. TOP CENTER: COMPASS HEADING TAPE ====================
@@ -1060,6 +1067,130 @@ public class ExoframeHudOverlay {
             }
         }
         g.drawString(font, "RADAR", rx - 12, ry + r + 2, 0x8800FFFF, false);
+    }
+
+    // ==================== HIGH-POWER 20MM TELESCOPIC SNIPER SCOPE ====================
+    private static void renderSniperScopeOverlay(GuiGraphics g, Font font, int width, int height, Minecraft mc, ExoframeEntity exoframe) {
+        int cx = width / 2;
+        int cy = height / 2;
+        int radius = Math.min(width, height) / 2 - 16;
+        if (radius < 40) radius = 40;
+
+        // 1. Full-Screen Scope Blackout Vignette Mask (outside the circular aperture)
+        int radSq = radius * radius;
+        for (int y = 0; y < height; y++) {
+            int dy = y - cy;
+            int dySq = dy * dy;
+            if (dySq >= radSq) {
+                g.fill(0, y, width, y + 1, 0xFD040608);
+            } else {
+                int dx = (int) Math.sqrt(radSq - dySq);
+                int leftEnd = cx - dx;
+                int rightStart = cx + dx;
+                if (leftEnd > 0) {
+                    g.fill(0, y, leftEnd, y + 1, 0xFD040608);
+                }
+                if (rightStart < width) {
+                    g.fill(rightStart, y, width, y + 1, 0xFD040608);
+                }
+                // Double-layer scope steel bezel and anti-glare chromatic rim
+                g.fill(leftEnd, y, leftEnd + 1, y + 1, 0xFF141A20);
+                g.fill(rightStart - 1, y, rightStart, y + 1, 0xFF141A20);
+                if (dx > 2) {
+                    g.fill(leftEnd + 1, y, leftEnd + 2, y + 1, 0x2200E5FF);
+                    g.fill(rightStart - 2, y, rightStart - 1, y + 1, 0x2200E5FF);
+                }
+            }
+        }
+
+        // 2. Multi-Coated Optical Glass Tint inside the scope circle
+        g.fill(cx - radius + 10, cy - radius + 10, cx + radius - 10, cy + radius - 10, 0x0700E5FF);
+
+        // 3. Tactical Mil-Dot Ballistic Reticle Lines
+        int retCol = 0xEE11151A; // Fine dark reticle steel
+        int retLen = radius - 20;
+
+        // Horizontal stadia bar
+        g.fill(cx - retLen, cy, cx - 4, cy + 1, retCol);
+        g.fill(cx + 4, cy, cx + retLen, cy + 1, retCol);
+
+        // Vertical stadia bar
+        g.fill(cx, cy - retLen, cx + 1, cy - 4, retCol);
+        g.fill(cx, cy + 4, cx + 1, cy + retLen, retCol);
+
+        // Precision Illuminated Red Center Micro-Dot
+        g.fill(cx, cy, cx + 1, cy + 1, 0xFFFF2222);
+        g.fill(cx - 1, cy, cx + 2, cy + 1, 0x99FF3333);
+        g.fill(cx, cy - 1, cx + 1, cy + 2, 0x99FF3333);
+
+        // Mil-Dot Hash Marks on Horizontal Axis
+        for (int mil = 1; mil <= 5; mil++) {
+            int px = mil * 16;
+            if (px < retLen - 10) {
+                int tickH = (mil % 2 == 0) ? 6 : 4;
+                g.fill(cx - px, cy - tickH / 2, cx - px + 1, cy + tickH / 2 + 1, retCol);
+                g.fill(cx + px, cy - tickH / 2, cx + px + 1, cy + tickH / 2 + 1, retCol);
+                if (mil % 2 == 0) {
+                    g.drawString(font, String.valueOf(mil), cx + px - 2, cy + 5, 0x88FFFFFF, false);
+                    g.drawString(font, String.valueOf(mil), cx - px - 3, cy + 5, 0x88FFFFFF, false);
+                }
+            }
+        }
+
+        // Vertical Elevation Ticks (Above center)
+        for (int mil = 1; mil <= 3; mil++) {
+            int py = mil * 16;
+            if (py < retLen - 10) {
+                g.fill(cx - 2, cy - py, cx + 3, cy - py + 1, retCol);
+            }
+        }
+
+        // BDC (Bullet Drop Compensation) Stadia Below Center
+        int[] bdcDrops = {18, 38, 62, 90};
+        int[] bdcWidths = {14, 22, 32, 44};
+        int[] bdcRanges = {200, 400, 600, 800};
+        for (int i = 0; i < bdcDrops.length; i++) {
+            int dropY = cy + bdcDrops[i];
+            if (dropY < cy + retLen - 10) {
+                int halfW = bdcWidths[i] / 2;
+                g.fill(cx - halfW, dropY, cx + halfW, dropY + 1, retCol);
+                g.drawString(font, bdcRanges[i] + "m", cx + halfW + 4, dropY - 3, 0x66FFFFFF, false);
+            }
+        }
+
+        // 4. Target Acquisition & Laser Rangefinder Telemetry Readout
+        double targetDist = -1;
+        String targetName = "";
+        if (mc.crosshairPickEntity instanceof LivingEntity living && living.isAlive()) {
+            targetDist = mc.player.getEyePosition().distanceTo(living.position());
+            targetName = living.getType().getDescription().getString().toUpperCase();
+        } else if (mc.hitResult instanceof BlockHitResult bHit && mc.hitResult.getType() == HitResult.Type.BLOCK) {
+            targetDist = mc.player.getEyePosition().distanceTo(bHit.getLocation());
+        }
+
+        String distStr = targetDist >= 0 ? String.format("%.1f M", targetDist) : "---.- M";
+
+        // Top Left: Optic Designation
+        g.drawString(font, "OPTIC // AMR-20 MONOLITHIC", cx - radius + 22, cy - radius + 24, 0xFF00FFCC, true);
+        g.drawString(font, "CAL: 20x102MM KINETIC AP", cx - radius + 22, cy - radius + 34, 0xAA00FFCC, true);
+
+        // Top Right: Magnification & Stabilization
+        String magStr = "MAG: 12.5X DIGITAL";
+        g.drawString(font, magStr, cx + radius - font.width(magStr) - 22, cy - radius + 24, 0xFF00FFCC, true);
+        String fcsStr = "FCS // STABILIZED";
+        g.drawString(font, fcsStr, cx + radius - font.width(fcsStr) - 22, cy - radius + 34, 0xFF00FF88, true);
+
+        // Bottom Left: Windage & Atmospheric Data
+        g.drawString(font, "ELEV: +1.25 MIL", cx - radius + 22, cy + radius - 38, 0xAAFFFFFF, true);
+        g.drawString(font, "WIND: 0.0 M/S [CALM]", cx - radius + 22, cy + radius - 26, 0xAAFFFFFF, true);
+
+        // Bottom Right: Rangefinder & Lock Status
+        int rngCol = targetDist >= 0 ? 0xFFFF3333 : 0xAAFFFFFF;
+        String rngStr = "RNG: " + distStr;
+        g.drawString(font, rngStr, cx + radius - font.width(rngStr) - 22, cy + radius - 38, rngCol, true);
+        String lockStr = (mc.crosshairPickEntity != null) ? "[LOCK // " + targetName + "]" : "[SEARCHING]";
+        int lockCol = (mc.crosshairPickEntity != null) ? 0xFFFF4444 : 0x8800FFCC;
+        g.drawString(font, lockStr, cx + radius - font.width(lockStr) - 22, cy + radius - 26, lockCol, true);
     }
 
     private static int countAmmo(Player player, ExoframeEntity exoframe) {

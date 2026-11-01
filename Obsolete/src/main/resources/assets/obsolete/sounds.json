@@ -97,7 +97,11 @@
     "category": "player",
     "subtitle": "subtitles.obsolete.weapon_sniper_fire",
     "sounds": [
-      "obsolete:weapon_sniper_fire"
+      {
+        "name": "obsolete:weapon_sniper_fire",
+        "volume": 2.5,
+        "attenuation_distance": 128
+      }
     ]
   },
   "weapon_autocannon_fire": {
