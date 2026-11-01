@@ -492,7 +492,8 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         // Flight booster mechanics (Gundam 3D Aerial Free Flight)
         if (hasFlightBooster()) {
             boolean jumping = InputHelper.isJumping(rider);
-            boolean crouching = isMechCrouching() || (rider instanceof Player p && p.isShiftKeyDown());
+            // Dedicated descend key (C: Mech Crouch) or pitch dive, leaving Shift exclusively for ground dismount
+            boolean crouching = isMechCrouching() || (rider.getXRot() > 25.0F && Math.abs(smoothedForward) > 0.15F);
 
             if (!isFlying() && !this.onGround() && jumping) {
                 setFlying(true);

@@ -70,8 +70,11 @@ public class ObsoleteMod {
                     exoframe.level().playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_PILOT_MOUNT.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1.2F, 1.0F);
                 }
             } else if (event.isDismounting() && event.getEntityMounting() instanceof Player player) {
-                // Realistic vehicle safety interlock: cannot dismount while moving at speed unless stopped or crouched
-                if (exoframe.getDeltaMovement().horizontalDistanceSqr() > 0.008D && !exoframe.isMechCrouching() && !exoframe.isDying()) {
+                // Realistic vehicle safety interlock: cannot dismount while airborne/flying or moving at speed
+                if (exoframe.isFlying() && !exoframe.isDying()) {
+                    event.setCanceled(true);
+                    player.displayClientMessage(Component.translatable("message.obsolete.cannot_dismount_while_flying"), true);
+                } else if (exoframe.getDeltaMovement().horizontalDistanceSqr() > 0.008D && !exoframe.isMechCrouching() && !exoframe.isDying()) {
                     event.setCanceled(true);
                     player.displayClientMessage(Component.translatable("message.obsolete.must_stop_to_dismount"), true);
                 } else if (!exoframe.level().isClientSide) {

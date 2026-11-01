@@ -26,10 +26,11 @@ public class ExoframeFlightBoosterItem extends Item {
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.literal("§b▶ Mech Back Module: §f" + boosterDescription));
         tooltip.add(Component.literal("§7Enables Gundam 3D Aerial Free Flight:"));
-        tooltip.add(Component.literal("§e • Space§7: Rocket Climb / Ascend"));
-        tooltip.add(Component.literal("§e • Shift / Crouch§7: Descend"));
-        tooltip.add(Component.literal("§e • W / Look Pitch§7: 3D Directional Vectoring"));
+        tooltip.add(Component.literal("§e • Space (in air)§7: Hover / Rocket Climb"));
+        tooltip.add(Component.literal("§e • C (Mech Crouch)§7: Descend / Land"));
+        tooltip.add(Component.literal("§e • Pitch Down / W§7: Flight Vectoring & Dive"));
         tooltip.add(Component.literal("§6 • Sprint (Ctrl)§7: Gundam Supersonic Boost Dash"));
+        tooltip.add(Component.literal("§7 • Shift§8: Dismount Cockpit (on ground only)"));
         tooltip.add(Component.literal("§8Install into Mech Back Equipment Slot via loadout menu."));
     }
 }
