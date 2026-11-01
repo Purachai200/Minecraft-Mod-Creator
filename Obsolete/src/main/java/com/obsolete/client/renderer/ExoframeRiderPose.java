@@ -25,7 +25,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = ObsoleteMod.MODID, value = Dist.CLIENT)
 public final class ExoframeRiderPose {
     public static final float LEG_FORWARD = 0.9F;   // rad, thighs forward-down
-    public static final float LEG_SPREAD = 0.8F;    // rad, straddling outward around the frame
+    public static final float LEG_SPREAD = 0.28F;    // rad, straddling outward around the frame
     public static final float ARM_FORWARD = 1.0F;   // rad, hands forward-down onto the grips
     public static final float ARM_SPREAD = 0.12F;
 

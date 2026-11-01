@@ -241,7 +241,7 @@ def rot_box(ox, oy, oz, sx, sy, sz, px, py, pz, rx, ry, rz):
 MODEL_SCALE = 1.8
 SEAT_DROP = -6.0
 AUTHORED = (0.0, 21.6, 5.1)
-SEAT_LOWER = 4.0
+SEAT_LOWER = 11.0
 SEATED = (0.0, ((30.8 - SEAT_LOWER) * MODEL_SCALE - 10.0) / MODEL_SCALE, 4.3)
 
 def to_seat(b):
@@ -306,7 +306,7 @@ def shell_ring(y, h, hx, zf, zb, front=True, t=0.6, c=1.1):
 
 # ==================== UNIFIED ARMORED BOX HULL BUILDERS ====================
 def build_box_canopy(extras=[]):
-    roof_y = 40.65
+    roof_y = 33.7
     rear_z = 9.47
     roof_quads = [
         (-5.5, roof_y, -2.5, 5.5, 1.0, 6.0),
@@ -324,20 +324,20 @@ def build_box_canopy(extras=[]):
         (3.6, roof_y + 1.0, 3.2, 0.4, 0.4, 2.6),
         (-4.0, roof_y + 1.0, 3.2, 0.4, 0.4, 2.6),
         # Rear bulkhead (split L/R)
-        (-5.5, 22.8, rear_z, 5.5, roof_y + 1.0 - 22.8, 0.8),
-        (0.0, 22.8, rear_z, 5.5, roof_y + 1.0 - 22.8, 0.8),
+        (-5.5, 19.5, rear_z, 5.5, roof_y + 1.0 - 19.5, 0.8),
+        (0.0, 19.5, rear_z, 5.5, roof_y + 1.0 - 19.5, 0.8),
         # Rear radiator louvers
-        (-4.0, 25.0, rear_z + 0.8, 8.0, 11.5, 0.6),
+        (-4.0, 20.5, rear_z + 0.8, 8.0, roof_y - 20.5, 0.6),
         # Rear emergency egress latch
         (-1.5, 30.0, rear_z + 0.8, 3.0, 3.0, 0.4),
         # Side armor walls
-        (5.9, 23.5, -2.2, 0.8, 16.0, rear_z - (-2.2)),
-        (-6.7, 23.5, -2.2, 0.8, 16.0, rear_z - (-2.2)),
+        (5.9, 19.5, -2.2, 0.8, roof_y - 19.5, rear_z - (-2.2)),
+        (-6.7, 19.5, -2.2, 0.8, roof_y - 19.5, rear_z - (-2.2)),
         # Overhang brow
-        (-3.0, 37.0, -3.6, 6.0, roof_y - 37.0, 1.2),
+        (-3.0, 31.0, -3.6, 6.0, roof_y - 31.0, 1.2),
         # Cheek cowls flanking throat cavity
-        (2.8, 30.5, -3.6, 3.2, 7.5, 1.2),
-        (-6.0, 30.5, -3.6, 3.2, 7.5, 1.2),
+        (2.8, 26.5, -3.6, 3.2, roof_y - 26.5, 1.2),
+        (-6.0, 26.5, -3.6, 3.2, roof_y - 26.5, 1.2),
         # 45 deg chamfered upper roof edges
         rot_box(4.8, roof_y - 0.7, -2.5, 1.4, 0.8, rear_z - (-2.5), 5.5, roof_y - 0.3, 3.2, 0, 0, -45),
         rot_box(-6.2, roof_y - 0.7, -2.5, 1.4, 0.8, rear_z - (-2.5), -5.5, roof_y - 0.3, 3.2, 0, 0, 45)
@@ -467,17 +467,16 @@ p = "pelvis"
 # Target drum diameter ≈ 0.5 * 9.0 = 4.5 (radius r = 2.25). Axis left-right (X axis).
 # Width = 4.4 (from x = -2.2 to +2.2). Visible radial ribs along circumference.
 add(p,
-    *disc_x(-2.2, 16.8, 0.0, 2.25, 4.4),                       # Main central motor/battery drum cylinder (diam 4.5 = 0.50x hip)
-    *ring_x(-2.25, 16.8, 0.0, 2.35, 4.5, n=12, s=0.45),        # 12 cooling / structural radial ribs
-    (-2.2, 16.5, -2.4, 4.4, 0.6, 4.8),                         # Drum perimeter reinforcement rail
-    (-1.8, 19.4, -1.0, 3.6, 0.6, 4.2),                         # Open tubular seat base cradle
-    (-1.4, 19.8, 0.2, 2.8, 0.5, 3.2))                          # Pilot saddle deck
+    *disc_x(-2.2, 14.0, 0.0, 1.8, 4.4),                       # Low-slung motor/battery drum
+    *ring_x(-2.25, 14.0, 0.0, 1.9, 4.5, n=12, s=0.35),
+    (-2.2, 13.8, -2.0, 4.4, 0.5, 4.0),                        # Reinforcement keel
+    (-4.0, 14.2, -1.0, 8.0, 1.2, 2.0),                        # Transverse chassis member
+    (-2.0, 17.0, 2.4, 4.0, 1.0, 2.8),                         # Seat bucket base cradle
+    (-1.6, 18.0, 3.8, 3.2, 1.0, 1.6))                         # Pilot saddle deck
 sym(p,
-    *disc_x(2.3, 17.0, 0.0, 1.8, 1.2),                         # Hip joint knuckle housings connecting to thighs
-    (2.2, 16.2, -1.6, 1.1, 1.6, 3.2),                         # Hip mount bracket
-    (1.7, 18.8, -1.2, 0.6, 0.6, 4.8),                         # Side seat cradle tube
-    (1.7, 16.8, 3.2, 0.6, 2.6, 0.6),                          # Rear vertical seat support truss
-    (1.7, 16.0, -1.4, 0.8, 0.8, 0.8))
+    *disc_x(3.6, 17.0, 0.0, 1.5, 1.0),                         # Hip joint knuckle housings connecting to thighs
+    (3.5, 16.2, -1.2, 1.1, 1.6, 2.4),                         # Hip mount bracket
+    (3.5, 15.0, 2.0, 0.6, 2.6, 1.2))                          # Rear vertical chassis truss
 
 w = "pelvis_wheel"
 # Secondary generator spindle / lower auxiliary drive
@@ -493,10 +492,8 @@ for y in (20.0, 21.8, 23.6, 25.4, 27.2):
     add(t, (-0.9, y, -0.6, 1.8, 1.2, 1.6),                     # Articulated vertebra segment
            (-0.6, y + 1.2, -0.4, 1.2, 0.6, 1.2))                # Intervertebral shock-absorber pad
 add(t,
-    (-0.4, 20.0, 1.0, 0.8, 9.6, 0.6),                          # Rear spine runner / cable conduit
+    (-0.4, 16.5, 1.0, 0.8, 13.1, 0.6),                         # Rear spine runner / cable conduit
     (-0.7, 28.4, -4.2, 1.4, 1.2, 3.6),                         # Slender forward neck boom to sensor head mount
-    (-1.2, 23.0, 1.2, 2.4, 0.8, 3.6),                          # Seat cradle lower (under the pilot)
-    (-1.8, 23.8, 0.6, 3.6, 1.2, 4.2),                          # Seat cradle upper
     # Arched shoulder yoke: one wide bar whose ends carry the arms (shoulders at x +-9, see YOKE WIDTH below)
     # (the yoke runs 2 px ahead of the shoulder line so the seated pilot's arms pass behind it)
     (-2.0, 32.4, -2.8, 4.0, 1.4, 1.8),                         # Centre peak of the arch, the highest point of the bare frame
@@ -569,11 +566,11 @@ sym(r, (4.6, 29.0, 7.2, 0.7, 30.0, 0.7),
     (5.4, 42.0, 0.0, 0.8, 6.0, 1.6))
 
 # ==================== 4. BACKPACKS & REAR MODULES ====================
-MOUNT = [(-3.6, 21.6, 6.6, 7.2, 9.8, 0.8),
-         (-1.2, 27.0, 5.4, 2.4, 1.6, 1.4),
-         *[bx for x in (2.0, -2.8) for bx in [(x, 26.8, 5.4, 0.8, 0.8, 1.4)]],
-         *[bx for x in (0.6, -1.4) for bx in [(x, 23.0, 1.0, 0.8, 0.8, 5.8)]],
-         *[bx for x in (1.0, -1.5) for bx in stepped(x, 26.6, 6.2, 22.0, 1.6, 0.5, 0.5, 3)]]
+MOUNT = [(-3.6, 21.6, 6.8, 7.2, 9.8, 0.8),
+         (-1.2, 27.0, 6.8, 2.4, 1.6, 1.0),
+         *[bx for x in (2.0, -2.8) for bx in [(x, 26.8, 6.8, 0.8, 0.8, 1.0)]],
+         *[bx for x in (0.6, -1.4) for bx in [(x, 23.0, 6.8, 0.8, 0.8, 1.0)]],
+         *[bx for x in (1.0, -1.5) for bx in stepped(x, 26.6, 7.2, 22.0, 6.8, 0.5, 0.5, 3)]]
 
 b = "backpack_cargo"
 add(b, (-4.0, 22.4, 7.4, 8.0, 7.6, 3.6),
@@ -1310,7 +1307,7 @@ sym("armor_head_rescue",
 
 c = "canopy_rescue"
 add(c,   # rescue cab: crash crossbars, floodlight mounts, 100% enclosed
-    *round_ring(33.0, 15.0, 11.2, -9.6, 15.0, r=3.2),
+    *round_ring(33.0, 15.0, 14.5, -9.6, 15.0, r=3.2),
     *round_ring(48.0, 5.0, 10.6, -9.0, 15.0, r=3.2),
     *round_ring(53.0, 3.0, 10.0, -7.0, 15.0, r=2.8),
     *round_ring(56.0, 3.0, 9.0, -5.6, 15.0, r=2.2),
@@ -1397,7 +1394,7 @@ def rot_box(ox, oy, oz, sx, sy, sz, px, py, pz, rx, ry, rz):
 MODEL_SCALE = 1.8
 SEAT_DROP = -6.0
 AUTHORED = (0.0, 21.6, 5.1)
-SEAT_LOWER = 4.0
+SEAT_LOWER = 11.0
 SEATED = (0.0, ((30.8 - SEAT_LOWER) * MODEL_SCALE - 10.0) / MODEL_SCALE, 4.3)
 
 def to_seat(b):
@@ -1462,7 +1459,7 @@ def shell_ring(y, h, hx, zf, zb, front=True, t=0.6, c=1.1):
 
 # ==================== UNIFIED ARMORED BOX HULL BUILDERS ====================
 def build_box_canopy(extras=[]):
-    roof_y = 40.65
+    roof_y = 33.7
     rear_z = 9.47
     roof_quads = [
         (-5.5, roof_y, -2.5, 5.5, 1.0, 6.0),
@@ -1480,20 +1477,20 @@ def build_box_canopy(extras=[]):
         (3.6, roof_y + 1.0, 3.2, 0.4, 0.4, 2.6),
         (-4.0, roof_y + 1.0, 3.2, 0.4, 0.4, 2.6),
         # Rear bulkhead (split L/R)
-        (-5.5, 22.8, rear_z, 5.5, roof_y + 1.0 - 22.8, 0.8),
-        (0.0, 22.8, rear_z, 5.5, roof_y + 1.0 - 22.8, 0.8),
+        (-5.5, 19.5, rear_z, 5.5, roof_y + 1.0 - 19.5, 0.8),
+        (0.0, 19.5, rear_z, 5.5, roof_y + 1.0 - 19.5, 0.8),
         # Rear radiator louvers
-        (-4.0, 25.0, rear_z + 0.8, 8.0, 11.5, 0.6),
+        (-4.0, 20.5, rear_z + 0.8, 8.0, roof_y - 20.5, 0.6),
         # Rear emergency egress latch
         (-1.5, 30.0, rear_z + 0.8, 3.0, 3.0, 0.4),
         # Side armor walls
-        (5.9, 23.5, -2.2, 0.8, 16.0, rear_z - (-2.2)),
-        (-6.7, 23.5, -2.2, 0.8, 16.0, rear_z - (-2.2)),
+        (5.9, 19.5, -2.2, 0.8, roof_y - 19.5, rear_z - (-2.2)),
+        (-6.7, 19.5, -2.2, 0.8, roof_y - 19.5, rear_z - (-2.2)),
         # Overhang brow
-        (-3.0, 37.0, -3.6, 6.0, roof_y - 37.0, 1.2),
+        (-3.0, 31.0, -3.6, 6.0, roof_y - 31.0, 1.2),
         # Cheek cowls flanking throat cavity
-        (2.8, 30.5, -3.6, 3.2, 7.5, 1.2),
-        (-6.0, 30.5, -3.6, 3.2, 7.5, 1.2),
+        (2.8, 26.5, -3.6, 3.2, roof_y - 26.5, 1.2),
+        (-6.0, 26.5, -3.6, 3.2, roof_y - 26.5, 1.2),
         # 45 deg chamfered upper roof edges
         rot_box(4.8, roof_y - 0.7, -2.5, 1.4, 0.8, rear_z - (-2.5), 5.5, roof_y - 0.3, 3.2, 0, 0, -45),
         rot_box(-6.2, roof_y - 0.7, -2.5, 1.4, 0.8, rear_z - (-2.5), -5.5, roof_y - 0.3, 3.2, 0, 0, 45)
@@ -1613,7 +1610,7 @@ for name, _, pivot, _ in BONES:
 MODEL_SCALE = 1.8
 SEAT_DROP = -6.0
 AUTHORED = (0.0, 21.6, 5.1)
-SEAT_LOWER = 4.0   # the Phase-1 frame put its saddle in the pelvis drum: sit the pilot down onto it
+SEAT_LOWER = 11.0   # the Phase-1 frame put its saddle in the pelvis drum: sit the pilot down onto it
 SEATED = (0.0, ((30.8 - SEAT_LOWER) * MODEL_SCALE - 10.0) / MODEL_SCALE, 4.3)   # mirrors ExoframeEntity.SEAT_CUSHION_Y
 HEAD_GROUP = (
     "head", "armor_head", "armor_head_usmc", "armor_head_dome", "armor_head_votoms", "armor_head_hood", "armor_head_polar",
@@ -1635,7 +1632,7 @@ def to_seat(b):
     p = [SEATED[i] + (b[i] - AUTHORED[i]) / MODEL_SCALE for i in range(3)]
     return (*p, *(v / MODEL_SCALE for v in b[3:6]))
 
-LEG_FORWARD, LEG_SPREAD, ARM_FORWARD, ARM_SPREAD = 0.9, 0.8, 1.0, 0.12
+LEG_FORWARD, LEG_SPREAD, ARM_FORWARD, ARM_SPREAD = 0.9, 0.28, 1.0, 0.12
 
 def limb_boxes(px, py, length, fwd, spread):
     d = (math.copysign(math.cos(fwd) * math.sin(spread), px), -math.cos(fwd) * math.cos(spread), -math.sin(fwd))

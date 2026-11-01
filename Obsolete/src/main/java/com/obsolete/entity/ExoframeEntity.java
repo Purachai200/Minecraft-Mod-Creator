@@ -119,7 +119,7 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     private int sprintPuffTimer = 0;
 
     /** Seat cushion height in model px; mirrored as 30.8 - SEAT_LOWER in tools/build_exoframe_geo.py (capsules are fitted to it). */
-    public static final double SEAT_CUSHION_Y = 26.8D;
+    public static final double SEAT_CUSHION_Y = 19.8D;
 
     // Raw Animations
     protected static final RawAnimation ANIM_IDLE = RawAnimation.begin().thenLoop("animation.exoframe.idle");
