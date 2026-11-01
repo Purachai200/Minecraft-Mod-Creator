@@ -228,8 +228,15 @@ def sym(bone, *boxes):
         add(bone, b, mx(b))
 
 def mx(b):
+    if len(b) >= 12:
+        x, y, z, sx, sy, sz, px, py, pz, rx, ry, rz = b
+        return (-(x + sx), y, z, sx, sy, sz, -px, py, pz, rx, -ry, -rz)
     x, y, z, sx, sy, sz = b
     return (-(x + sx), y, z, sx, sy, sz)
+
+def rot_box(ox, oy, oz, sx, sy, sz, px, py, pz, rx, ry, rz):
+    """Returns a 12-element tuple defining a cube with its own pivot and 3-axis rotation."""
+    return (ox, oy, oz, sx, sy, sz, px, py, pz, rx, ry, rz)
 
 def disc_x(x, cy, cz, r, w):
     k = 0.83 * r
@@ -501,37 +508,72 @@ LEG_ARMOR["usmc"] = [
 
 # ---------- 2. CERBERUS ----------
 a = "armor_head_dome"
-add(a, *disc_y(0, 30.6, -3.8, 3.0, 1.0),              # Base armored mounting collar
-    *disc_y(0, 31.6, -3.8, 2.8, 3.4),                 # Hemispherical sensor dome
-    *disc_y(0, 35.0, -3.8, 2.2, 0.6),                 # Crown dome stepped transition
-    *disc_y(0, 35.6, -3.8, 1.4, 0.4),                 # Top telemetry cap
-    (-2.4, 32.6, -6.6, 4.8, 0.8, 0.5))                # Panoramic FLIR sensor band
-sym(a, (2.8, 32.0, -4.6, 0.6, 2.0, 1.8))              # Symmetrical side sensor housings
+add(a,
+    # Base collar
+    *disc_y(0, 30.6, -1.0, 2.8, 1.0),
+    # Lower jaw & chin wedge
+    (-1.6, 31.0, -2.8, 3.2, 1.4, 2.2),
+    rot_box(-1.6, 30.6, -3.6, 3.2, 1.2, 1.0, 0, 31.0, -3.6, 25, 0, 0),
+    # Visor cavity backing & glowing Crimson Mono-eye
+    (-2.4, 32.2, -3.2, 4.8, 1.2, 2.4),
+    (-0.6, 32.4, -3.6, 1.2, 0.8, 0.6), # Crimson Mono-eye
+    # Curved sloped helmet brow (tilted down 22 deg over mono-eye)
+    rot_box(-2.4, 33.2, -3.8, 4.8, 1.2, 1.8, 0, 33.6, -3.8, -22, 0, 0),
+    # Crown dome front facet (tilted back 15 deg)
+    rot_box(-2.2, 34.2, -2.4, 4.4, 1.2, 2.4, 0, 34.6, -2.4, 15, 0, 0),
+    # Crown dome rear facet (tilted down 35 deg)
+    rot_box(-2.0, 33.2, -0.2, 4.0, 1.8, 1.6, 0, 33.6, 0.4, 35, 0, 0),
+    # Commander crest blade antenna
+    rot_box(-0.3, 34.8, -2.2, 0.6, 2.4, 1.2, 0, 35.0, -2.0, -25, 0, 0)
+)
+sym(a,
+    # Cheek cowl plates (tilted inwards)
+    rot_box(1.8, 31.6, -3.0, 1.0, 2.6, 3.2, 2.2, 32.0, -2.0, 0, 18, -10)
+)
 
 a = "armor_chest_cerberus"
-add(a, (-1.5, 21.2, -5.6, 3.0, 8.2, 0.8),             # Smooth contoured central spine
-    (-2.4, 28.6, -5.4, 4.8, 1.0, 0.8),                # Upper yoke collar
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.5),                 # Backplate mount
-    (-1.4, 15.2, -5.4, 2.8, 5.8, 0.7))                # Lower abdomen core
-sym(a, (1.5, 21.4, -5.5, 4.4, 7.8, 3.4),              # Contoured breastplate cowls
-    (5.8, 21.8, -5.0, 0.7, 7.0, 2.8),                 # Lateral torso flank shields
-    (1.4, 15.0, -5.5, 3.4, 6.6, 0.7),                 # Abdominal flank guard
-    (2.0, 20.4, -5.8, 1.6, 1.2, 0.4))                 # Canopy latch locks
+add(a,
+    # Center sloped glacis breastplate (monolithic continuous plate tilted 24 deg)
+    rot_box(-3.0, 22.0, -5.8, 6.0, 7.2, 1.4, 0, 22.0, -4.8, -24, 0, 0),
+    # Upper armored throat collar
+    (-3.2, 28.8, -4.8, 6.4, 1.8, 1.8),
+    # Exposed corrugated mechanical waist bellows (black accordion louvers)
+    (-2.8, 19.5, -4.6, 5.6, 0.8, 1.4),
+    (-2.6, 18.2, -4.4, 5.2, 0.8, 1.4),
+    (-2.4, 16.9, -4.2, 4.8, 0.8, 1.4),
+    (-2.2, 15.6, -4.0, 4.4, 0.8, 1.4),
+    # Groin keel wedge (tilted up 18 deg)
+    rot_box(-1.6, 14.8, -5.0, 3.2, 5.0, 1.4, 0, 15.0, -4.8, 18, 0, 0),
+    # Backplate mount
+    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.6)
+)
+sym(a,
+    # Pectoral flank plates (tilted inwards and downwards)
+    rot_box(2.8, 22.0, -5.2, 3.2, 6.8, 2.2, 3.0, 23.0, -4.5, -18, 16, -8),
+    # Hip skirt armor plates (flared outwards 16 deg)
+    rot_box(3.2, 14.5, -4.0, 1.2, 5.4, 3.8, 3.5, 18.0, -2.5, 0, 0, -16)
+)
 
 SHOULDERS["cerberus"] = [
-    (5.2, 32.2, -3.8, 5.6, 1.0, 6.4),                 # Curved top pauldron shell
-    (5.6, 33.2, -3.2, 4.6, 0.7, 5.2),                 # Upper ridge
-    (10.6, 26.2, -4.0, 1.1, 6.6, 6.8),                # Heavy outer curved plate
-    (11.7, 27.2, -2.6, 0.4, 4.6, 4.0),                # Recessed heat sink / tactical flash panel
-    (5.4, 26.6, -4.6, 5.4, 5.8, 0.8),                 # Front deflection shield
-    (5.4, 26.6, 2.4, 5.4, 5.8, 0.8),                  # Rear deflection shield
-    (5.0, 29.8, -2.0, 0.6, 2.0, 3.0)                  # Joint mounting clamp
+    # Top pauldron shell draped smoothly over shoulder (tilted gently outward 8 deg)
+    rot_box(4.8, 30.8, -4.0, 6.4, 1.4, 8.0, 5.5, 31.0, 0.0, 0, 0, -8),
+    # Outer vertical heavy armor plate draped over upper arm
+    (9.8, 24.5, -3.8, 1.4, 7.5, 7.6),
+    # Front deflection beveled face (tilted forward 12 deg)
+    rot_box(4.8, 25.0, -4.6, 5.4, 6.5, 1.2, 6.0, 29.0, -4.0, -12, 0, 0),
+    # Rear deflection beveled face (tilted rearward 12 deg)
+    rot_box(4.8, 25.0, 3.4, 5.4, 6.5, 1.2, 6.0, 29.0, 4.0, 12, 0, 0),
+    # Rear thruster booster block
+    (5.4, 26.8, 4.2, 4.6, 5.4, 2.6),
+    *disc_z(6.6, 28.0, 6.8, 0.8, 0.8),
+    *disc_z(8.8, 28.0, 6.8, 0.8, 0.8)
 ]
 LEG_ARMOR["cerberus"] = [
     (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip ball cowl
-    (6.2, 10.8, -2.8, 1.0, 5.8, 4.8),                 # Heavy outer plate
-    (2.8, 11.2, -3.2, 3.4, 4.8, 1.0),                 # Front cuisse plate
-    (3.0, 8.2, -4.6, 2.8, 3.0, 1.2),                  # Contoured knee guard
+    (5.8, 10.8, -2.6, 1.2, 5.6, 4.8),                 # Outer ballistic thigh plate
+    (2.8, 11.2, -3.2, 3.4, 5.2, 1.2),                 # Front cuisse plate
+    # Sharp angled knee blade pointing upward/forward 42 deg (Pomkots style)
+    rot_box(3.0, 8.2, -5.2, 3.0, 3.8, 1.4, 4.5, 9.0, -4.0, 42, 0, 0),
     (2.8, 11.2, 1.8, 3.4, 4.8, 0.9)                   # Rear hamstring plate
 ]
 
@@ -985,8 +1027,19 @@ SHIN_EXTRA = {
     "valkyrie": [(2.8, 7.2, -5.2, 3.4, 1.8, 0.8), (3.0, 4.0, -3.6, 3.0, 1.6, 0.6)]
 }
 for faction, extra in SHIN_EXTRA.items():
-    add(f"armor_left_shin_{faction}", *GREAVE, *extra)
-    add(f"armor_right_shin_{faction}", *[mx(b) for b in GREAVE + extra])
+    if faction == "cerberus":
+        cerberus_shin = [
+            rot_box(3.0, 2.0, -4.2, 3.0, 7.0, 1.2, 4.5, 6.0, -3.5, -16, 0, 0),
+            rot_box(6.0, 1.8, -3.0, 1.2, 7.2, 5.4, 6.0, 7.0, 0.0, 0, 0, -14),
+            rot_box(3.0, 2.2, 2.2, 3.0, 6.2, 1.4, 4.5, 6.0, 2.0, 14, 0, 0),
+            *disc_z(4.5, 3.5, 3.6, 0.8, 0.6),
+            rot_box(2.8, 0.2, -5.6, 3.4, 1.6, 3.0, 4.5, 1.0, -4.0, 22, 0, 0)
+        ]
+        add(f"armor_left_shin_{faction}", *cerberus_shin)
+        add(f"armor_right_shin_{faction}", *[mx(b) for b in cerberus_shin])
+    else:
+        add(f"armor_left_shin_{faction}", *GREAVE, *extra)
+        add(f"armor_right_shin_{faction}", *[mx(b) for b in GREAVE + extra])
 
 # ---------- PILOT CAPSULES (existing) ----------
 c = "canopy_usmc"   # enclosed hood: rounded corners, vision slit, tapering brow and roof, 100% enclosed
@@ -1520,11 +1573,23 @@ add("weapon_fishing_rod",
     (X - 0.5, 48.0, -6.0, 1.0, 1.6, 1.0))  # Bobber tackle
 
 def cube(b, uv):
+    if len(b) >= 12:
+        return {
+            "origin": [round(v, 3) for v in b[:3]],
+            "size": [round(max(v, 0.1), 3) for v in b[3:6]],
+            "pivot": [round(v, 3) for v in b[6:9]],
+            "rotation": [round(v, 3) for v in b[9:12]],
+            "uv": uv
+        }
     return {
         "origin": [round(v, 3) for v in b[:3]],
-        "size": [round(max(v, 0.1), 3) for v in b[3:]],
+        "size": [round(max(v, 0.1), 3) for v in b[3:6]],
         "uv": uv
     }
+
+def rot_box(ox, oy, oz, sx, sy, sz, px, py, pz, rx, ry, rz):
+    """Returns a 12-element tuple defining a cube with its own pivot and 3-axis rotation."""
+    return (ox, oy, oz, sx, sy, sz, px, py, pz, rx, ry, rz)
 
 # ==================== YOKE WIDTH & ARM REACH ====================
 # The arms hang off the ends of the wide yoke (outer span ~1.6x the hips) and must reach 6.4 + 12.0 px so the
@@ -1546,7 +1611,16 @@ for name, _, pivot, _ in BONES:
     pivot[0] = round(pivot[0] + side * ARM_DX, 3)
     pivot[1] = round(pivot[1] + dy, 3)
     if name in C:
-        C[name] = [(round(x + side * ARM_DX, 4), round(y + dy, 4), z, sx, sy, sz) for x, y, z, sx, sy, sz in C[name]]
+        new_cubes = []
+        for b in C[name]:
+            if len(b) >= 12:
+                x, y, z, sx, sy, sz, px, py, pz, rx, ry, rz = b
+                new_cubes.append((round(x + side * ARM_DX, 4), round(y + dy, 4), z, sx, sy, sz,
+                                  round(px + side * ARM_DX, 4), round(py + dy, 4), pz, rx, ry, rz))
+            else:
+                x, y, z, sx, sy, sz = b
+                new_cubes.append((round(x + side * ARM_DX, 4), round(y + dy, 4), z, sx, sy, sz))
+        C[name] = new_cubes
 
 # ==================== SEAT & CAPSULE FIT ====================
 MODEL_SCALE = 1.8
@@ -1566,8 +1640,13 @@ CANOPIES = (
 )
 
 def to_seat(b):
+    if len(b) >= 12:
+        x, y, z, sx, sy, sz, px, py, pz, rx, ry, rz = b
+        p = [SEATED[i] + (b[i] - AUTHORED[i]) / MODEL_SCALE for i in range(3)]
+        pivot = [SEATED[i] + (px_val - AUTHORED[i]) / MODEL_SCALE for i, px_val in enumerate((px, py, pz))]
+        return (*p, *(v / MODEL_SCALE for v in (sx, sy, sz)), *pivot, rx, ry, rz)
     p = [SEATED[i] + (b[i] - AUTHORED[i]) / MODEL_SCALE for i in range(3)]
-    return (*p, *(v / MODEL_SCALE for v in b[3:]))
+    return (*p, *(v / MODEL_SCALE for v in b[3:6]))
 
 LEG_FORWARD, LEG_SPREAD, ARM_FORWARD, ARM_SPREAD = 0.9, 0.8, 1.0, 0.12
 
@@ -1596,17 +1675,33 @@ def leg_fairing():
 
 def move(bone, dy=0.0, dz=0.0):
     if bone in C:
-        C[bone] = [(x, y + dy, z + dz, sx, sy, sz) for x, y, z, sx, sy, sz in C[bone]]
+        out = []
+        for b in C[bone]:
+            if len(b) >= 12:
+                x, y, z, sx, sy, sz, px, py, pz, rx, ry, rz = b
+                out.append((x, y + dy, z + dz, sx, sy, sz, px, py + dy, pz + dz, rx, ry, rz))
+            else:
+                x, y, z, sx, sy, sz = b
+                out.append((x, y + dy, z + dz, sx, sy, sz))
+        C[bone] = out
 
 def cap_top(bone, top, zmin, zmax):
     if bone not in C:
         return
     out = []
-    for x, y, z, sx, sy, sz in C[bone]:
-        if z < zmax and z + sz > zmin and y + sy > top:
-            sy = top - y
-        if sy > 0.05:
-            out.append((x, y, z, sx, sy, sz))
+    for b in C[bone]:
+        if len(b) >= 12:
+            x, y, z, sx, sy, sz, px, py, pz, rx, ry, rz = b
+            if z < zmax and z + sz > zmin and y + sy > top:
+                sy = top - y
+            if sy > 0.05:
+                out.append((x, y, z, sx, sy, sz, px, py, pz, rx, ry, rz))
+        else:
+            x, y, z, sx, sy, sz = b
+            if z < zmax and z + sz > zmin and y + sy > top:
+                sy = top - y
+            if sy > 0.05:
+                out.append((x, y, z, sx, sy, sz))
     C[bone] = out
 
 for chest in (
@@ -1627,7 +1722,15 @@ for n in HEAD_GROUP:
 move("upper_back_seat", SEAT_DROP - SEAT_LOWER)
 
 for n in CANOPIES:
-    C[n] = [to_seat((x, y + SEAT_DROP, z, sx, sy, sz)) for x, y, z, sx, sy, sz in C[n]]
+    out = []
+    for b in C[n]:
+        if len(b) >= 12:
+            x, y, z, sx, sy, sz, px, py, pz, rx, ry, rz = b
+            out.append(to_seat((x, y + SEAT_DROP, z, sx, sy, sz, px, py + SEAT_DROP, pz, rx, ry, rz)))
+        else:
+            x, y, z, sx, sy, sz = b
+            out.append(to_seat((x, y + SEAT_DROP, z, sx, sy, sz)))
+    C[n] = out
 
 C["armor_roll_cage"] = [(x, y + SEAT_DROP, z, sx, sy, sz) if y >= 35 else
                         (x, y, z, sx, sy + SEAT_DROP if y + sy > 44 else sy, sz)
@@ -1757,7 +1860,7 @@ for w_name, (grip, fist, yaw, pshare) in AIM_HOLDS.items():
               min(p[2] for p in pts), max(p[2] for p in pts))
         for hb in HEAD_GROUP:
             for hc in C.get(hb, []):
-                x2, y2, z2, sx, sy, sz = hc
+                x2, y2, z2, sx, sy, sz = hc[:6]
                 if not (gb[1] <= x2 or gb[0] >= x2 + sx or
                         gb[3] <= y2 or gb[2] >= y2 + sy or
                         gb[5] <= z2 or gb[4] >= z2 + sz):
@@ -1871,7 +1974,7 @@ for fac_name, (bone_list, free_rects) in FACTION_UV_REGIONS.items():
     cubes_to_pack = []
     for b_name in bone_list:
         for idx, c in enumerate(C.get(b_name, [])):
-            sx, sy, sz = [math.ceil(max(v, 0.1)) for v in c[3:]]
+            sx, sy, sz = [math.ceil(max(v, 0.1)) for v in c[3:6]]
             w = 2 * (sz + sx)
             h = sz + sy
             cubes_to_pack.append((b_name, idx, c, w, h, sx, sy, sz))
@@ -1889,7 +1992,7 @@ for fac_name, (bone_list, free_rects) in FACTION_UV_REGIONS.items():
             "bone": b_name,
             "cube_index": idx,
             "origin": [round(val, 3) for val in c[:3]],
-            "size": [round(max(val, 0.1), 3) for val in c[3:]],
+            "size": [round(max(val, 0.1), 3) for val in c[3:6]],
             "uv": [u, v],
             "w_uv": w,
             "h_uv": h,

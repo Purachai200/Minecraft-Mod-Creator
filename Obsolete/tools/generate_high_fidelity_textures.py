@@ -130,13 +130,13 @@ for item in PACKED_MANIFEST:
                     DETAIL_MAP[(px, py)] = 2 # Bevel highlight
 
         # ---------------- Markings & Decals ----------------
-        # 1. Pegaso Black Dome: White "1" on front and top
-        if bone == "armor_head_dome" and fname in ("north", "top") and fw >= 4 and fh >= 2:
+        # 1. Pegaso Black Dome: White "1" on front crown only
+        if bone == "armor_head_dome" and fname == "north" and cidx == 6 and fw >= 4 and fh >= 2:
             cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
             for (dx, dy) in [(0, -1), (-1, -1), (0, 0), (0, 1), (-1, 1), (1, 1)]:
                 MARKING_MAP[(cx + dx, cy + dy)] = (255, 255, 255, 255)
 
-        if bone == "canopy_cerberus" and fname == "north" and cidx in (43, 46, 49) and fw >= 4:
+        if bone == "canopy_cerberus" and fname == "north" and cidx == 43 and fw >= 4:
             cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
             for (dx, dy) in [(0, -1), (-1, -1), (0, 0), (0, 1), (-1, 1), (1, 1)]:
                 MARKING_MAP[(cx + dx, cy + dy)] = (255, 255, 255, 255)
@@ -223,9 +223,16 @@ def faction_livery(x, y):
     if (x, y) in BONE_MAP:
         fac, bone, cidx, _ = BONE_MAP[(x, y)]
         if fac == "Cerberus":
-            if "shoulder_cerberus" in bone: return (176, 32, 30) # Crimson red shoulder pods
-            if "backpack_cerberus" in bone: return (70, 82, 50)  # Olive ammo cans
-            return (40, 42, 46)                                 # Pegaso Black
+            if bone == "armor_head_dome":
+                if cidx == 6: return (255, 30, 42) # Glowing Crimson Mono-eye
+                if cidx == 5: return (18, 20, 22)  # Deep shadow visor backing
+            if "shoulder_cerberus" in bone:
+                if cidx == 0: return (185, 32, 30) # Crimson red top flash accent
+                return (42, 44, 48)                 # Matte charcoal pauldron
+            if "backpack_cerberus" in bone: return (55, 62, 50)
+            if "chest" in bone and cidx in (2, 3, 4, 5):
+                return (24, 25, 28)                 # Dark corrugated bellows
+            return (40, 42, 46)                     # Pegaso Black main plates
         elif fac == "USMC":
             return (78, 88, 58)                                 # Marine Raider olive drab
         elif fac == "Polar":
