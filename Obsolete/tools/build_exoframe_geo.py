@@ -238,6 +238,190 @@ def rot_box(ox, oy, oz, sx, sy, sz, px, py, pz, rx, ry, rz):
     """Returns a 12-element tuple defining a cube with its own pivot and 3-axis rotation."""
     return (ox, oy, oz, sx, sy, sz, px, py, pz, rx, ry, rz)
 
+MODEL_SCALE = 1.8
+SEAT_DROP = -6.0
+AUTHORED = (0.0, 21.6, 5.1)
+SEAT_LOWER = 4.0
+SEATED = (0.0, ((30.8 - SEAT_LOWER) * MODEL_SCALE - 10.0) / MODEL_SCALE, 4.3)
+
+def to_seat(b):
+    if len(b) >= 12:
+        x, y, z, sx, sy, sz, px, py, pz, rx, ry, rz = b
+        p = [SEATED[i] + (b[i] - AUTHORED[i]) / MODEL_SCALE for i in range(3)]
+        pivot = [SEATED[i] + (px_val - AUTHORED[i]) / MODEL_SCALE for i, px_val in enumerate((px, py, pz))]
+        return (*p, *(v / MODEL_SCALE for v in (sx, sy, sz)), *pivot, rx, ry, rz)
+    x, y, z, sx, sy, sz = b
+    p = [SEATED[i] + (b[i] - AUTHORED[i]) / MODEL_SCALE for i in range(3)]
+    return (*p, *(v / MODEL_SCALE for v in (sx, sy, sz)))
+
+def from_seat(b):
+    if len(b) >= 12:
+        mx, my, mz, msx, msy, msz, mpx, mpy, mpz, rx, ry, rz = b
+        ax = (mx - SEATED[0]) * MODEL_SCALE + AUTHORED[0]
+        ay = (my - SEATED[1]) * MODEL_SCALE + AUTHORED[1] - SEAT_DROP
+        az = (mz - SEATED[2]) * MODEL_SCALE + AUTHORED[2]
+        asx = msx * MODEL_SCALE
+        asy = msy * MODEL_SCALE
+        asz = msz * MODEL_SCALE
+        apx = (mpx - SEATED[0]) * MODEL_SCALE + AUTHORED[0]
+        apy = (mpy - SEATED[1]) * MODEL_SCALE + AUTHORED[1] - SEAT_DROP
+        apz = (mpz - SEATED[2]) * MODEL_SCALE + AUTHORED[2]
+        return (ax, ay, az, asx, asy, asz, apx, apy, apz, rx, ry, rz)
+    mx, my, mz, msx, msy, msz = b
+    ax = (mx - SEATED[0]) * MODEL_SCALE + AUTHORED[0]
+    ay = (my - SEATED[1]) * MODEL_SCALE + AUTHORED[1] - SEAT_DROP
+    az = (mz - SEATED[2]) * MODEL_SCALE + AUTHORED[2]
+    asx = msx * MODEL_SCALE
+    asy = msy * MODEL_SCALE
+    asz = msz * MODEL_SCALE
+    return (ax, ay, az, asx, asy, asz)
+
+def round_ring(y, h, hx, zf, zb, r=2.6, t=0.6, front=True, n=3):
+    out = [(-hx + r, y, zb - t, 2 * (hx - r), h, t)]
+    if front:
+        out.append((-hx + r, y, zf, 2 * (hx - r), h, t))
+    for sx in (1, -1):
+        out.append(((hx - t) if sx > 0 else -hx, y, zf + r, t, h, zb - zf - 2 * r))
+        for zc, sz in ((zf, 1), (zb, -1)):
+            for i in range(n):
+                a0, a1 = math.pi / 2 * i / n, math.pi / 2 * (i + 1) / n
+                xs = [hx - r + r * math.cos(a) for a in (a0, a1)]
+                zs = [r - r * math.sin(a) for a in (a0, a1)]
+                x0, x1 = min(xs), max(max(xs), min(xs) + t)
+                z0, z1 = min(zs), max(max(zs), min(zs) + t)
+                x0, x1 = (x0, x1) if sx > 0 else (-x1, -x0)
+                z0, z1 = (zc + z0, zc + z1) if sz > 0 else (zc - z1, zc - z0)
+                out.append((x0, y, z0, x1 - x0, h, z1 - z0))
+    return out
+
+def shell_ring(y, h, hx, zf, zb, front=True, t=0.6, c=1.1):
+    out = [(-hx + c, y, zb - t, 2 * (hx - c), h, t)]
+    if front:
+        out.append((-hx + c, y, zf, 2 * (hx - c), h, t))
+    for sx in (1, -1):
+        out.append(((hx - t) if sx > 0 else -hx, y, zf + c, t, h, zb - zf - 2 * c))
+        for zc in (zf, zb - c):
+            out.append(((hx - c) if sx > 0 else -hx, y, zc, c, h, c))
+    return out
+
+# ==================== UNIFIED ARMORED BOX HULL BUILDERS ====================
+def build_box_canopy(extras=[]):
+    roof_y = 40.65
+    rear_z = 9.47
+    roof_quads = [
+        (-5.5, roof_y, -2.5, 5.5, 1.0, 6.0),
+        (0.0, roof_y, -2.5, 5.5, 1.0, 6.0),
+        (-5.5, roof_y, 3.5, 5.5, 1.0, rear_z + 0.8 - 3.5),
+        (0.0, roof_y, 3.5, 5.5, 1.0, rear_z + 0.8 - 3.5),
+    ]
+    base = [
+        *roof_quads,
+        # Commander hatch
+        (-3.2, roof_y + 1.0, 1.5, 6.4, 0.6, 5.5),
+        # Hatch rim
+        (-3.4, roof_y + 1.0, 6.8, 6.8, 0.7, 0.6),
+        # Grab handles
+        (3.6, roof_y + 1.0, 3.2, 0.4, 0.4, 2.6),
+        (-4.0, roof_y + 1.0, 3.2, 0.4, 0.4, 2.6),
+        # Rear bulkhead (split L/R)
+        (-5.5, 22.8, rear_z, 5.5, roof_y + 1.0 - 22.8, 0.8),
+        (0.0, 22.8, rear_z, 5.5, roof_y + 1.0 - 22.8, 0.8),
+        # Rear radiator louvers
+        (-4.0, 25.0, rear_z + 0.8, 8.0, 11.5, 0.6),
+        # Rear emergency egress latch
+        (-1.5, 30.0, rear_z + 0.8, 3.0, 3.0, 0.4),
+        # Side armor walls
+        (5.9, 23.5, -2.2, 0.8, 16.0, rear_z - (-2.2)),
+        (-6.7, 23.5, -2.2, 0.8, 16.0, rear_z - (-2.2)),
+        # Overhang brow
+        (-3.0, 37.0, -3.6, 6.0, roof_y - 37.0, 1.2),
+        # Cheek cowls flanking throat cavity
+        (2.8, 30.5, -3.6, 3.2, 7.5, 1.2),
+        (-6.0, 30.5, -3.6, 3.2, 7.5, 1.2),
+        # 45 deg chamfered upper roof edges
+        rot_box(4.8, roof_y - 0.7, -2.5, 1.4, 0.8, rear_z - (-2.5), 5.5, roof_y - 0.3, 3.2, 0, 0, -45),
+        rot_box(-6.2, roof_y - 0.7, -2.5, 1.4, 0.8, rear_z - (-2.5), -5.5, roof_y - 0.3, 3.2, 0, 0, 45)
+    ]
+    model_boxes = base + list(extras)
+    return [from_seat(b) for b in model_boxes]
+
+def build_chest_glacis(extras=[]):
+    base = [
+        # Center sloped glacis breastplate (monolithic continuous plate tilted -26 deg)
+        rot_box(-5.4, 22.0, -7.2, 10.8, 9.6, 1.4, 0, 22.0, -6.5, -26, 0, 0),
+        # Lower belly glacis (tilted 28 deg back)
+        rot_box(-4.5, 16.5, -4.2, 9.0, 6.2, 1.4, 0, 17.0, -4.2, 28, 0, 0),
+        # Upper throat collar sill
+        (-3.0, 29.8, -3.6, 6.0, 1.4, 1.4),
+        # Corrugated mechanical waist bellows
+        (-3.6, 19.5, -4.6, 7.2, 0.8, 1.2),
+        (-3.4, 18.2, -4.4, 6.8, 0.8, 1.2),
+        (-3.2, 16.9, -4.2, 6.4, 0.8, 1.2),
+        # Groin keel wedge (tilted up 18 deg)
+        rot_box(-2.0, 14.2, -5.2, 4.0, 4.8, 1.4, 0, 15.0, -4.8, 18, 0, 0),
+        # Hip skirts
+        rot_box(3.2, 14.5, -4.0, 1.2, 5.4, 3.8, 3.5, 18.0, -2.5, 0, 0, -16),
+        rot_box(-4.4, 14.5, -4.0, 1.2, 5.4, 3.8, -3.5, 18.0, -2.5, 0, 0, 16),
+        # Pectoral flank cheek deflection plates
+        rot_box(3.0, 22.0, -6.5, 2.8, 7.6, 2.0, 3.2, 23.0, -5.5, -20, 16, -8),
+        rot_box(-5.8, 22.0, -6.5, 2.8, 7.6, 2.0, -3.2, 23.0, -5.5, -20, -16, 8),
+    ]
+    return base + list(extras)
+
+def build_throat_head(apertures=[], extras=[]):
+    base = [
+        # Main armored sensor housing block recessed inside throat
+        (-2.2, 31.4, -3.2, 4.4, 2.4, 2.0),
+        # Primary sensor visor lens/aperture
+        (-1.8, 32.2, -3.4, 3.6, 0.8, 0.4),
+        # Sloped deflector brow cowl
+        rot_box(-2.2, 33.6, -3.4, 4.4, 0.8, 1.8, 0, 33.6, -3.4, -18, 0, 0)
+    ]
+    return base + list(apertures) + list(extras)
+
+def build_box_pauldron(extras=[]):
+    base = [
+        # Top chamfered plate
+        rot_box(4.8, 31.5, -4.0, 6.4, 1.2, 8.0, 5.5, 31.5, 0.0, 0, 0, -8),
+        # Outer heavy vertical ballistic slab
+        (10.2, 24.5, -3.8, 1.2, 7.5, 7.6),
+        # Front beveled deflection face
+        rot_box(4.8, 25.0, -4.6, 5.4, 6.5, 1.2, 6.0, 29.0, -4.0, -12, 0, 0),
+        # Rear beveled deflection face
+        rot_box(4.8, 25.0, 3.4, 5.4, 6.5, 1.2, 6.0, 29.0, 4.0, 12, 0, 0)
+    ]
+    return base + list(extras)
+
+def build_leg_cuisse(extras=[]):
+    base = [
+        (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip ball cowl
+        (5.8, 10.8, -2.6, 1.2, 5.6, 4.8),                 # Outer ballistic thigh plate
+        (2.8, 11.2, -3.2, 3.4, 5.2, 1.2),                 # Front cuisse plate
+        # Chunky rectangular forward knee guard block
+        (2.8, 8.0, -5.2, 3.2, 3.6, 2.2),
+        (6.0, 9.2, -4.2, 0.6, 1.4, 1.4),                  # Side pivot disc
+        # Exposed twin hydraulic pistons running behind knee
+        (3.4, 8.5, -3.2, 0.8, 5.5, 0.8),
+        (4.8, 8.5, -3.2, 0.8, 5.5, 0.8)
+    ]
+    return base + list(extras)
+
+def build_shin_greave(extras=[]):
+    base = [
+        # Front downward shin slab
+        rot_box(2.8, 2.0, -4.4, 3.4, 7.0, 1.4, 4.5, 6.0, -3.5, -16, 0, 0),
+        # Flared outer calf wing protecting actuator & wheel
+        rot_box(6.0, 1.8, -3.0, 1.2, 7.2, 5.4, 6.0, 7.0, 0.0, 0, 0, -14),
+        # Rear calf guard
+        rot_box(3.0, 2.2, 2.2, 3.0, 6.2, 1.4, 4.5, 6.0, 2.0, 14, 0, 0),
+        # Split-toe articulated boot pads
+        (2.6, 0.2, -5.6, 1.8, 1.6, 3.2),                  # Inner toe pad
+        (4.6, 0.2, -5.6, 1.8, 1.6, 3.2),                  # Outer toe pad
+        (2.6, 0.0, -5.6, 3.8, 0.4, 8.0),                  # Deep sole tread
+        (3.0, 0.2, 2.6, 3.0, 1.4, 1.8)                    # Rear heel spur
+    ]
+    return base + list(extras)
+
 def disc_x(x, cy, cz, r, w):
     k = 0.83 * r
     return [
@@ -341,33 +525,24 @@ h = "head"
 # ==================== 2. HEAD ARMOR VARIANTS ====================
 # A. Sand Head
 a = "armor_head"
-add(a, (-2.4, 31.0, -5.4, 4.8, 3.6, 4.6),             # Main armored sensor housing
-    (-2.2, 34.6, -5.2, 4.4, 0.8, 4.2),                # Sloped top deflector brow
-    (-2.0, 32.6, -5.8, 4.0, 0.8, 0.5),                # Optical visor cowl
-    (-1.2, 32.7, -6.0, 1.0, 0.6, 0.3),                # Main optical rangefinder
-    (0.2, 32.7, -6.0, 1.0, 0.6, 0.3),                 # Auxiliary FLIR sensor
-    (-2.0, 35.2, -2.4, 0.4, 6.0, 0.4))                # Tactical high-gain antenna
-sym(a, (2.4, 31.2, -5.0, 0.4, 3.0, 3.8))              # Ballistic cheek plate armor
+add(a, *build_throat_head(
+    apertures=[(-1.2, 32.4, -3.5, 1.0, 0.6, 0.3), (0.2, 32.4, -3.5, 1.0, 0.6, 0.3)],
+    extras=[(-2.0, 34.0, -2.4, 0.4, 5.0, 0.4)]
+))
 
 # D. VOTOMS 3-Lens Turret Optic Camera
 a = "armor_head_votoms"
-add(a, (-2.6, 31.2, -5.2, 5.2, 3.4, 4.4),          # Turret head block
-    (-2.2, 34.6, -4.8, 4.4, 0.6, 3.8),             # Turret brow
-    *disc_z(0, 33.0, -5.8, 1.8, 0.6),              # Revolving turret disk
-    *disc_z(0.6, 33.6, -6.4, 0.8, 0.8),            # Main standard optic (large green)
-    *disc_z(-0.7, 33.8, -6.3, 0.5, 0.7),           # Wide-angle auxiliary optic (red)
-    *disc_z(-0.2, 32.1, -6.3, 0.45, 0.7),          # Precision zoom optic (cyan)
-    (-2.2, 34.8, -2.4, 0.6, 0.8, 0.6),             # Sensor mast
-    (-2.0, 35.6, -2.2, 0.3, 7.0, 0.3))             # Antenna
-sym(a, (2.4, 32.0, -4.4, 0.5, 1.8, 2.4))
+add(a, (-2.4, 31.4, -3.2, 4.8, 2.4, 2.0),
+    (-2.0, 33.6, -3.4, 4.0, 0.8, 1.8),
+    *disc_z(0, 32.4, -3.5, 1.4, 0.4),
+    *disc_z(0.5, 32.8, -3.9, 0.6, 0.5),
+    *disc_z(-0.6, 32.8, -3.8, 0.4, 0.4),
+    *disc_z(-0.1, 31.8, -3.8, 0.35, 0.4))
 
 # ==================== 3. CHEST ARMOR VARIANTS ====================
 # A. Sand Chest
 a = "armor_chest"
-add(a, (-1.5, 21.0, -5.4, 3.0, 8.2, 0.8),             # Central reinforced glacis core
-    (-2.2, 28.4, -5.2, 4.4, 1.0, 0.8),                # Upper frame yoke collar with bolt bosses
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.5),                 # Rear backplate harness mount
-    (-1.8, 15.2, -5.2, 3.6, 5.8, 0.7))                # Lower abdomen core blast plate
+add(a, *build_chest_glacis())
 sym(a, (1.5, 21.4, -5.3, 4.0, 7.6, 3.2),              # Left/right sloped pectoral cowls
     (5.5, 21.8, -4.7, 0.6, 6.8, 2.6),                 # Lateral torso flank shields
     (1.8, 28.8, -4.9, 3.4, 0.6, 2.6),                 # Top collar chamfer
@@ -466,150 +641,87 @@ def spike(x, y, z, base, length, axis="y", n=3):
 
 SHOULDERS, LEG_ARMOR = {}, {}
 
-# ---------- 1. MARINE RAIDER ----------
+# ---------- 1. MARINE RAIDER (USMC) ----------
 a = "armor_head_usmc"
-add(a, (-2.5, 31.0, -5.6, 5.0, 3.6, 4.8),             # Main armored angular sensor block
-    (-2.2, 34.6, -5.4, 4.4, 0.6, 4.4),                # Sloped top deflector brow
-    (-2.0, 32.6, -6.0, 4.0, 0.8, 0.5),                # Recessed optronic visor housing
-    (-1.4, 32.7, -6.2, 1.0, 0.6, 0.3),                # Left FLIR sensor aperture
-    (0.4, 32.7, -6.2, 1.0, 0.6, 0.3),                 # Right optical zoom aperture
-    (-1.8, 35.2, -2.6, 0.4, 6.0, 0.4))                # Tactical high-gain comms antenna
-sym(a, (2.5, 31.2, -5.0, 0.5, 3.0, 3.8),              # Cheek plate armor
-    (1.2, 33.6, -6.1, 0.6, 0.5, 0.4))                 # Auxiliary tactical rangefinder
+add(a, *build_throat_head(
+    apertures=[(-1.4, 32.2, -3.5, 0.8, 0.6, 0.3), (0.4, 32.2, -3.5, 0.8, 0.6, 0.3)],
+    extras=[(1.4, 32.8, -3.5, 0.8, 0.8, 0.4)]
+))
 
 a = "armor_chest_usmc"
-add(a, (-1.5, 21.0, -5.5, 3.0, 8.2, 0.8),             # Central reinforced glacis core
-    (-2.2, 28.4, -5.3, 4.4, 1.0, 0.8),                # Upper frame yoke collar with bolt bosses
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.5),                 # Rear backplate harness mount
-    (-1.8, 15.2, -5.3, 3.6, 5.8, 0.7))                # Lower abdomen core blast plate
-sym(a, (1.5, 21.4, -5.4, 4.0, 7.6, 3.2),              # Left/right sloped pectoral cowls
-    (5.5, 21.8, -4.8, 0.6, 6.8, 2.6),                 # Lateral torso flank shields
-    (1.8, 28.8, -5.0, 3.4, 0.6, 2.6),                 # Top collar chamfer
-    (1.4, 15.0, -5.4, 3.2, 6.2, 0.7),                 # Abdominal flank guard
-    (2.2, 20.4, -5.7, 1.2, 1.4, 0.4))                 # Cockpit hinge latch lugs
+add(a, *build_chest_glacis([
+    (3.2, 21.0, -7.6, 1.0, 1.2, 0.5), (-4.2, 21.0, -7.6, 1.0, 1.2, 0.5),
+    (-4.2, 29.0, -4.8, 8.4, 0.5, 0.5)
+]))
 
-SHOULDERS["usmc"] = [
-    (5.2, 32.2, -3.8, 5.4, 1.0, 6.2),                 # Top sloped deflector plate
-    (5.4, 33.2, -3.2, 4.8, 0.6, 5.0),                 # Raised upper blast lip
-    (10.4, 26.0, -3.8, 1.0, 6.8, 6.2),                # Outer vertical ballistic plate
-    (11.4, 27.2, -2.4, 0.4, 4.4, 3.4),                # Heavy identification stencil panel
-    (5.4, 26.6, -4.6, 5.2, 5.8, 0.8),                 # Front deflection shield
-    (5.4, 26.6, 2.2, 5.2, 5.8, 0.8),                  # Rear deflection shield
-    (5.0, 29.8, -2.0, 0.6, 2.0, 3.0)                  # Joint mounting bracket
-]
-LEG_ARMOR["usmc"] = [
-    (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip ball-joint protective cowl
-    (6.0, 10.8, -2.8, 0.9, 5.6, 4.8),                 # Outer ballistic thigh plate
-    (6.8, 11.8, -2.0, 0.3, 3.8, 3.2),                 # Outer reinforcing bevel trim
-    (2.8, 11.2, -3.2, 3.4, 4.8, 1.0),                 # Front cuisse deflection plate
-    (3.0, 8.4, -4.6, 2.8, 2.8, 1.2),                  # Lower knee-cap guard
-    (2.8, 11.2, 1.8, 3.4, 4.8, 0.9)                   # Rear actuator shield
-]
+c = "canopy_usmc"
+add(c, *build_box_canopy([
+    (4.4, 40.5, 7.9, 0.3, 6.5, 0.3), (-4.7, 40.5, 7.9, 0.3, 6.5, 0.3)
+]))
 
-# ---------- 2. CERBERUS ----------
+SHOULDERS["usmc"] = build_box_pauldron([
+    (11.5, 26.5, -2.5, 0.3, 4.0, 5.0),
+    (5.5, 31.8, -4.2, 1.2, 1.2, 0.4)
+])
+LEG_ARMOR["usmc"] = build_leg_cuisse([
+    (6.8, 12.0, -2.0, 0.3, 3.6, 3.2)
+])
+
+# ---------- 2. CERBERUS (PEGASO BLACK) ----------
 a = "armor_head_dome"
-add(a,
-    # Base collar
-    *disc_y(0, 30.6, -1.0, 2.8, 1.0),
-    # Lower jaw & chin wedge
-    (-1.6, 31.0, -2.8, 3.2, 1.4, 2.2),
-    rot_box(-1.6, 30.6, -3.6, 3.2, 1.2, 1.0, 0, 31.0, -3.6, 25, 0, 0),
-    # Visor cavity backing & glowing Crimson Mono-eye
-    (-2.4, 32.2, -3.2, 4.8, 1.2, 2.4),
-    (-0.6, 32.4, -3.6, 1.2, 0.8, 0.6), # Crimson Mono-eye
-    # Curved sloped helmet brow (tilted down 22 deg over mono-eye)
-    rot_box(-2.4, 33.2, -3.8, 4.8, 1.2, 1.8, 0, 33.6, -3.8, -22, 0, 0),
-    # Crown dome front facet (tilted back 15 deg)
-    rot_box(-2.2, 34.2, -2.4, 4.4, 1.2, 2.4, 0, 34.6, -2.4, 15, 0, 0),
-    # Crown dome rear facet (tilted down 35 deg)
-    rot_box(-2.0, 33.2, -0.2, 4.0, 1.8, 1.6, 0, 33.6, 0.4, 35, 0, 0),
-    # Commander crest blade antenna
-    rot_box(-0.3, 34.8, -2.2, 0.6, 2.4, 1.2, 0, 35.0, -2.0, -25, 0, 0)
-)
-sym(a,
-    # Cheek cowl plates (tilted inwards)
-    rot_box(1.8, 31.6, -3.0, 1.0, 2.6, 3.2, 2.2, 32.0, -2.0, 0, 18, -10)
-)
+add(a, *build_throat_head(
+    apertures=[(-0.6, 32.2, -3.4, 1.2, 1.0, 0.6)],
+    extras=[
+        (-2.4, 31.8, -3.2, 4.8, 1.6, 2.0),
+        rot_box(-2.4, 33.2, -3.5, 4.8, 1.0, 1.6, 0, 33.6, -3.5, -22, 0, 0)
+    ]
+))
 
 a = "armor_chest_cerberus"
-add(a,
-    # Center sloped glacis breastplate (monolithic continuous plate tilted 24 deg)
-    rot_box(-3.0, 22.0, -5.8, 6.0, 7.2, 1.4, 0, 22.0, -4.8, -24, 0, 0),
-    # Upper armored throat collar
-    (-3.2, 28.8, -4.8, 6.4, 1.8, 1.8),
-    # Exposed corrugated mechanical waist bellows (black accordion louvers)
-    (-2.8, 19.5, -4.6, 5.6, 0.8, 1.4),
-    (-2.6, 18.2, -4.4, 5.2, 0.8, 1.4),
-    (-2.4, 16.9, -4.2, 4.8, 0.8, 1.4),
-    (-2.2, 15.6, -4.0, 4.4, 0.8, 1.4),
-    # Groin keel wedge (tilted up 18 deg)
-    rot_box(-1.6, 14.8, -5.0, 3.2, 5.0, 1.4, 0, 15.0, -4.8, 18, 0, 0),
-    # Backplate mount
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.6)
-)
-sym(a,
-    # Pectoral flank plates (tilted inwards and downwards)
-    rot_box(2.8, 22.0, -5.2, 3.2, 6.8, 2.2, 3.0, 23.0, -4.5, -18, 16, -8),
-    # Hip skirt armor plates (flared outwards 16 deg)
-    rot_box(3.2, 14.5, -4.0, 1.2, 5.4, 3.8, 3.5, 18.0, -2.5, 0, 0, -16)
-)
+add(a, *build_chest_glacis([
+    rot_box(-1.6, 25.0, -7.5, 3.2, 3.0, 0.4, 0, 22.0, -6.5, -26, 0, 0)
+]))
 
-SHOULDERS["cerberus"] = [
-    # Top pauldron shell draped smoothly over shoulder (tilted gently outward 8 deg)
-    rot_box(4.8, 30.8, -4.0, 6.4, 1.4, 8.0, 5.5, 31.0, 0.0, 0, 0, -8),
-    # Outer vertical heavy armor plate draped over upper arm
-    (9.8, 24.5, -3.8, 1.4, 7.5, 7.6),
-    # Front deflection beveled face (tilted forward 12 deg)
-    rot_box(4.8, 25.0, -4.6, 5.4, 6.5, 1.2, 6.0, 29.0, -4.0, -12, 0, 0),
-    # Rear deflection beveled face (tilted rearward 12 deg)
-    rot_box(4.8, 25.0, 3.4, 5.4, 6.5, 1.2, 6.0, 29.0, 4.0, 12, 0, 0),
-    # Rear thruster booster block
+c = "canopy_cerberus"
+add(c, *build_box_canopy([
+    *disc_z(4.2, 41.65, 6.0, 0.6, 0.4), *disc_z(-4.2, 41.65, 6.0, 0.6, 0.4),
+    (-0.3, 41.65, 4.0, 0.6, 2.0, 1.4)
+]))
+
+SHOULDERS["cerberus"] = build_box_pauldron([
     (5.4, 26.8, 4.2, 4.6, 5.4, 2.6),
     *disc_z(6.6, 28.0, 6.8, 0.8, 0.8),
-    *disc_z(8.8, 28.0, 6.8, 0.8, 0.8)
-]
-LEG_ARMOR["cerberus"] = [
-    (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip ball cowl
-    (5.8, 10.8, -2.6, 1.2, 5.6, 4.8),                 # Outer ballistic thigh plate
-    (2.8, 11.2, -3.2, 3.4, 5.2, 1.2),                 # Front cuisse plate
-    # Sharp angled knee blade pointing upward/forward 42 deg (Pomkots style)
-    rot_box(3.0, 8.2, -5.2, 3.0, 3.8, 1.4, 4.5, 9.0, -4.0, 42, 0, 0),
-    (2.8, 11.2, 1.8, 3.4, 4.8, 0.9)                   # Rear hamstring plate
-]
+    *disc_z(8.8, 28.0, 6.8, 0.8, 0.8),
+    (4.8, 32.6, -3.8, 6.4, 0.4, 7.6)
+])
+LEG_ARMOR["cerberus"] = build_leg_cuisse()
 
 # ---------- 3. POLAR FRONT ----------
 a = "armor_head_polar"
-add(a, (-2.6, 31.0, -5.4, 5.2, 3.6, 4.6),             # Armored insulated hood
-    (-2.4, 34.6, -5.8, 4.8, 0.8, 4.8),                # Extended snow/anti-glare peak brow
-    (-1.8, 32.8, -5.8, 3.6, 0.7, 0.5))                # Polar thermal sensor slit
-sym(a, (2.6, 31.4, -4.8, 0.6, 2.6, 3.6))              # De-icing intake vents
+add(a, *build_throat_head(
+    apertures=[*disc_z(-1.0, 32.4, -3.5, 0.5, 0.4), *disc_z(1.0, 32.4, -3.5, 0.5, 0.4)],
+    extras=[(-2.4, 33.6, -3.6, 4.8, 0.8, 1.8)]
+))
 
 a = "armor_chest_polar"
-add(a, (-1.6, 21.0, -5.5, 3.2, 8.2, 0.9),             # Insulated composite glacis
-    (-2.4, 28.6, -5.3, 4.8, 1.2, 0.9),                # High thermal collar
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.5),                 # Backplate mount
-    (-1.4, 15.2, -5.3, 2.8, 6.0, 0.7))                # Lower abdomen core
-sym(a, (1.6, 21.4, -5.4, 4.2, 7.6, 3.4),              # Pectoral cowls
-    (5.6, 21.8, -4.9, 0.7, 6.8, 2.7),                 # Lateral torso flank shields
-    (1.4, 15.0, -5.4, 3.2, 6.4, 0.8))                 # Abdominal flank guard
+add(a, *build_chest_glacis([
+    rot_box(-3.5, 23.0, -7.4, 7.0, 4.0, 0.4, 0, 22.0, -6.5, -26, 0, 0),
+    (-3.2, 30.5, -3.8, 6.4, 1.0, 1.4)
+]))
 
-SHOULDERS["polar"] = [
-    (5.2, 32.4, -3.8, 5.6, 1.0, 6.4),                 # Top snow-shed sloped roof
-    (5.6, 33.4, -3.0, 4.6, 0.6, 4.8),                 # Upper defrosting heater housing
-    (10.6, 26.2, -4.0, 1.0, 6.8, 6.6),                # Outer heavy thermal plate
-    (5.4, 26.6, -4.6, 5.4, 5.8, 0.8),                 # Front deflection shield
-    (5.4, 26.6, 2.4, 5.4, 5.8, 0.8),                  # Rear deflection shield
-    (5.0, 29.8, -2.0, 0.6, 2.0, 3.0)                  # Joint mounting bracket
-]
-LEG_ARMOR["polar"] = [
-    (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip joint insulated cowl
-    (6.0, 10.8, -2.8, 1.0, 5.8, 4.8),                 # Heavy outer insulated thigh plate
-    (2.8, 11.2, -3.2, 3.4, 4.8, 1.0),                 # Front cuisse thermal plate
-    (3.0, 8.4, -4.6, 2.8, 2.8, 1.2),                  # Heavy contoured knee flange
-    (2.8, 11.2, 1.8, 3.4, 4.8, 0.9)                   # Rear actuator protector
-]
+c = "canopy_polar"
+add(c, *build_box_canopy([
+    (-4.5, 41.65, -1.0, 9.0, 0.5, 8.0),
+    (-3.0, 41.65, 7.0, 6.0, 0.8, 1.5)
+]))
 
-SKI = [(2.2, 0.2, -14.0, 4.6, 0.6, 24.0),
+SHOULDERS["polar"] = build_box_pauldron([
+    (5.6, 32.6, -3.0, 4.6, 0.6, 4.8)
+])
+LEG_ARMOR["polar"] = build_leg_cuisse()
+
+SKI = [(2.2, 0.2, -14.0, 4.6, 0.6, 12.0),
+       (2.2, 0.2, -2.0, 4.6, 0.6, 12.0),
        *stepped(2.2, 2.4, -18.0, 0.2, -14.0, 4.6, 0.6, 4),
        (3.0, 0.8, -0.6, 0.4, 1.0, 1.6), (5.6, 0.8, -0.6, 0.4, 1.0, 1.6)]
 add("armor_left_ski", *SKI)
@@ -623,480 +735,194 @@ sym(b, *disc_z(10.2, 36.2, -10.0, 1.1, 16.0),
     (4.2, 32.6, -0.6, 6.4, 0.8, 0.8),
     (9.6, 37.3, -4.0, 1.2, 0.8, 1.6))
 
-# ---------- 4. OUTLANDER HEAVY ----------
+# ---------- 4. OUTLANDER HEAVY (ERA BRICKS) ----------
 a = "armor_head_hood"
-add(a, (-2.4, 31.0, -5.8, 4.8, 3.6, 5.0),             # Heavy brutalist head block
-    (-2.2, 34.6, -6.0, 4.4, 0.8, 5.2),                # Welded reinforced brow
-    (-1.8, 32.6, -6.2, 3.6, 0.8, 0.5),                # Armored periscope visor slit
-    (-0.6, 35.4, -4.8, 1.2, 0.8, 4.0))                # Top reinforcement spine
-sym(a, (2.3, 31.2, -5.4, 0.5, 3.2, 4.4))              # Heavy cheek slabs with welded seams
+add(a, *build_throat_head(
+    apertures=[(-1.6, 32.3, -3.5, 3.2, 0.6, 0.4)],
+    extras=[
+        (-2.2, 31.4, -3.3, 4.4, 2.4, 2.0),
+        (-2.4, 33.6, -3.6, 4.8, 1.0, 1.8)
+    ]
+))
 
 a = "armor_chest_hood"
-def shell_ring(y, h, hx, zf, zb, front=True, t=0.6, c=1.1):
-    out = [(-hx + c, y, zb - t, 2 * (hx - c), h, t)]
-    if front:
-        out.append((-hx + c, y, zf, 2 * (hx - c), h, t))
-    for sx in (1, -1):
-        out.append(((hx - t) if sx > 0 else -hx, y, zf + c, t, h, zb - zf - 2 * c))
-        for zc in (zf, zb - c):
-            out.append(((hx - c) if sx > 0 else -hx, y, zc, c, h, c))
-    return out
+add(a, *build_chest_glacis([
+    # 2x2 Bolted ERA Bricks on upper chest glacis
+    rot_box(-4.2, 23.5, -7.5, 3.8, 2.6, 0.8, 0, 22.0, -6.5, -26, 0, 0),
+    rot_box(0.4, 23.5, -7.5, 3.8, 2.6, 0.8, 0, 22.0, -6.5, -26, 0, 0),
+    rot_box(-4.2, 26.8, -6.0, 3.8, 2.6, 0.8, 0, 22.0, -6.5, -26, 0, 0),
+    rot_box(0.4, 26.8, -6.0, 3.8, 2.6, 0.8, 0, 22.0, -6.5, -26, 0, 0),
+    (-4.0, 16.0, -4.8, 8.0, 1.2, 0.8)
+]))
 
-def round_ring(y, h, hx, zf, zb, r=2.6, t=0.6, front=True, n=3):
-    """shell_ring with quarter-round corners (n voxel steps per corner) instead of square posts."""
-    out = [(-hx + r, y, zb - t, 2 * (hx - r), h, t)]
-    if front:
-        out.append((-hx + r, y, zf, 2 * (hx - r), h, t))
-    for sx in (1, -1):
-        out.append(((hx - t) if sx > 0 else -hx, y, zf + r, t, h, zb - zf - 2 * r))
-        for zc, sz in ((zf, 1), (zb, -1)):
-            for i in range(n):
-                a0, a1 = math.pi / 2 * i / n, math.pi / 2 * (i + 1) / n
-                xs = [hx - r + r * math.cos(a) for a in (a0, a1)]
-                zs = [r - r * math.sin(a) for a in (a0, a1)]
-                x0, x1 = min(xs), max(max(xs), min(xs) + t)
-                z0, z1 = min(zs), max(max(zs), min(zs) + t)
-                x0, x1 = (x0, x1) if sx > 0 else (-x1, -x0)
-                z0, z1 = (zc + z0, zc + z1) if sz > 0 else (zc - z1, zc - z0)
-                out.append((x0, y, z0, x1 - x0, h, z1 - z0))
-    return out
+c = "canopy_hood"
+add(c, *build_box_canopy([
+    (-5.0, 41.65, -1.0, 10.0, 0.8, 0.6),
+    (-4.0, 41.65, 4.0, 8.0, 0.4, 0.6)
+]))
 
-add(a, (-2.0, 21.0, -5.6, 4.0, 8.4, 1.0),             # Monolithic heavy steel glacis
-    (-3.0, 28.6, -5.4, 6.0, 1.2, 1.0),                # Upper yoke reinforcing beam
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.5),                 # Backplate mount
-    (-2.2, 15.0, -5.5, 4.4, 6.4, 0.9),                # Massive abdomen blast shield
-    *shell_ring(31.0, 1.6, 5.1, -9.0, 9.0),
-    *shell_ring(32.6, 1.8, 5.0, -8.8, 8.8))
-sym(a, (2.0, 21.2, -5.5, 4.0, 8.0, 3.4),              # Heavy side breastplates
-    (5.8, 21.6, -5.0, 0.8, 7.2, 2.8),                 # Lateral flank armor
-    (1.6, 15.2, -5.4, 3.4, 6.0, 0.8),                 # Side abdominal plates
-    *[(5.0, y, -5.0, 0.2, 0.4, 10.0) for y in (31.6, 33.4)])
+SHOULDERS["outlander"] = build_box_pauldron([
+    # 2x2 Bolted ERA Bricks on outer pauldron plate
+    (11.5, 28.5, -3.2, 0.8, 3.0, 3.2),
+    (11.5, 28.5, 0.4, 0.8, 3.0, 3.2),
+    (11.5, 25.0, -3.2, 0.8, 3.0, 3.2),
+    (11.5, 25.0, 0.4, 0.8, 3.0, 3.2),
+    (5.6, 32.6, -3.2, 4.8, 0.8, 5.4)
+])
+LEG_ARMOR["outlander"] = build_leg_cuisse([
+    (7.1, 11.6, -2.0, 0.4, 4.0, 3.2)
+])
 
-SHOULDERS["outlander"] = [
-    (5.2, 32.2, -4.0, 5.8, 1.2, 7.0),                 # Top sloped slab
-    (5.6, 33.4, -3.2, 4.8, 0.8, 5.4),                 # Upper reinforcement strip
-    (10.6, 25.8, -4.2, 1.2, 7.0, 7.2),                # Massive outer ballistic plate
-    (11.8, 27.0, -2.8, 0.5, 4.8, 4.4),                # Outer welded reinforcement beam
-    (5.4, 26.4, -4.8, 5.4, 6.0, 0.9),                 # Front shield slab
-    (5.4, 26.4, 2.4, 5.4, 6.0, 0.9),                  # Rear shield slab
-    (4.8, 29.6, -2.2, 0.8, 2.4, 3.4)                  # Heavy arm mounting bracket
-]
-LEG_ARMOR["outlander"] = [
-    (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip ball-joint armor
-    (6.0, 10.6, -3.0, 1.2, 6.0, 5.2),                 # Heavy outer slab
-    (7.1, 11.6, -2.0, 0.4, 4.0, 3.2),                 # Outer bolted rib
-    (2.8, 11.2, -3.4, 3.4, 5.0, 1.2),                 # Front deflection cuisse
-    (2.8, 8.0, -5.0, 3.2, 3.2, 1.4),                  # Reinforced knee guard
-    (2.8, 11.2, 1.8, 3.4, 4.8, 1.0)                   # Rear blast shield
-]
+# ---------- 5. SALVAGE MILITIA ----------
+add("armor_head_salvage", *build_throat_head(
+    apertures=[(0.6, 32.2, -3.3, 1.2, 1.2, 0.4)],
+    extras=[(-2.0, 31.8, -3.4, 4.0, 1.8, 0.3)]
+))
+add("armor_chest_salvage", *build_chest_glacis([
+    rot_box(-3.8, 23.0, -7.5, 5.0, 5.0, 0.6, 0, 22.0, -6.5, -26, 0, 0),
+    (1.5, 24.0, -7.6, 2.5, 0.4, 0.4)
+]))
+add("canopy_salvage", *build_box_canopy([
+    (-4.0, 41.65, 0.0, 6.0, 0.4, 5.0),
+    (-1.0, 42.05, 2.0, 2.0, 1.2, 0.4)
+]))
+SHOULDERS["salvage"] = build_box_pauldron([
+    (10.8, 31.5, -1.0, 0.6, 2.0, 2.0),
+    (11.5, 26.0, -2.0, 0.4, 4.0, 4.0)
+])
+LEG_ARMOR["salvage"] = build_leg_cuisse()
 
-# ==================== 5. 6 NEW FACTION ARMOR SETS ====================
-# ----- Faction 1: SALVAGE MILITIA -----
-add("armor_head_salvage",
-    (-2.4, 31.0, -5.2, 4.8, 3.4, 4.4),             # Armored cab block
-    (-2.3, 34.4, -5.4, 4.6, 0.6, 4.6),             # Sloped scrap visor brow
-    (-1.8, 32.6, -5.6, 3.6, 0.8, 0.5),             # Horizontal viewport mesh slit
-    *disc_z(1.2, 33.0, -5.9, 0.8, 0.6),            # Left auxiliary floodlight
-    (-1.8, 35.0, -2.4, 0.4, 5.5, 0.4))             # Antenna / scrap rod
-sym("armor_head_salvage", (2.3, 31.2, -4.8, 0.5, 2.8, 3.8))
+add("backpack_salvage",
+    *MOUNT,
+    (-4.0, 23.0, 7.6, 8.0, 6.0, 2.4),
+    (-4.2, 29.0, 7.4, 8.4, 4.0, 2.8),
+    (-2.0, 33.0, 7.8, 4.0, 2.0, 2.0))
 
-add("armor_chest_salvage",
-    (-1.6, 21.0, -5.4, 3.2, 8.2, 0.8),             # Heavy welded scrap glacis plate
-    (0.4, 23.4, -5.8, 2.6, 3.4, 0.4),              # Asymmetric reinforcement patch
-    (-2.4, 28.6, -5.2, 4.8, 1.0, 0.8),             # Upper yoke tie-bar
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.5),              # Backplate mount
-    (-1.4, 15.2, -5.2, 2.8, 6.0, 0.7))             # Lower abdomen core
-sym("armor_chest_salvage",
-    (1.4, 21.4, -5.3, 4.0, 7.4, 3.2),              # Pectoral scrap cowls
-    (5.4, 21.8, -4.8, 0.6, 6.6, 2.6),              # Flank shields
-    (1.4, 15.0, -5.3, 3.2, 6.2, 0.7))              # Abdominal flank plates
+# ---------- 6. SHIDEN CORPS ----------
+add("armor_head_shiden", *build_throat_head(
+    apertures=[(-2.0, 32.0, -3.4, 4.0, 1.2, 0.4)],
+    extras=[(-2.2, 33.4, -3.5, 4.4, 0.8, 1.6)]
+))
+add("armor_chest_shiden", *build_chest_glacis([
+    rot_box(-4.0, 24.0, -7.4, 8.0, 4.2, 0.5, 0, 22.0, -6.5, -26, 0, 0),
+    (1.8, 29.5, -4.0, 0.8, 0.8, 0.4)
+]))
+add("canopy_shiden", *build_box_canopy([
+    (-2.0, 41.65, 4.0, 4.0, 1.0, 3.0),
+    (-0.3, 42.65, 5.0, 0.6, 3.0, 0.8)
+]))
+SHOULDERS["shiden"] = build_box_pauldron([
+    (5.4, 32.6, -3.2, 4.8, 0.6, 5.0),
+    (10.8, 25.0, -2.5, 0.5, 5.0, 0.5)
+])
+LEG_ARMOR["shiden"] = build_leg_cuisse()
 
-c = "canopy_salvage"   # crude welded scrap capsule: heavy steel patches, roll hoop, visor slit, 100% enclosed rear
-add(c,
-    *round_ring(33.0, 11.0, 11.2, -9.6, 15.0, r=2.4),
-    *round_ring(44.0, 5.0, 10.6, -9.0, 15.0, r=2.4, front=False),
-    (-6.0, 45.0, -9.2, 12.0, 0.6, 0.5),
-    (-5.5, 47.0, -9.2, 11.0, 0.6, 0.5),
-    *round_ring(49.0, 6.0, 10.2, -7.6, 15.0, r=2.0),
-    *round_ring(55.0, 5.0, 9.0, -6.0, 15.0, r=1.8),
-    *round_ring(60.0, 3.8, 8.0, -4.8, 15.0, r=1.8),
-    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8),
-    (-4.0, 64.6, 0.0, 8.0, 0.6, 10.0),
-    (-5.5, 36.0, 15.0, 11.0, 27.8, 0.8),
-    (-4.0, 42.0, 15.8, 8.0, 12.0, 0.6),
-    (-2.0, 48.0, 16.4, 4.0, 4.0, 0.6),
-    (-6.0, 37.0, -9.8, 4.6, 3.6, 0.4), (1.8, 35.4, -9.8, 3.8, 2.6, 0.4),
-    (-10.8, 45.0, -8.0, 0.6, 0.6, 18.0), (10.2, 45.0, -8.0, 0.6, 0.6, 18.0))
+add("backpack_shiden",
+    *MOUNT,
+    (-3.8, 22.8, 7.5, 7.6, 8.0, 2.8),
+    *disc_z(0, 26.8, 10.3, 1.4, 1.0))
+sym("backpack_shiden", (3.8, 24.0, 8.0, 0.6, 6.0, 2.0))
 
-SHOULDERS["salvage"] = [
-    (5.2, 32.2, -3.8, 5.4, 1.0, 6.2),                 # Top sloped plate
-    (10.4, 26.0, -3.8, 1.0, 6.8, 6.2),                # Outer armor plate
-    (11.5, 27.2, -2.4, 0.4, 4.4, 3.4),                # Reinforcement weld bars
-    (5.4, 26.6, -4.6, 5.2, 5.8, 0.8),                 # Front deflection shield
-    (5.4, 26.6, 2.2, 5.2, 5.8, 0.8),                  # Rear deflection shield
-    (5.0, 29.8, -2.0, 0.6, 2.0, 3.0)                  # Mounting clamp
-]
-LEG_ARMOR["salvage"] = [
-    (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip ball-joint armor
-    (6.0, 10.8, -2.8, 1.0, 5.8, 4.8),                 # Heavy outer scrap plate
-    (2.8, 11.2, -3.2, 3.4, 4.8, 1.0),                 # Front cuisse deflection plate
-    (3.0, 8.4, -4.6, 2.8, 2.8, 1.2),                  # Welded knee armor guard
-    (2.8, 11.2, 1.8, 3.4, 4.8, 0.9)                   # Rear actuator protector
-]
-add("backpack_salvage", *MOUNT,
-    (-3.8, 22.4, 7.4, 7.6, 7.4, 3.4), (-3.2, 26.0, 11.0, 6.4, 2.0, 0.6))
-sym("backpack_salvage",
-    *disc_z(2.0, 26.0, 8.0, 1.4, 4.0), (1.6, 29.2, 8.2, 1.6, 1.2, 1.6))
+# ---------- 7. KHAMSIN GUARD ----------
+add("armor_head_khamsin", *build_throat_head(
+    apertures=[(-1.0, 32.2, -3.3, 2.0, 0.8, 0.4)],
+    extras=[(-2.2, 33.2, -3.5, 4.4, 0.8, 1.6)]
+))
+add("armor_chest_khamsin", *build_chest_glacis([
+    rot_box(-3.5, 23.5, -7.5, 7.0, 3.0, 0.6, 0, 22.0, -6.5, -26, 0, 0)
+]))
+add("canopy_khamsin", *build_box_canopy([
+    (-4.5, 41.65, 3.0, 9.0, 1.2, 4.0)
+]))
+SHOULDERS["khamsin"] = build_box_pauldron([
+    (5.2, 32.4, -4.0, 5.8, 0.8, 7.0)
+])
+LEG_ARMOR["khamsin"] = build_leg_cuisse()
 
-# ----- Faction 2: SHIDEN CORPS -----
-add("armor_head_shiden",
-    (-2.4, 31.0, -5.2, 4.8, 3.4, 4.4),             # Precision sensor head
-    (-2.2, 34.4, -5.2, 4.4, 0.8, 4.2),             # Angled composite brow
-    (-1.8, 32.6, -5.6, 3.6, 0.8, 0.5),             # Panoramic optical sensor visor
-    (-0.4, 35.2, -4.4, 0.8, 4.5, 0.8))             # Central tactical fin / antenna
-sym("armor_head_shiden", (2.3, 31.2, -4.8, 0.5, 2.8, 3.8))
+add("backpack_khamsin",
+    *MOUNT,
+    (-4.2, 22.4, 7.6, 8.4, 7.6, 3.0),
+    *disc_z(-2.0, 26.2, 10.6, 1.2, 1.0),
+    *disc_z(2.0, 26.2, 10.6, 1.2, 1.0))
+sym("backpack_khamsin", (4.2, 23.0, 8.0, 0.8, 6.0, 2.4))
 
-add("armor_chest_shiden",
-    (-1.6, 21.2, -5.5, 3.2, 8.2, 0.9),             # Clean faceted composite breastplate
-    (-2.4, 28.6, -5.3, 4.8, 1.0, 0.9),             # Upper yoke armor
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.5),              # Backplate mount
-    (-1.4, 15.2, -5.3, 2.8, 6.0, 0.7))             # Lower abdomen core
-sym("armor_chest_shiden",
-    (1.6, 21.4, -5.4, 4.2, 7.6, 3.4),              # Pectoral plates
-    (5.6, 21.8, -4.9, 0.7, 6.8, 2.7),              # Flank composite shields
-    (1.4, 15.0, -5.4, 3.2, 6.4, 0.7))              # Abdominal flank guards
+# ---------- 8. RIVERINE RECON ----------
+add("armor_head_riverine", *build_throat_head(
+    apertures=[*disc_z(-0.8, 32.4, -3.4, 0.5, 0.4), *disc_z(0.8, 32.4, -3.4, 0.5, 0.4)]
+))
+add("armor_chest_riverine", *build_chest_glacis([
+    rot_box(3.2, 22.5, -6.8, 2.4, 6.0, 1.8, 3.2, 23.0, -5.5, -20, 16, -8),
+    rot_box(-5.6, 22.5, -6.8, 2.4, 6.0, 1.8, -3.2, 23.0, -5.5, -20, -16, 8)
+]))
+add("canopy_riverine", *build_box_canopy([
+    *disc_z(-3.5, 41.65, 7.0, 0.8, 2.0),
+    *disc_z(3.5, 41.65, 7.0, 0.8, 2.0)
+]))
+SHOULDERS["riverine"] = build_box_pauldron([
+    (11.5, 28.0, -1.0, 0.5, 1.2, 2.0)
+])
+LEG_ARMOR["riverine"] = build_leg_cuisse()
 
-c = "canopy_shiden"
-add(c,   # rounded tub, forward-raked visor band, dome tapering above the shoulders, 100% enclosed
-    *round_ring(33.0, 15.0, 11.2, -9.6, 15.0, r=3.2),
-    *round_ring(48.0, 4.0, 10.6, -9.0, 15.0, r=3.0),
-    *round_ring(52.0, 3.0, 10.2, -7.4, 15.0, r=3.0),
-    *round_ring(55.0, 4.0, 9.2, -5.8, 15.0, r=2.6),
-    *round_ring(59.0, 4.8, 8.0, -4.8, 15.0, r=2.2),
-    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8),
-    (-6.0, 49.4, -9.3, 12.0, 0.8, 0.4),                 # vision slit
-    (-0.4, 64.6, 4.0, 0.8, 3.0, 0.8))                  # blade antenna
+add("backpack_riverine",
+    *MOUNT,
+    *disc_x(-3.6, 26.2, 8.6, 1.8, 7.2),
+    (-4.0, 22.0, 8.6, 8.0, 1.2, 1.2),
+    (-4.0, 29.2, 8.6, 8.0, 1.2, 1.2),
+    *disc_z(0, 26.2, 10.4, 1.2, 1.2))
 
-SHOULDERS["shiden"] = [
-    (5.2, 32.4, -3.8, 5.6, 1.0, 6.2),                 # Top sloped deflector plate
-    (5.4, 33.4, -3.2, 4.8, 0.6, 5.0),                 # Upper aerodynamic crest
-    (10.6, 26.2, -4.0, 1.0, 6.8, 6.4),                # Outer composite ballistic plate
-    (11.6, 27.4, -2.4, 0.4, 4.4, 3.4),                # Tactical identification stripe panel
-    (5.4, 26.6, -4.6, 5.4, 5.8, 0.8),                 # Front deflection shield
-    (5.4, 26.6, 2.4, 5.4, 5.8, 0.8),                  # Rear deflection shield
-    (5.0, 29.8, -2.0, 0.6, 2.0, 3.0)                  # Joint mounting bracket
-]
-LEG_ARMOR["shiden"] = [
-    (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip ball-joint cowl
-    (6.0, 10.8, -2.8, 1.0, 5.8, 4.8),                 # Heavy outer composite plate
-    (2.8, 11.2, -3.2, 3.4, 4.8, 1.0),                 # Front cuisse deflection plate
-    (3.0, 8.4, -4.6, 2.8, 2.8, 1.2),                  # Contoured knee guard
-    (2.8, 11.2, 1.8, 3.4, 4.8, 0.9)                   # Rear actuator protector
-]
-add("backpack_shiden", *MOUNT, (-3.4, 22.4, 7.4, 6.8, 7.4, 3.2))
-sym("backpack_shiden",
-    *disc_z(2.6, 26.0, 7.6, 1.6, 4.0), *disc_z(2.6, 26.0, 11.4, 1.2, 0.8),
-    (3.8, 25.0, 8.0, 0.4, 2.0, 3.0))
+# ---------- 9. SPECTER PMC ----------
+add("armor_head_specter", *build_throat_head(
+    apertures=[(-1.8, 32.3, -3.4, 3.6, 0.4, 0.4)],
+    extras=[rot_box(-2.2, 33.2, -3.5, 4.4, 0.8, 1.6, 0, 33.6, -3.5, -22, 0, 0)]
+))
+add("armor_chest_specter", *build_chest_glacis([
+    rot_box(-2.5, 23.5, -7.5, 5.0, 5.0, 0.6, 0, 22.0, -6.5, -26, 0, 0)
+]))
+add("canopy_specter", *build_box_canopy([
+    (-0.6, 41.65, -1.0, 1.2, 1.0, 9.0)
+]))
+SHOULDERS["specter"] = build_box_pauldron([
+    rot_box(10.2, 25.0, -3.8, 1.2, 6.8, 7.6, 10.5, 28.0, 0, 0, 0, 6)
+])
+LEG_ARMOR["specter"] = build_leg_cuisse()
 
-# ----- Faction 3: KHAMSIN GUARD -----
-add("armor_head_khamsin",
-    (-2.4, 31.0, -5.2, 4.8, 3.4, 4.4),             # Armored head block
-    (-2.3, 34.4, -5.4, 4.6, 0.8, 4.6),             # Sun/sand deflecting brow
-    (-1.8, 32.6, -5.6, 3.6, 0.8, 0.5))             # Louvred dust-filter visor
-sym("armor_head_khamsin", *disc_z(2.2, 32.2, -4.8, 0.8, 3.2))
+add("backpack_specter",
+    *MOUNT,
+    (-3.4, 23.0, 7.4, 6.8, 7.8, 2.4),
+    (-2.4, 24.0, 9.8, 4.8, 5.8, 0.8))
 
-add("armor_chest_khamsin",
-    (-1.6, 21.0, -5.4, 3.2, 8.2, 0.8),             # Sand-shedding composite glacis
-    (-2.4, 28.6, -5.2, 4.8, 1.0, 0.8),             # Yoke dust seal collar
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.5),              # Backplate mount
-    (-1.4, 15.2, -5.2, 2.8, 6.0, 0.7))             # Abdominal core
-sym("armor_chest_khamsin",
-    (1.5, 21.4, -5.3, 4.2, 7.6, 3.2),              # Pectoral cowls
-    (5.6, 21.8, -4.8, 0.6, 6.8, 2.6),              # Flank shields
-    (1.4, 15.0, -5.3, 3.2, 6.2, 0.7))              # Side abdominal plates
+# ---------- 10. VALKYRIE SPEC-OPS ----------
+add("armor_head_valkyrie", *build_throat_head(
+    apertures=[*disc_z(0.0, 32.4, -3.4, 1.0, 0.4)],
+    extras=[*disc_z(0.0, 32.4, -3.3, 1.4, 0.2)]
+))
+add("armor_chest_valkyrie", *build_chest_glacis([
+    rot_box(-2.0, 24.0, -7.4, 4.0, 3.5, 0.4, 0, 22.0, -6.5, -26, 0, 0)
+]))
+add("canopy_valkyrie", *build_box_canopy([
+    (-2.5, 41.65, 2.0, 5.0, 0.8, 4.0),
+    (0.0, 42.45, 4.0, 0.4, 3.5, 0.4)
+]))
+SHOULDERS["valkyrie"] = build_box_pauldron([
+    rot_box(10.2, 25.5, -3.8, 1.4, 6.5, 7.6, 10.5, 29.0, 0, 0, 0, -8)
+])
+LEG_ARMOR["valkyrie"] = build_leg_cuisse()
 
-c = "canopy_khamsin"
-add(c,   # desert armored body: closed body, rear radiator housing, periscope visor, sloped sun-shade on top
-    *round_ring(33.0, 11.0, 11.2, -9.6, 15.0, r=3.2),
-    *round_ring(44.0, 5.0, 10.6, -9.2, 15.0, r=3.0, front=False),
-    (-5.0, 45.0, -9.4, 10.0, 3.0, 0.6),
-    *round_ring(49.0, 6.0, 10.2, -8.0, 15.0, r=2.8),
-    *round_ring(55.0, 5.0, 9.2, -6.4, 15.0, r=2.4),
-    *round_ring(60.0, 3.8, 8.0, -4.8, 15.0, r=2.0),
-    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8),
-    (-5.0, 36.0, 15.0, 10.0, 27.8, 1.0),
-    (-4.0, 42.0, 16.0, 8.0, 14.0, 0.8),
-    *[(-3.5, 43.5 + 2.0 * k, 16.8, 7.0, 0.6, 0.4) for k in range(5)],
-    (-10.8, 44.0, -9.0, 0.8, 20.8, 0.8), (10.0, 44.0, -9.0, 0.8, 20.8, 0.8),
-    (-10.8, 44.0, 14.2, 0.8, 20.8, 0.8), (10.0, 44.0, 14.2, 0.8, 20.8, 0.8),
-    *[(-11.0, 64.8 - 0.2 * k, -6.0 + 4.0 * k, 22.0, 0.6, 4.2) for k in range(5)],
-    (-3.0, 41.0, -10.0, 6.0, 1.6, 0.4))                  # sand filter grille
-
-SHOULDERS["khamsin"] = [
-    (5.2, 32.2, -4.0, 5.6, 1.0, 6.8),                 # Wide desert sun/dust deflector
-    (5.4, 33.2, -3.2, 4.8, 0.6, 5.2),                 # Upper sand-lip ridge
-    (10.6, 26.2, -4.0, 1.0, 6.8, 6.8),                # Outer heavy plate
-    (5.4, 26.6, -4.6, 5.4, 5.6, 0.8),                 # Front deflection shield
-    (5.4, 26.6, 2.6, 5.4, 5.6, 0.8),                  # Rear deflection shield
-    (5.0, 29.8, -2.0, 0.6, 2.0, 3.0)                  # Arm mount bracket
-]
-LEG_ARMOR["khamsin"] = [
-    (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip seal cowl
-    (6.0, 10.8, -2.8, 1.0, 5.8, 4.8),                 # Heavy outer sand shield
-    (2.8, 11.2, -3.2, 3.4, 4.8, 1.0),                 # Front cuisse deflection plate
-    (3.0, 8.4, -4.6, 2.8, 2.8, 1.2),                  # Louvred knee protector
-    (2.8, 11.2, 1.8, 3.4, 4.8, 0.9)                   # Rear sand skirt
-]
-add("backpack_khamsin", *MOUNT,
-    (-3.6, 22.4, 7.4, 7.2, 7.4, 3.2),
-    (-0.4, 30.0, 8.0, 0.8, 8.0, 0.8))
-sym("backpack_khamsin",
-    *disc_z(2.4, 26.0, 7.6, 1.5, 3.6),
-    (1.0, 23.0, 11.2, 2.8, 5.6, 0.5))
-
-# ----- Faction 4: RIVERINE RECON -----
-add("armor_head_riverine",
-    (-2.4, 31.0, -5.2, 4.8, 3.4, 4.4),             # Hydrodynamic head dome
-    (-2.2, 34.4, -5.2, 4.4, 0.8, 4.4),             # Sloped water-shedding brow
-    (-1.8, 32.6, -5.6, 3.6, 0.8, 0.5),             # Sealed panoramic periscope viewport
-    (1.4, 34.6, -4.0, 0.6, 4.2, 0.6),              # Right periscope optic mast
-    (1.3, 38.6, -4.4, 0.8, 0.8, 1.0))              # Periscope prism head
-sym("armor_head_riverine", (2.4, 31.2, -4.8, 0.5, 2.8, 3.8))
-
-add("armor_chest_riverine",
-    (-1.6, 21.0, -5.4, 3.2, 8.2, 0.8),             # Amphibious bow glacis
-    (-2.4, 28.6, -5.2, 4.8, 1.0, 0.8),             # Watertight yoke collar
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.5),              # Backplate mount
-    (-1.4, 15.2, -5.2, 2.8, 6.0, 0.7))             # Lower abdomen sealed hull
-sym("armor_chest_riverine",
-    (1.5, 21.4, -5.3, 4.2, 7.6, 3.2),              # Hydrodynamic breastplate sponsons
-    (5.6, 21.8, -4.8, 0.6, 6.8, 2.6),              # Watertight flank sponsons
-    (1.4, 15.0, -5.3, 3.2, 6.2, 0.7))              # Abdominal flank guards
-
-c = "canopy_riverine"
-add(c,   # closed amphibious hull: rear pressure bulkhead, periscope viewport, roof deck, extended snorkel
-    *round_ring(33.0, 11.0, 11.2, -9.6, 15.0, r=3.2),
-    *round_ring(44.0, 5.0, 10.6, -9.2, 15.0, r=3.0, front=False),
-    (-6.0, 45.0, -9.6, 12.0, 3.0, 0.6),
-    *round_ring(49.0, 6.0, 10.2, -8.0, 15.0, r=2.8),
-    *round_ring(55.0, 5.0, 9.2, -6.2, 15.0, r=2.4),
-    *round_ring(60.0, 3.8, 8.0, -4.8, 15.0, r=2.0),
-    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8),
-    (-5.0, 36.0, 15.0, 10.0, 27.8, 1.0),
-    (-3.5, 42.0, 16.0, 7.0, 14.0, 0.8),
-    (-1.0, 46.0, 16.8, 2.0, 6.0, 0.5),
-    (-10.4, 44.0, -9.4, 1.6, 19.8, 1.6), (-10.6, 63.8, -9.8, 2.0, 0.8, 2.0),
-    (-10.8, 64.6, -9.8, 2.4, 1.2, 2.4),
-    (8.0, 56.0, -7.0, 1.6, 1.6, 1.2))
-
-SHOULDERS["riverine"] = [
-    (5.2, 32.2, -3.8, 5.4, 1.0, 6.2),                 # Streamlined buoyant pauldrons
-    (5.4, 33.2, -3.0, 4.8, 0.6, 5.0),                 # Upper hydrodynamic ridge
-    (10.4, 26.2, -3.8, 1.0, 6.8, 6.2),                # Outer buoyant sponson plate
-    (11.5, 27.4, -2.4, 0.4, 4.4, 3.4),                # Watertight trim strip
-    (5.4, 26.6, -4.6, 5.2, 5.8, 0.8),                 # Front deflection shield
-    (5.4, 26.6, 2.2, 5.2, 5.8, 0.8),                  # Rear deflection shield
-    (5.0, 29.8, -2.0, 0.6, 2.0, 3.0)                  # Joint mounting bracket
-]
-LEG_ARMOR["riverine"] = [
-    (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip joint splash cowl
-    (6.0, 10.8, -2.8, 1.0, 5.8, 4.8),                 # Outer sloped sponson plate
-    (2.8, 11.2, -3.2, 3.4, 4.8, 1.0),                 # Front cuisse deflection plate
-    (3.0, 8.4, -4.6, 2.8, 2.8, 1.2),                  # Streamlined knee prow
-    (2.8, 11.2, 1.8, 3.4, 4.8, 0.9)                   # Rear actuator protector
-]
-add("backpack_riverine", *MOUNT,
-    (-3.6, 22.4, 7.4, 7.2, 7.4, 3.2),
-    (-0.8, 29.8, 7.8, 1.6, 8.0, 1.6), (-0.6, 37.6, 7.4, 1.2, 1.0, 2.0))
-sym("backpack_riverine", *disc_z(2.6, 25.6, 7.6, 1.4, 4.0))
-
-# ----- Faction 5: SPECTER PMC -----
-add("armor_head_specter",
-    (-2.4, 31.0, -5.2, 4.8, 3.4, 4.4),             # Low-RCS stealth faceted head
-    (-2.2, 34.4, -5.4, 4.4, 0.8, 4.4),             # Sloped faceted stealth brow
-    (-1.8, 32.6, -5.6, 3.6, 0.8, 0.5))             # Flush-mounted infrared visor slit
-sym("armor_head_specter", (2.3, 31.2, -4.8, 0.5, 2.8, 3.8))
-
-add("armor_chest_specter",
-    (-1.6, 21.0, -5.4, 3.2, 8.2, 0.8),             # Faceted stealth glacis
-    (-2.4, 28.6, -5.2, 4.8, 1.0, 0.8),             # Upper yoke radar-deflector collar
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.5),              # Backplate mount
-    (-1.4, 15.2, -5.2, 2.8, 6.0, 0.7))             # Lower abdomen core
-sym("armor_chest_specter",
-    (1.5, 21.4, -5.3, 4.2, 7.6, 3.2),              # Faceted side breastplates
-    (5.6, 21.8, -4.8, 0.6, 6.8, 2.6),              # Flank stealth deflectors
-    (1.4, 15.0, -5.3, 3.2, 6.2, 0.7))              # Abdominal flank plates
-
-c = "canopy_specter"
-add(c,   # stealth wedge: hard single-step chamfers, steep taper from the shoulders up, 100% enclosed
-    *round_ring(33.0, 13.0, 11.2, -9.6, 15.0, r=2.0, n=1),
-    *round_ring(46.0, 4.0, 10.4, -8.8, 15.0, r=2.4, n=1),
-    *round_ring(50.0, 4.0, 10.2, -7.0, 15.0, r=2.4, n=1),
-    *round_ring(54.0, 4.0, 9.2, -5.6, 15.0, r=2.2, n=1),
-    *round_ring(58.0, 5.8, 8.0, -4.8, 15.0, r=1.8, n=1),
-    (-6.8, 63.8, -4.8, 13.6, 0.8, 19.8),
-    (-5.0, 47.0, -9.0, 10.0, 0.6, 0.4))                  # sensor slit
-
-SHOULDERS["specter"] = [
-    (5.2, 32.4, -3.8, 5.4, 1.0, 6.2),                 # Top faceted deflector roof
-    (5.4, 33.4, -3.0, 4.6, 0.6, 4.8),                 # Upper stealth chine
-    (10.4, 26.2, -3.8, 1.0, 6.8, 6.2),                # Outer sloped radar-deflection plate
-    (5.4, 26.6, -4.6, 5.2, 5.8, 0.8),                 # Front deflection shield
-    (5.4, 26.6, 2.2, 5.2, 5.8, 0.8),                  # Rear deflection shield
-    (5.0, 29.8, -2.0, 0.6, 2.0, 3.0)                  # Joint mounting bracket
-]
-LEG_ARMOR["specter"] = [
-    (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip ball-joint stealth cowl
-    (6.0, 10.8, -2.8, 1.0, 5.8, 4.8),                 # Outer faceted ballistic plate
-    (2.8, 11.2, -3.2, 3.4, 4.8, 1.0),                 # Front cuisse deflection plate
-    (3.0, 8.4, -4.6, 2.8, 2.8, 1.2),                  # Angular knee deflector
-    (2.8, 11.2, 1.8, 3.4, 4.8, 0.9)                   # Rear actuator protector
-]
-add("backpack_specter", *MOUNT,
-    (-3.4, 22.6, 7.4, 6.8, 7.0, 2.6),
-    (-2.8, 23.2, 10.0, 5.6, 5.8, 0.8))
-sym("backpack_specter", (3.2, 24.0, 8.0, 0.5, 4.0, 2.2))
-
-# ----- Faction 6: VALKYRIE GUARD -----
-add("armor_head_valkyrie",
-    *disc_y(0, 31.0, -4.5, 2.4, 3.6),                  # Streamlined helmet dome
-    *disc_y(0, 34.6, -4.5, 2.0, 0.8),                  # Upper contoured dome crown
-    (-1.8, 32.6, -6.0, 3.6, 0.8, 0.5))                 # Front sensor visor aperture
-sym("armor_head_valkyrie",
-    *disc_z(1.4, 33.0, -5.6, 0.6, 0.5))                # Phased-array sensor disks
-
-add("armor_chest_valkyrie",
-    (-1.6, 21.0, -5.5, 3.2, 8.2, 0.8),                 # Contoured titanium composite breastplate
-    (-2.4, 28.6, -5.3, 4.8, 1.0, 0.8),                 # Sleek yoke collar
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.5),                  # Backplate mount
-    (-1.4, 15.2, -5.3, 2.8, 6.0, 0.7))                 # Lower abdomen core
-sym("armor_chest_valkyrie",
-    (1.5, 21.4, -5.4, 4.2, 7.6, 3.4),                  # Contoured breastplate cowls
-    (5.6, 21.8, -4.9, 0.7, 6.8, 2.7),                  # Lateral flank shields
-    (1.4, 15.0, -5.4, 3.2, 6.4, 0.7))                  # Abdominal flank guards
-
-c = "canopy_valkyrie"
-add(c,   # smooth elite pod: 4-step round corners, dome, tri-lens sensor array, 100% enclosed
-    *round_ring(33.0, 15.0, 11.2, -9.6, 15.0, r=3.6, n=4),
-    *round_ring(48.0, 4.0, 10.6, -9.0, 15.0, r=3.6, n=4),
-    *round_ring(52.0, 3.0, 10.2, -7.0, 15.0, r=3.2, n=4),
-    *round_ring(55.0, 4.0, 9.2, -5.6, 15.0, r=2.8),
-    *round_ring(59.0, 4.8, 8.0, -4.8, 15.0, r=2.0),
-    (-6.8, 63.8, -4.8, 13.6, 0.8, 19.8),
-    (-10.9, 47.0, -6.0, 0.3, 0.5, 13.0), (10.6, 47.0, -6.0, 0.3, 0.5, 13.0),   # trim lines
-    *disc_z(-2.2, 50.0, -9.4, 0.7, 0.4), *disc_z(0.0, 50.6, -9.4, 0.9, 0.4), *disc_z(2.2, 50.0, -9.4, 0.7, 0.4))
-
-SHOULDERS["valkyrie"] = [
-    (5.2, 32.4, -3.8, 5.6, 1.0, 6.2),                 # Curved top shell
-    (5.4, 33.4, -3.2, 4.6, 0.6, 5.0),                 # Upper aerodynamic spine
-    (10.6, 26.2, -4.0, 1.0, 6.8, 6.4),                # Outer contoured composite plate
-    (11.6, 27.2, -2.6, 0.4, 4.6, 4.0),                # Tactical flash trim line
-    (5.4, 26.6, -4.6, 5.4, 5.8, 0.8),                 # Front deflection shield
-    (5.4, 26.6, 2.4, 5.4, 5.8, 0.8),                  # Rear deflection shield
-    (5.0, 29.8, -2.0, 0.6, 2.0, 3.0)                  # Joint mounting clamp
-]
-LEG_ARMOR["valkyrie"] = [
-    (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip joint aerodynamic cowl
-    (6.0, 10.8, -2.8, 1.0, 5.8, 4.8),                 # Heavy outer composite plate
-    (2.8, 11.2, -3.2, 3.4, 4.8, 1.0),                 # Front cuisse deflection plate
-    (3.0, 8.4, -4.6, 2.8, 2.8, 1.2),                  # Contoured knee prow
-    (2.8, 11.2, 1.8, 3.4, 4.8, 0.9)                   # Rear actuator protector
-]
-add("backpack_valkyrie", *MOUNT,
+add("backpack_valkyrie",
+    *MOUNT,
     (-3.6, 22.4, 7.4, 7.2, 7.4, 3.6),
     *disc_z(0, 26.0, 11.0, 1.8, 1.2))
 sym("backpack_valkyrie", (3.6, 23.0, 7.8, 0.5, 8.0, 3.2))
 
-# ---------- SHIN GREAVES (all factions) ----------
-GREAVE = [*stepped(2.9, 8.2, -4.6, 2.6, -0.2, 3.2, 0.7, 5),
-          *stepped(5.8, 5.4, -1.0, 2.8, 1.4, 0.5, 2.4, 2),
-          *stepped(2.6, 7.6, -2.6, 2.8, 1.2, 0.5, 2.4, 3),
-          (3.0, 2.4, -0.6, 3.0, 0.8, 2.6)]
+# ---------- SHIN GREAVES (all factions with split-toe boots) ----------
+SHOULDERS["sand"] = build_box_pauldron()
+LEG_ARMOR["sand"] = build_leg_cuisse()
 
-SHIN_EXTRA = {
-    "sand": [],
-    "usmc": [*disc_x(6.3, 4.4, 0.2, 0.5, 0.2), (3.2, 6.6, -4.9, 2.6, 0.3, 0.3), (3.2, 4.6, -3.4, 2.6, 0.3, 0.3)],
-    "cerberus": [(3.0, 2.8, 2.4, 3.0, 4.8, 0.5), (3.6, 7.4, 1.0, 1.8, 0.8, 0.4)],
-    "polar": [*stepped(3.3, 8.0, -5.0, 3.0, -0.6, 2.4, 0.4, 4)],
-    "outlander": [*spike(3.9, 5.2, -2.6, 1.0, 2.4, "-z"), (2.8, 7.0, -5.0, 3.4, 1.2, 1.0)],
-    "salvage": [(3.0, 6.8, -4.8, 2.8, 0.8, 0.5), (3.4, 4.4, -3.2, 2.2, 0.6, 0.4)],
-    "shiden": [(3.0, 7.0, -5.0, 3.0, 1.4, 0.6), (3.2, 4.0, -3.4, 2.6, 1.2, 0.5)],
-    "khamsin": [(2.8, 6.4, -4.8, 3.4, 1.6, 0.5), (5.9, 4.2, -0.6, 0.5, 2.0, 2.0)],
-    "riverine": [(3.0, 6.6, -4.8, 3.0, 1.2, 0.6), (3.2, 4.2, -3.4, 2.6, 1.0, 0.5)],
-    "specter": [(3.2, 7.0, -4.8, 2.6, 1.4, 0.5), (3.4, 4.2, -3.2, 2.2, 1.2, 0.4)],
-    "valkyrie": [(2.8, 7.2, -5.2, 3.4, 1.8, 0.8), (3.0, 4.0, -3.6, 3.0, 1.6, 0.6)]
-}
-for faction, extra in SHIN_EXTRA.items():
-    if faction == "cerberus":
-        cerberus_shin = [
-            rot_box(3.0, 2.0, -4.2, 3.0, 7.0, 1.2, 4.5, 6.0, -3.5, -16, 0, 0),
-            rot_box(6.0, 1.8, -3.0, 1.2, 7.2, 5.4, 6.0, 7.0, 0.0, 0, 0, -14),
-            rot_box(3.0, 2.2, 2.2, 3.0, 6.2, 1.4, 4.5, 6.0, 2.0, 14, 0, 0),
-            *disc_z(4.5, 3.5, 3.6, 0.8, 0.6),
-            rot_box(2.8, 0.2, -5.6, 3.4, 1.6, 3.0, 4.5, 1.0, -4.0, 22, 0, 0)
-        ]
-        add(f"armor_left_shin_{faction}", *cerberus_shin)
-        add(f"armor_right_shin_{faction}", *[mx(b) for b in cerberus_shin])
-    else:
-        add(f"armor_left_shin_{faction}", *GREAVE, *extra)
-        add(f"armor_right_shin_{faction}", *[mx(b) for b in GREAVE + extra])
-
-# ---------- PILOT CAPSULES (existing) ----------
-c = "canopy_usmc"   # enclosed hood: rounded corners, vision slit, tapering brow and roof, 100% enclosed
-add(c, *round_ring(33.0, 13.6, 11.2, -9.8, 15.0, r=3.2),
-    *round_ring(46.6, 2.2, 10.8, -9.8, 15.0, r=3.2, front=False),          # vision slit gap
-    *round_ring(48.8, 6.2, 10.2, -9.0, 15.0, r=3.2),
-    *round_ring(55.0, 4.0, 9.2, -7.0, 15.0, r=3.0),
-    *round_ring(59.0, 4.8, 8.0, -4.8, 15.0, r=2.4),
-    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8),
-    (-0.4, 46.6, -9.7, 0.8, 2.2, 0.6),
-    (-6.0, 50.2, -9.4, 12.0, 0.6, 0.4),
-    (-2.0, 64.6, 1.0, 4.0, 0.6, 0.6),
-    *disc_z(-2.4, 65.4, -4.0, 1.0, 2.0), *disc_z(2.4, 65.4, -4.0, 1.0, 2.0),
-    *disc_z(-2.4, 65.4, -4.3, 0.6, 0.3), *disc_z(2.4, 65.4, -4.3, 0.6, 0.3))
-sym(c, (11.0, 40.0, -4.0, 0.3, 0.6, 12.0), (10.6, 50.0, -4.0, 0.3, 0.6, 12.0),
-    (10.6, 43.0, -2.0, 0.3, 4.6, 6.0),
-    (6.0, 53.0, -9.0, 1.6, 1.0, 0.4))
-
-c = "canopy_cerberus"   # armored tub with raised rear hatch, periscope visor, low roof, 100% enclosed
-add(c, *round_ring(33.0, 11.0, 11.2, -9.4, 15.0, r=3.2),
-    *round_ring(44.0, 5.0, 10.6, -9.2, 15.0, r=3.0, front=False),
-    (-6.0, 45.0, -9.4, 12.0, 3.0, 0.5),
-    *round_ring(49.0, 6.0, 10.2, -8.0, 15.0, r=3.0),
-    *round_ring(55.0, 5.0, 9.2, -6.0, 15.0, r=2.6),
-    *round_ring(60.0, 3.8, 8.0, -4.8, 15.0, r=2.2),
-    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8),
-    (-4.5, 36.0, 15.0, 9.0, 22.0, 1.2),
-    (-2.0, 44.0, 16.2, 4.0, 6.0, 0.8),
-    (-0.6, 46.0, -9.8, 1.2, 2.0, 0.6))
-sym(c, (5.6, 37.0, -9.6, 2.0, 2.4, 0.4))
-
-c = "canopy_polar"   # closed insulated arctic drum: hollow thermal rings, roof dome, sealed rear hatch
-add(c, *round_ring(33.0, 11.0, 11.2, -9.2, 15.0, r=4.0),
-    *round_ring(44.0, 5.0, 10.6, -9.2, 15.0, r=4.0, front=False),
-    (-4.5, 45.0, -9.2, 9.0, 3.0, 0.5),
-    *round_ring(49.0, 6.0, 10.2, -8.4, 15.0, r=3.8),
-    *round_ring(55.0, 5.0, 9.4, -6.6, 15.0, r=3.4),
-    *round_ring(60.0, 3.8, 8.2, -5.0, 15.0, r=3.0),
-    (-7.2, 63.8, -5.0, 14.4, 0.8, 20.0),
-    (-4.0, 64.6, -2.0, 8.0, 0.8, 14.0),
-    (-5.0, 35.0, 15.0, 10.0, 24.0, 1.2),
-    (-2.0, 60.0, -6.0, 4.0, 2.0, 1.0))
-sym(c, (10.8, 38.0, 0.0, 0.6, 18.0, 0.6), (10.8, 56.0, 0.0, 0.6, 0.6, 12.0), (10.8, 38.0, 12.0, 0.6, 18.0, 0.6))
-
-c = "canopy_hood"   # reinforced cowl, sloped periscope visor, crude spikes/rivets, 100% enclosed
-add(c, *round_ring(33.0, 13.0, 11.2, -9.0, 15.0, r=3.0),
-    *round_ring(46.0, 5.0, 10.6, -8.6, 15.0, r=3.0),
-    *round_ring(51.0, 2.0, 10.2, -8.0, 15.0, r=3.0),
-    *round_ring(53.0, 2.0, 9.6, -8.0, 15.0, front=False, r=3.0),
-    *round_ring(55.0, 4.0, 9.0, -7.0, 15.0, r=3.0),
-    *round_ring(59.0, 4.8, 8.0, -5.0, 15.0, r=2.4),
-    (-6.8, 63.8, -5.0, 13.6, 0.8, 20.0),
-    (-0.4, 53.0, -8.2, 0.8, 2.0, 0.5),
-    (-0.5, 64.6, -4.0, 1.0, 0.6, 12.0),
-    *[(-6.0 + 1.5 * k, 46.6, -8.65, 0.5, 4.0, 0.3) for k in range(9)])
-sym(c, *spike(3.6, 64.6, -4.0, 1.0, 3.0), *spike(3.6, 64.6, 4.4, 1.0, 2.4),
-    *spike(10.6, 50.0, -3.0, 1.0, 2.4, "x"))
+for faction in ("sand", "usmc", "cerberus", "polar", "outlander", "salvage", "shiden", "khamsin", "riverine", "specter", "valkyrie"):
+    extra = [(2.6, 2.5, -4.8, 3.8, 0.8, 1.0)] if faction == "polar" else []
+    shin = build_shin_greave(extra)
+    add(f"armor_left_shin_{faction}", *shin)
+    add(f"armor_right_shin_{faction}", *[mx(b) for b in shin])
 
 for faction, boxes in SHOULDERS.items():
     add(f"armor_left_shoulder_{faction}", *boxes)
@@ -1434,44 +1260,21 @@ add(g,
     (X - 0.4, 14.8, -24.0, 0.8, 0.4, 18.0))
 
 # ==================== ROLE VARIANTS GEOMETRY ====================
-# 1. Tactical Police
-add("armor_head_police",
-    (-2.4, 31.0, -5.4, 4.8, 3.6, 4.6),             # Police sensor helmet base
-    (-2.2, 34.6, -5.2, 4.4, 0.8, 4.2),                # Sloped top deflector brow
-    (-2.0, 32.6, -5.8, 4.0, 0.8, 0.5),                # Low-light optronic visor slot
-    (-1.2, 32.7, -6.0, 1.0, 0.6, 0.3),                # Left surveillance aperture
-    (0.2, 32.7, -6.0, 1.0, 0.6, 0.3),                 # Right optical zoom aperture
-    (-2.2, 35.4, -4.6, 2.0, 1.0, 1.0),                # Strobe beacon left (blue)
-    (0.2, 35.4, -4.6, 2.0, 1.0, 1.0),                 # Strobe beacon right (red)
-    (-0.4, 35.4, -5.0, 0.8, 1.0, 0.8),                # Siren acoustic hailing horn
-    (2.2, 33.0, -2.0, 0.4, 5.0, 0.4))                 # Comms whip antenna
-sym("armor_head_police",
-    (2.4, 31.2, -5.0, 0.4, 3.0, 3.8))                 # Ballistic cheek plate armor
+# 1. Riot Police
+add("armor_head_police", *build_throat_head(
+    apertures=[(-2.0, 31.8, -3.4, 4.0, 1.8, 0.3)],
+    extras=[(-0.4, 33.6, -3.5, 0.8, 0.8, 0.6)]
+))
 
 c = "canopy_police"
-add(c,   # enclosed riot cab: polycarbonate visor pane, blue/red emergency bar, 100% enclosed
-    *round_ring(33.0, 14.0, 11.2, -9.6, 15.0, r=3.0),
-    *round_ring(47.0, 2.0, 10.8, -9.6, 15.0, r=3.0, front=False), # Visor slot
-    *round_ring(49.0, 6.0, 10.2, -9.0, 15.0, r=3.0),
-    *round_ring(55.0, 4.0, 9.2, -6.6, 15.0, r=2.6),
-    *round_ring(59.0, 4.8, 8.0, -4.8, 15.0, r=2.2),
-    (-7.0, 63.8, -4.8, 14.0, 0.8, 19.8), # Roof plate
-    (-6.0, 47.0, -9.4, 12.0, 2.0, 0.3), # Polycarbonate visor pane
-    (-4.0, 64.6, 2.0, 2.0, 1.0, 1.4),  # Blue emergency bar
-    (2.0, 64.6, 2.0, 2.0, 1.0, 1.4))   # Red emergency bar
+add(c, *build_box_canopy([
+    (-4.5, 38.8, -3.7, 4.2, 0.8, 0.8), # Blue emergency strobe bar
+    (0.3, 38.8, -3.7, 4.2, 0.8, 0.8)   # Red emergency strobe bar
+]))
 
-add("armor_chest_police",
-    (-2.0, 21.0, -5.6, 4.0, 8.2, 0.8),             # Central reinforced riot plate
-    (-2.4, 28.6, -5.4, 4.8, 1.0, 0.8),             # Collar yoke
-    (-3.6, 21.0, 1.4, 7.2, 6.4, 0.5),              # Backplate mount
-    (-1.6, 15.2, -5.4, 3.2, 5.8, 0.7),             # Lower abdomen core
-    (-4.5, 23.0, -6.0, 3.6, 3.2, 0.7),             # Tactical utility pouch L
-    (0.9, 23.0, -6.0, 3.6, 3.2, 0.7))              # Tactical utility pouch R
-sym("armor_chest_police",
-    (2.0, 21.4, -5.5, 3.8, 7.8, 3.2),              # Left/right sloped pectoral cowls
-    (5.8, 21.8, -5.0, 0.7, 7.0, 2.6),              # Lateral flank guards
-    (1.6, 15.0, -5.5, 3.4, 6.4, 0.7),              # Abdominal flank guard
-    (2.2, 20.4, -5.8, 1.4, 1.4, 0.4))              # Cockpit hinge latch lugs
+add("armor_chest_police", *build_chest_glacis([
+    (-5.0, 21.0, -7.8, 10.0, 2.4, 0.8)
+]))
 
 add("weapon_riot_shield",
     (4.5, 9.0, -6.5, 6.0, 20.0, 0.8),   # Center shield body
@@ -1590,6 +1393,190 @@ def cube(b, uv):
 def rot_box(ox, oy, oz, sx, sy, sz, px, py, pz, rx, ry, rz):
     """Returns a 12-element tuple defining a cube with its own pivot and 3-axis rotation."""
     return (ox, oy, oz, sx, sy, sz, px, py, pz, rx, ry, rz)
+
+MODEL_SCALE = 1.8
+SEAT_DROP = -6.0
+AUTHORED = (0.0, 21.6, 5.1)
+SEAT_LOWER = 4.0
+SEATED = (0.0, ((30.8 - SEAT_LOWER) * MODEL_SCALE - 10.0) / MODEL_SCALE, 4.3)
+
+def to_seat(b):
+    if len(b) >= 12:
+        x, y, z, sx, sy, sz, px, py, pz, rx, ry, rz = b
+        p = [SEATED[i] + (b[i] - AUTHORED[i]) / MODEL_SCALE for i in range(3)]
+        pivot = [SEATED[i] + (px_val - AUTHORED[i]) / MODEL_SCALE for i, px_val in enumerate((px, py, pz))]
+        return (*p, *(v / MODEL_SCALE for v in (sx, sy, sz)), *pivot, rx, ry, rz)
+    x, y, z, sx, sy, sz = b
+    p = [SEATED[i] + (b[i] - AUTHORED[i]) / MODEL_SCALE for i in range(3)]
+    return (*p, *(v / MODEL_SCALE for v in (sx, sy, sz)))
+
+def from_seat(b):
+    if len(b) >= 12:
+        mx, my, mz, msx, msy, msz, mpx, mpy, mpz, rx, ry, rz = b
+        ax = (mx - SEATED[0]) * MODEL_SCALE + AUTHORED[0]
+        ay = (my - SEATED[1]) * MODEL_SCALE + AUTHORED[1] - SEAT_DROP
+        az = (mz - SEATED[2]) * MODEL_SCALE + AUTHORED[2]
+        asx = msx * MODEL_SCALE
+        asy = msy * MODEL_SCALE
+        asz = msz * MODEL_SCALE
+        apx = (mpx - SEATED[0]) * MODEL_SCALE + AUTHORED[0]
+        apy = (mpy - SEATED[1]) * MODEL_SCALE + AUTHORED[1] - SEAT_DROP
+        apz = (mpz - SEATED[2]) * MODEL_SCALE + AUTHORED[2]
+        return (ax, ay, az, asx, asy, asz, apx, apy, apz, rx, ry, rz)
+    mx, my, mz, msx, msy, msz = b
+    ax = (mx - SEATED[0]) * MODEL_SCALE + AUTHORED[0]
+    ay = (my - SEATED[1]) * MODEL_SCALE + AUTHORED[1] - SEAT_DROP
+    az = (mz - SEATED[2]) * MODEL_SCALE + AUTHORED[2]
+    asx = msx * MODEL_SCALE
+    asy = msy * MODEL_SCALE
+    asz = msz * MODEL_SCALE
+    return (ax, ay, az, asx, asy, asz)
+
+def round_ring(y, h, hx, zf, zb, r=2.6, t=0.6, front=True, n=3):
+    out = [(-hx + r, y, zb - t, 2 * (hx - r), h, t)]
+    if front:
+        out.append((-hx + r, y, zf, 2 * (hx - r), h, t))
+    for sx in (1, -1):
+        out.append(((hx - t) if sx > 0 else -hx, y, zf + r, t, h, zb - zf - 2 * r))
+        for zc, sz in ((zf, 1), (zb, -1)):
+            for i in range(n):
+                a0, a1 = math.pi / 2 * i / n, math.pi / 2 * (i + 1) / n
+                xs = [hx - r + r * math.cos(a) for a in (a0, a1)]
+                zs = [r - r * math.sin(a) for a in (a0, a1)]
+                x0, x1 = min(xs), max(max(xs), min(xs) + t)
+                z0, z1 = min(zs), max(max(zs), min(zs) + t)
+                x0, x1 = (x0, x1) if sx > 0 else (-x1, -x0)
+                z0, z1 = (zc + z0, zc + z1) if sz > 0 else (zc - z1, zc - z0)
+                out.append((x0, y, z0, x1 - x0, h, z1 - z0))
+    return out
+
+def shell_ring(y, h, hx, zf, zb, front=True, t=0.6, c=1.1):
+    out = [(-hx + c, y, zb - t, 2 * (hx - c), h, t)]
+    if front:
+        out.append((-hx + c, y, zf, 2 * (hx - c), h, t))
+    for sx in (1, -1):
+        out.append(((hx - t) if sx > 0 else -hx, y, zf + c, t, h, zb - zf - 2 * c))
+        for zc in (zf, zb - c):
+            out.append(((hx - c) if sx > 0 else -hx, y, zc, c, h, c))
+    return out
+
+# ==================== UNIFIED ARMORED BOX HULL BUILDERS ====================
+def build_box_canopy(extras=[]):
+    roof_y = 40.65
+    rear_z = 9.47
+    roof_quads = [
+        (-5.5, roof_y, -2.5, 5.5, 1.0, 6.0),
+        (0.0, roof_y, -2.5, 5.5, 1.0, 6.0),
+        (-5.5, roof_y, 3.5, 5.5, 1.0, rear_z + 0.8 - 3.5),
+        (0.0, roof_y, 3.5, 5.5, 1.0, rear_z + 0.8 - 3.5),
+    ]
+    base = [
+        *roof_quads,
+        # Commander hatch
+        (-3.2, roof_y + 1.0, 1.5, 6.4, 0.6, 5.5),
+        # Hatch rim
+        (-3.4, roof_y + 1.0, 6.8, 6.8, 0.7, 0.6),
+        # Grab handles
+        (3.6, roof_y + 1.0, 3.2, 0.4, 0.4, 2.6),
+        (-4.0, roof_y + 1.0, 3.2, 0.4, 0.4, 2.6),
+        # Rear bulkhead (split L/R)
+        (-5.5, 22.8, rear_z, 5.5, roof_y + 1.0 - 22.8, 0.8),
+        (0.0, 22.8, rear_z, 5.5, roof_y + 1.0 - 22.8, 0.8),
+        # Rear radiator louvers
+        (-4.0, 25.0, rear_z + 0.8, 8.0, 11.5, 0.6),
+        # Rear emergency egress latch
+        (-1.5, 30.0, rear_z + 0.8, 3.0, 3.0, 0.4),
+        # Side armor walls
+        (5.9, 23.5, -2.2, 0.8, 16.0, rear_z - (-2.2)),
+        (-6.7, 23.5, -2.2, 0.8, 16.0, rear_z - (-2.2)),
+        # Overhang brow
+        (-3.0, 37.0, -3.6, 6.0, roof_y - 37.0, 1.2),
+        # Cheek cowls flanking throat cavity
+        (2.8, 30.5, -3.6, 3.2, 7.5, 1.2),
+        (-6.0, 30.5, -3.6, 3.2, 7.5, 1.2),
+        # 45 deg chamfered upper roof edges
+        rot_box(4.8, roof_y - 0.7, -2.5, 1.4, 0.8, rear_z - (-2.5), 5.5, roof_y - 0.3, 3.2, 0, 0, -45),
+        rot_box(-6.2, roof_y - 0.7, -2.5, 1.4, 0.8, rear_z - (-2.5), -5.5, roof_y - 0.3, 3.2, 0, 0, 45)
+    ]
+    model_boxes = base + list(extras)
+    return [from_seat(b) for b in model_boxes]
+
+def build_chest_glacis(extras=[]):
+    base = [
+        # Center sloped glacis breastplate (monolithic continuous plate tilted -26 deg)
+        rot_box(-5.4, 22.0, -7.2, 10.8, 9.6, 1.4, 0, 22.0, -6.5, -26, 0, 0),
+        # Lower belly glacis (tilted 28 deg back)
+        rot_box(-4.5, 16.5, -4.2, 9.0, 6.2, 1.4, 0, 17.0, -4.2, 28, 0, 0),
+        # Upper throat collar sill
+        (-3.0, 29.8, -3.6, 6.0, 1.4, 1.4),
+        # Corrugated mechanical waist bellows
+        (-3.6, 19.5, -4.6, 7.2, 0.8, 1.2),
+        (-3.4, 18.2, -4.4, 6.8, 0.8, 1.2),
+        (-3.2, 16.9, -4.2, 6.4, 0.8, 1.2),
+        # Groin keel wedge (tilted up 18 deg)
+        rot_box(-2.0, 14.2, -5.2, 4.0, 4.8, 1.4, 0, 15.0, -4.8, 18, 0, 0),
+        # Hip skirts
+        rot_box(3.2, 14.5, -4.0, 1.2, 5.4, 3.8, 3.5, 18.0, -2.5, 0, 0, -16),
+        rot_box(-4.4, 14.5, -4.0, 1.2, 5.4, 3.8, -3.5, 18.0, -2.5, 0, 0, 16),
+        # Pectoral flank cheek deflection plates
+        rot_box(3.0, 22.0, -6.5, 2.8, 7.6, 2.0, 3.2, 23.0, -5.5, -20, 16, -8),
+        rot_box(-5.8, 22.0, -6.5, 2.8, 7.6, 2.0, -3.2, 23.0, -5.5, -20, -16, 8),
+    ]
+    return base + list(extras)
+
+def build_throat_head(apertures=[], extras=[]):
+    base = [
+        # Main armored sensor housing block recessed inside throat
+        (-2.2, 31.4, -3.2, 4.4, 2.4, 2.0),
+        # Primary sensor visor lens/aperture
+        (-1.8, 32.2, -3.4, 3.6, 0.8, 0.4),
+        # Sloped deflector brow cowl
+        rot_box(-2.2, 33.6, -3.4, 4.4, 0.8, 1.8, 0, 33.6, -3.4, -18, 0, 0)
+    ]
+    return base + list(apertures) + list(extras)
+
+def build_box_pauldron(extras=[]):
+    base = [
+        # Top chamfered plate
+        rot_box(4.8, 31.5, -4.0, 6.4, 1.2, 8.0, 5.5, 31.5, 0.0, 0, 0, -8),
+        # Outer heavy vertical ballistic slab
+        (10.2, 24.5, -3.8, 1.2, 7.5, 7.6),
+        # Front beveled deflection face
+        rot_box(4.8, 25.0, -4.6, 5.4, 6.5, 1.2, 6.0, 29.0, -4.0, -12, 0, 0),
+        # Rear beveled deflection face
+        rot_box(4.8, 25.0, 3.4, 5.4, 6.5, 1.2, 6.0, 29.0, 4.0, 12, 0, 0)
+    ]
+    return base + list(extras)
+
+def build_leg_cuisse(extras=[]):
+    base = [
+        (2.6, 16.0, -2.2, 3.8, 1.2, 4.4),                 # Hip ball cowl
+        (5.8, 10.8, -2.6, 1.2, 5.6, 4.8),                 # Outer ballistic thigh plate
+        (2.8, 11.2, -3.2, 3.4, 5.2, 1.2),                 # Front cuisse plate
+        # Chunky rectangular forward knee guard block
+        (2.8, 8.0, -5.2, 3.2, 3.6, 2.2),
+        (6.0, 9.2, -4.2, 0.6, 1.4, 1.4),                  # Side pivot disc
+        # Exposed twin hydraulic pistons running behind knee
+        (3.4, 8.5, -3.2, 0.8, 5.5, 0.8),
+        (4.8, 8.5, -3.2, 0.8, 5.5, 0.8)
+    ]
+    return base + list(extras)
+
+def build_shin_greave(extras=[]):
+    base = [
+        # Front downward shin slab
+        rot_box(2.8, 2.0, -4.4, 3.4, 7.0, 1.4, 4.5, 6.0, -3.5, -16, 0, 0),
+        # Flared outer calf wing protecting actuator & wheel
+        rot_box(6.0, 1.8, -3.0, 1.2, 7.2, 5.4, 6.0, 7.0, 0.0, 0, 0, -14),
+        # Rear calf guard
+        rot_box(3.0, 2.2, 2.2, 3.0, 6.2, 1.4, 4.5, 6.0, 2.0, 14, 0, 0),
+        # Split-toe articulated boot pads
+        (2.6, 0.2, -5.6, 1.8, 1.6, 3.2),                  # Inner toe pad
+        (4.6, 0.2, -5.6, 1.8, 1.6, 3.2),                  # Outer toe pad
+        (2.6, 0.0, -5.6, 3.8, 0.4, 8.0),                  # Deep sole tread
+        (3.0, 0.2, 2.6, 3.0, 1.4, 1.8)                    # Rear heel spur
+    ]
+    return base + list(extras)
 
 # ==================== YOKE WIDTH & ARM REACH ====================
 # The arms hang off the ends of the wide yoke (outer span ~1.6x the hips) and must reach 6.4 + 12.0 px so the
@@ -1716,7 +1703,7 @@ thighs = (min(b[0] for b in LEGS), min(b[1] for b in LEGS), min(b[2] for b in LE
           max(b[2] + b[5] for b in LEGS) - min(b[2] for b in LEGS))
 
 for n in HEAD_GROUP:
-    move(n, dy=-3.6, dz=-4.6)
+    # In the unified architecture, heads are already placed precisely inside the throat cowl
     cap_top(n, thighs[1] - 0.1, thighs[2], thighs[2] + thighs[5])
 
 move("upper_back_seat", SEAT_DROP - SEAT_LOWER)
