@@ -84,4 +84,18 @@ public class ObsoleteMod {
             }
         }
     }
+
+    @SubscribeEvent
+    public void onStartTracking(net.minecraftforge.event.entity.player.PlayerEvent.StartTracking event) {
+        if (event.getTarget() instanceof ExoframeEntity exoframe && event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            int slots = exoframe.getModularInventory().getSlots();
+            for (int i = 0; i < slots; i++) {
+                net.minecraft.world.item.ItemStack stack = exoframe.getModularInventory().getStackInSlot(i);
+                if (!stack.isEmpty()) {
+                    com.obsolete.network.ModNetworking.sendToPlayer(
+                            new com.obsolete.network.ExoframeInventorySyncS2CPacket(exoframe.getId(), i, stack), player);
+                }
+            }
+        }
+    }
 }

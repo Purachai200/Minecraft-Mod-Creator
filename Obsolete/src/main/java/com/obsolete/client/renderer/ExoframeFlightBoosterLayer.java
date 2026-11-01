@@ -33,6 +33,13 @@ public class ExoframeFlightBoosterLayer extends GeoRenderLayer<ExoframeEntity> {
             return;
         }
 
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        boolean pilotFirstPerson = mc.options.getCameraType() == net.minecraft.client.CameraType.FIRST_PERSON
+                && mc.player != null && mc.player.getVehicle() == exoframe && mc.screen == null;
+        if (pilotFirstPerson) {
+            return;
+        }
+
         BakedGeoModel model = GeckoLibCache.getBakedModels().get(GEO_RES);
         if (model == null) return;
 

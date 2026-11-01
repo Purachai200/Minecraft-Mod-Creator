@@ -22,6 +22,13 @@ public class ModKeyMappings {
             KEY_CATEGORY
     );
 
+    public static final KeyMapping KEY_MECH_MELEE = new KeyMapping(
+            "key.obsolete.melee",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_F,
+            KEY_CATEGORY
+    );
+
     // Same order as ExoframeEntity.EMOTES
     public static final KeyMapping[] KEY_EMOTES = {
             new KeyMapping("key.obsolete.emote.salute", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, KEY_CATEGORY),
@@ -33,6 +40,7 @@ public class ModKeyMappings {
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(KEY_FIRE_WEAPON);
         event.register(KEY_MECH_CROUCH);
+        event.register(KEY_MECH_MELEE);
         for (KeyMapping key : KEY_EMOTES) {
             event.register(key);
         }

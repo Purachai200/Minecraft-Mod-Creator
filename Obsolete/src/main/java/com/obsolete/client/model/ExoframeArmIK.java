@@ -88,6 +88,27 @@ public final class ExoframeArmIK {
         zero(lHand);
     }
 
+    public static void poseUnarmedPunch(Function<String, CoreGeoBone> bones, ExoframeEntity exo, float partialTick) {
+        CoreGeoBone rArm = bones.apply("right_arm"), rFore = bones.apply("right_forearm"), rHand = bones.apply("right_hand");
+        CoreGeoBone lArm = bones.apply("left_arm"), lFore = bones.apply("left_forearm"), lHand = bones.apply("left_hand");
+        if (rArm == null || rFore == null || rHand == null || lArm == null || lFore == null || lHand == null) return;
+
+        Vector3f rFist = render(RIGHT_FIST);
+        float progress = Mth.clamp((exo.clientMeleeTicks + partialTick) / 12.0F, 0.0F, 1.0F);
+
+        float rightZ = progress < 0.28F ? Mth.lerp(progress / 0.28F, 0.0F, 4.0F)
+                : (progress < 0.65F ? Mth.lerp((progress - 0.28F) / 0.37F, 4.0F, -14.0F)
+                : Mth.lerp((progress - 0.65F) / 0.35F, -14.0F, 0.0F));
+        float leftZ = progress < 0.28F ? Mth.lerp(progress / 0.28F, 0.0F, -2.0F)
+                : (progress < 0.65F ? Mth.lerp((progress - 0.28F) / 0.37F, -2.0F, 5.0F)
+                : Mth.lerp((progress - 0.65F) / 0.35F, 5.0F, 0.0F));
+
+        solveArm(rArm, rFore, rFist, render(new Vector3f(-6.0F, 18.0F, rightZ)));
+        solveArm(lArm, lFore, new Vector3f(-rFist.x, rFist.y, rFist.z), render(new Vector3f(6.0F, 18.0F, leftZ)));
+        zero(rHand);
+        zero(lHand);
+    }
+
     public static void pose(Function<String, CoreGeoBone> bones, ExoframeEntity exo, Item item, float partialTick,
                             float moveAmount, float lookPitch, float recoilKick, boolean firing, boolean emoting) {
         CoreGeoBone rArm = bones.apply("right_arm"), rFore = bones.apply("right_forearm"), rHand = bones.apply("right_hand");
@@ -118,6 +139,30 @@ public final class ExoframeArmIK {
                 + Mth.sin(age * 0.08F) * 0.12F;                                                    // breathing
         fist.z += recoilKick * 8F * aim;                                                           // recoil into the shoulder
 
+        boolean isMelee = exo.isMechMeleeing();
+        boolean isBlade = (hold == Hold.VIBRO_BLADE || hold == Hold.STUN_BATON);
+        float mProgress = Mth.clamp((exo.clientMeleeTicks + partialTick) / 10.0F, 0.0F, 1.0F);
+
+        if (isBlade && isMelee) {
+            // High-velocity cleave / slash arc for melee blade
+            if (mProgress < 0.28F) {
+                float w = mProgress / 0.28F;
+                fist = new Vector3f(hold.restFist).lerp(render(new Vector3f(-9.0F, 22.0F, 3.0F)), w);
+                pitch = Mth.lerp(w, hold.restPitch, -0.65F);
+                yaw = Mth.lerp(w, hold.restYaw, 0.45F);
+            } else if (mProgress < 0.65F) {
+                float s = (mProgress - 0.28F) / 0.37F;
+                fist = render(new Vector3f(-9.0F, 22.0F, 3.0F)).lerp(render(new Vector3f(-3.5F, 11.0F, -12.0F)), s);
+                pitch = Mth.lerp(s, -0.65F, 0.75F);
+                yaw = Mth.lerp(s, 0.45F, -0.75F);
+            } else {
+                float r = (mProgress - 0.65F) / 0.35F;
+                fist = render(new Vector3f(-3.5F, 11.0F, -12.0F)).lerp(new Vector3f(hold.restFist), r);
+                pitch = Mth.lerp(r, 0.75F, hold.restPitch);
+                yaw = Mth.lerp(r, -0.75F, hold.restYaw);
+            }
+        }
+
         // ---- right arm onto the fist target ----
         Vector3f rFist = render(RIGHT_FIST);
         solveArm(rArm, rFore, rFist, fist);
@@ -144,6 +189,28 @@ public final class ExoframeArmIK {
             // Detach left hand from two-handed gun aim; hold riot shield forward in protective stance
             Vector3f shieldTarget = render(new Vector3f(5.5F, 20.0F, -7.0F));
             solveArm(lArm, lFore, new Vector3f(-rFist.x, rFist.y, rFist.z), shieldTarget);
+            zero(lHand);
+            return;
+        }
+        if (isMelee && !isBlade) {
+            // Devastating Left Power-Fist punch smash while holding weapon in right hand
+            float pZ;
+            if (mProgress < 0.25F) {
+                pZ = Mth.lerp(mProgress / 0.25F, 0.0F, 4.0F); // coil back
+            } else if (mProgress < 0.62F) {
+                pZ = Mth.lerp((mProgress - 0.25F) / 0.37F, 4.0F, -14.5F); // explosive forward extension!
+            } else {
+                pZ = Mth.lerp((mProgress - 0.62F) / 0.38F, -14.5F, 0.0F); // retract
+            }
+            Vector3f leftPunchTarget = render(new Vector3f(5.5F, 18.0F, pZ));
+            solveArm(lArm, lFore, new Vector3f(-rFist.x, rFist.y, rFist.z), leftPunchTarget);
+            zero(lHand);
+            return;
+        }
+        if (isBlade) {
+            // Left arm holds tactical combat guard stance during blade cleave
+            Vector3f guardTarget = render(new Vector3f(5.0F, 16.0F, -5.0F));
+            solveArm(lArm, lFore, new Vector3f(-rFist.x, rFist.y, rFist.z), guardTarget);
             zero(lHand);
             return;
         }

@@ -172,6 +172,20 @@
       "obsolete:weapon_melee_swing"
     ]
   },
+  "weapon_blade_swing": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_blade_swing",
+    "sounds": [
+      "obsolete:weapon_blade_swing"
+    ]
+  },
+  "weapon_blade_impact": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_blade_impact",
+    "sounds": [
+      "obsolete:weapon_blade_impact"
+    ]
+  },
   "weapon_melee_impact": {
     "category": "player",
     "subtitle": "subtitles.obsolete.weapon_melee_impact",

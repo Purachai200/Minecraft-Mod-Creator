@@ -55,6 +55,7 @@
   "key.category.obsolete": "OBSOLETE Exoframe Controls",
   "key.obsolete.fire": "Fire Primary Weapon / Tool",
   "key.obsolete.crouch": "Mech Crouch / Flight Descend",
+  "key.obsolete.melee": "Mech Melee Punch / Bash",
   "tooltip.obsolete.armor_slot": "Equip Slot: %s",
   "tooltip.obsolete.damage_reduction": "Kinetic Mitigation: %s",
   "tooltip.obsolete.durability": "Armor Integrity: %s / %s",

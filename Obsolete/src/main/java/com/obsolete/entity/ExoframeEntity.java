@@ -144,6 +144,7 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     /** Client-only render state: eased 0..1 blend between rest carry and shouldered aim. */
     public float clientAimBlend;
     public float clientAimAge;
+    public int clientMeleeTicks;
 
     public static final String EMOTE_CONTROLLER = "emote";
     /** Emote names as sent by the client; "salute" switches to the left hand when a weapon fills the right. */
@@ -296,6 +297,19 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         if (!this.level().isClientSide) {
             for (int i = 0; i < slots; i++) {
                 ModNetworking.sendToTracking(new ExoframeInventorySyncS2CPacket(this.getId(), i, modularInventory.getStackInSlot(i)), this);
+            }
+        }
+    }
+
+    @Override
+    public void startSeenByPlayer(ServerPlayer player) {
+        super.startSeenByPlayer(player);
+        // Transmit all equipped modular armor stacks to newly tracking client so armor renders immediately
+        int slots = modularInventory.getSlots();
+        for (int i = 0; i < slots; i++) {
+            ItemStack stack = modularInventory.getStackInSlot(i);
+            if (!stack.isEmpty()) {
+                ModNetworking.sendToPlayer(new ExoframeInventorySyncS2CPacket(this.getId(), i, stack), player);
             }
         }
     }
@@ -591,6 +605,13 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             meleeCooldown--;
             if (meleeCooldown <= 0) {
                 this.entityData.set(DATA_IS_MELEEING, false);
+            }
+        }
+        if (this.level().isClientSide) {
+            if (isMechMeleeing()) {
+                clientMeleeTicks++;
+            } else {
+                clientMeleeTicks = 0;
             }
         }
 
@@ -1089,8 +1110,9 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
 
         ItemStack mainWpn = modularInventory.getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());
         boolean isStunBaton = mainWpn.is(ModItems.EXOFRAME_STUN_BATON.get());
+        boolean isBlade = mainWpn.is(ModItems.EXOFRAME_VIBRO_BLADE.get());
 
-        meleeCooldown = isStunBaton ? 12 : 15;
+        meleeCooldown = isStunBaton ? 12 : (isBlade ? 10 : 15);
         this.entityData.set(DATA_IS_MELEEING, true);
 
         // Find enemies in front cone (sweep hitbox ~2.8 blocks)
@@ -1103,33 +1125,39 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         List<LivingEntity> targets = this.level().getEntitiesOfClass(LivingEntity.class, strikeBox,
                 e -> e != this && e != pilot && !this.isAlliedTo(e));
 
-        float meleeDamage = isStunBaton ? 18.0F : 22.0F;
+        float meleeDamage = isBlade ? 34.0F : (isStunBaton ? 18.0F : 24.0F);
         for (LivingEntity target : targets) {
             target.hurt(this.damageSources().mobAttack(this), meleeDamage);
             if (isStunBaton) {
                 target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 1, false, true, true));
                 target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, false, true, true));
             }
-            Vec3 kb = forward.scale(isStunBaton ? 0.7D : 1.2D).add(0, 0.35D, 0);
+            Vec3 kb = forward.scale(isStunBaton ? 0.7D : (isBlade ? 1.0D : 1.4D)).add(0, 0.35D, 0);
             target.setDeltaMovement(kb);
             target.hurtMarked = true;
         }
 
         Level level = this.level();
         if (isStunBaton) {
-            level.playSound(null, this.blockPosition(), ModSounds.WEAPON_STUN_ZAP.get(), SoundSource.PLAYERS, 1.8F, 1.0F);
+            level.playSound(null, this.blockPosition(), ModSounds.WEAPON_STUN_ZAP.get(), SoundSource.PLAYERS, 2.4F, 1.0F);
+        } else if (isBlade) {
+            level.playSound(null, this.blockPosition(), ModSounds.WEAPON_BLADE_SWING.get(), SoundSource.PLAYERS, 2.8F, 1.0F);
         } else {
-            level.playSound(null, this.blockPosition(), ModSounds.EXOFRAME_MELEE.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
+            level.playSound(null, this.blockPosition(), ModSounds.EXOFRAME_MELEE.get(), SoundSource.PLAYERS, 3.2F, 0.95F);
         }
 
         if (!targets.isEmpty()) {
-            level.playSound(null, this.blockPosition(), ModSounds.WEAPON_MELEE_IMPACT.get(), SoundSource.PLAYERS, 2.2F, 1.0F);
-            triggerPilotCameraShake(0.5F, 5);
+            if (isBlade) {
+                level.playSound(null, this.blockPosition(), ModSounds.WEAPON_BLADE_IMPACT.get(), SoundSource.PLAYERS, 3.0F, 1.0F);
+            } else {
+                level.playSound(null, this.blockPosition(), ModSounds.WEAPON_MELEE_IMPACT.get(), SoundSource.PLAYERS, 3.4F, 1.0F);
+            }
+            triggerPilotCameraShake(0.6F, 6);
         }
 
         if (level instanceof ServerLevel serverLevel) {
-            serverLevel.sendParticles(isStunBaton ? ParticleTypes.ELECTRIC_SPARK : ParticleTypes.SWEEP_ATTACK,
-                    strikeCenter.x, strikeCenter.y, strikeCenter.z, isStunBaton ? 8 : 2, 0.2D, 0.2D, 0.2D, 0.0D);
+            serverLevel.sendParticles(isStunBaton ? ParticleTypes.ELECTRIC_SPARK : (isBlade ? ParticleTypes.CRIT : ParticleTypes.SWEEP_ATTACK),
+                    strikeCenter.x, strikeCenter.y, strikeCenter.z, isStunBaton ? 10 : (isBlade ? 12 : 3), 0.2D, 0.2D, 0.2D, 0.05D);
         }
     }
 

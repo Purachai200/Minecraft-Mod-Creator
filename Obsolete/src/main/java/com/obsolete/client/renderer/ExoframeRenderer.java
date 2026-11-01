@@ -17,8 +17,8 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 public class ExoframeRenderer extends GeoEntityRenderer<ExoframeEntity> {
 
-    /** When true, advances animations and IK bones without drawing geometry to screen. */
-    private boolean animateOnly = false;
+    /** When true, the client player is riding this exoframe in first-person view. */
+    private boolean isFirstPersonPilot = false;
 
     public ExoframeRenderer(EntityRendererProvider.Context renderManager) {
         super(renderManager, new ExoframeModel());
@@ -47,26 +47,42 @@ public class ExoframeRenderer extends GeoEntityRenderer<ExoframeEntity> {
     @Override
     public void render(ExoframeEntity entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
         Minecraft mc = Minecraft.getInstance();
-        boolean pilotFirstPerson = mc.options.getCameraType() == CameraType.FIRST_PERSON && mc.player != null && mc.player.getVehicle() == entity;
-
-        if (pilotFirstPerson && entity.isCombatArmored()) {
-            this.animateOnly = true;
-        }
+        this.isFirstPersonPilot = mc.options.getCameraType() == CameraType.FIRST_PERSON
+                && mc.player != null && mc.player.getVehicle() == entity
+                && mc.screen == null;
 
         poseStack.pushPose();
         try {
             super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
         } finally {
-            this.animateOnly = false;
+            this.isFirstPersonPilot = false;
         }
         poseStack.popPose();
     }
 
     @Override
-    public void renderRecursively(PoseStack poseStack, ExoframeEntity animatable, GeoBone bone, RenderType renderType, MultiBufferSource bufferSource,
-                                  VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay,
+    public void renderCubesOfBone(PoseStack poseStack, GeoBone bone, VertexConsumer buffer, int packedLight, int packedOverlay,
                                   float red, float green, float blue, float alpha) {
-        if (this.animateOnly) return;
-        super.renderRecursively(poseStack, animatable, bone, renderType, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, red, green, blue, alpha);
+        if (this.isFirstPersonPilot && shouldHideCubesInFirstPerson(bone.getName())) {
+            // Skip rendering blocking cockpit/head cubes in first person, but still traverse and render arms, hands, and weapons
+            return;
+        }
+        super.renderCubesOfBone(poseStack, bone, buffer, packedLight, packedOverlay, red, green, blue, alpha);
+    }
+
+    private boolean shouldHideCubesInFirstPerson(String name) {
+        if (name == null) return false;
+        if (name.equals("head") || name.equals("torso") || name.equals("pelvis")
+                || name.equals("upper_back_seat") || name.equals("backpack")) {
+            return true;
+        }
+        if (name.startsWith("canopy_") || name.startsWith("armor_chest_") || name.startsWith("armor_head_")
+                || name.startsWith("sensor_") || name.startsWith("backpack_")) {
+            return true;
+        }
+        if (name.contains("thigh") || name.contains("shin") || name.contains("foot") || name.contains("leg")) {
+            return true;
+        }
+        return false;
     }
 }

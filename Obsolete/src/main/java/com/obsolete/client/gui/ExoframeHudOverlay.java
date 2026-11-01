@@ -303,6 +303,15 @@ public class ExoframeHudOverlay {
         int bDist = tier == 3 ? 16 : 14;
         int col = exoframe.isAiming() ? 0xFFFF3333 : (tier == 3 ? 0xDD00FFFF : (tier == 2 ? 0xDD00FF88 : 0xAA00AAFF));
 
+        // Center Tactical Crosshair Reticle & Precision Micro-Dot
+        g.fill(cx, cy, cx + 1, cy + 1, col | 0xFF000000); // Center dot
+        int retGap = exoframe.isAiming() ? 3 : 5;
+        int retLen = exoframe.isAiming() ? 6 : 4;
+        g.fill(cx - retGap - retLen, cy, cx - retGap, cy + 1, col); // Left tick
+        g.fill(cx + retGap + 1, cy, cx + retGap + 1 + retLen, cy + 1, col); // Right tick
+        g.fill(cx, cy - retGap - retLen, cx + 1, cy - retGap, col); // Top tick
+        g.fill(cx, cy + retGap + 1, cx + 1, cy + retGap + 1 + retLen, col); // Bottom tick
+
         // Top-Left bracket
         g.fill(cx - bDist, cy - bDist, cx - bDist + bSize, cy - bDist + 1, col);
         g.fill(cx - bDist, cy - bDist, cx - bDist + 1, cy - bDist + bSize, col);

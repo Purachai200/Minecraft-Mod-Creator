@@ -70,6 +70,11 @@ public class KeyInputHandler {
                 ModNetworking.sendToServer(new ExoframeFireC2SPacket());
             }
 
+            // Dedicated Quick Melee Punch / Bash Keybind (F key)
+            while (ModKeyMappings.KEY_MECH_MELEE.consumeClick()) {
+                ModNetworking.sendToServer(new ExoframeMeleeC2SPacket());
+            }
+
             for (int i = 0; i < ModKeyMappings.KEY_EMOTES.length; i++) {
                 while (ModKeyMappings.KEY_EMOTES[i].consumeClick()) {
                     ModNetworking.sendToServer(new ExoframeEmoteC2SPacket(ExoframeEntity.EMOTES[i]));
@@ -120,6 +125,13 @@ public class KeyInputHandler {
     public static void onInteractionKey(InputEvent.InteractionKeyMappingTriggered event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && mc.player.getVehicle() instanceof ExoframeEntity exoframe) {
+            if (event.isPickBlock()) {
+                // Middle-click quick melee smash
+                event.setCanceled(true);
+                ModNetworking.sendToServer(new ExoframeMeleeC2SPacket());
+                return;
+            }
+
             if (event.isAttack()) {
                 event.setCanceled(true);
                 event.setSwingHand(false);

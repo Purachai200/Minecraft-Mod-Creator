@@ -211,6 +211,8 @@ public class ExoframeModel extends GeoModel<ExoframeEntity> {
             ExoframeArmIK.clearMount(bone("right_hand_weapon_mount"));
             if (hasShield && !emoting) {
                 ExoframeArmIK.poseShield(this::bone);
+            } else if (exoframe.isMechMeleeing() && !emoting) {
+                ExoframeArmIK.poseUnarmedPunch(this::bone, exoframe, state.getPartialTick());
             }
         }
     }

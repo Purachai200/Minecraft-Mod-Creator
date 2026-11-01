@@ -42,6 +42,8 @@ public class ModSounds {
 
     // Melee & Tactical
     public static final RegistryObject<SoundEvent> EXOFRAME_MELEE = register("exoframe_melee");
+    public static final RegistryObject<SoundEvent> WEAPON_BLADE_SWING = register("weapon_blade_swing");
+    public static final RegistryObject<SoundEvent> WEAPON_BLADE_IMPACT = register("weapon_blade_impact");
     public static final RegistryObject<SoundEvent> WEAPON_MELEE_IMPACT = register("weapon_melee_impact");
     public static final RegistryObject<SoundEvent> WEAPON_STUN_ZAP = register("weapon_stun_zap");
 
