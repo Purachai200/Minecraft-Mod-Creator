@@ -1,17 +1,24 @@
 package com.obsolete.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.obsolete.client.model.ExoframeModel;
 import com.obsolete.entity.ExoframeEntity;
+import net.minecraft.client.CameraType;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
+import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.core.object.Color;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 public class ExoframeRenderer extends GeoEntityRenderer<ExoframeEntity> {
+
+    /** When true, advances animations and IK bones without drawing geometry to screen. */
+    private boolean animateOnly = false;
 
     public ExoframeRenderer(EntityRendererProvider.Context renderManager) {
         super(renderManager, new ExoframeModel());
@@ -38,8 +45,27 @@ public class ExoframeRenderer extends GeoEntityRenderer<ExoframeEntity> {
 
     @Override
     public void render(ExoframeEntity entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
+        Minecraft mc = Minecraft.getInstance();
+        boolean pilotFirstPerson = mc.options.getCameraType() == CameraType.FIRST_PERSON && mc.player != null && mc.player.getVehicle() == entity;
+
+        if (pilotFirstPerson && entity.isCombatArmored()) {
+            this.animateOnly = true;
+        }
+
         poseStack.pushPose();
-        super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+        try {
+            super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+        } finally {
+            this.animateOnly = false;
+        }
         poseStack.popPose();
+    }
+
+    @Override
+    public void renderRecursively(PoseStack poseStack, ExoframeEntity animatable, GeoBone bone, RenderType renderType, MultiBufferSource bufferSource,
+                                  VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay,
+                                  float red, float green, float blue, float alpha) {
+        if (this.animateOnly) return;
+        super.renderRecursively(poseStack, animatable, bone, renderType, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, red, green, blue, alpha);
     }
 }

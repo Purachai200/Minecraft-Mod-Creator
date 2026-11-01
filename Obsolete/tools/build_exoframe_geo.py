@@ -653,7 +653,7 @@ add(a, *build_chest_glacis([
 
 c = "canopy_usmc"
 add(c, *build_box_canopy([
-    (4.4, 40.5, 7.9, 0.3, 6.5, 0.3), (-4.7, 40.5, 7.9, 0.3, 6.5, 0.3)
+    (4.4, 33.55, 7.9, 0.3, 6.5, 0.3), (-4.7, 33.55, 7.9, 0.3, 6.5, 0.3)
 ]))
 
 SHOULDERS["usmc"] = build_box_pauldron([
@@ -681,8 +681,8 @@ add(a, *build_chest_glacis([
 
 c = "canopy_cerberus"
 add(c, *build_box_canopy([
-    *disc_z(4.2, 41.65, 6.0, 0.6, 0.4), *disc_z(-4.2, 41.65, 6.0, 0.6, 0.4),
-    (-0.3, 41.65, 4.0, 0.6, 2.0, 1.4)
+    *disc_z(4.2, 34.7, 6.0, 0.6, 0.4), *disc_z(-4.2, 34.7, 6.0, 0.6, 0.4),
+    (-0.3, 34.7, 4.0, 0.6, 2.0, 1.4)
 ]))
 
 SHOULDERS["cerberus"] = build_box_pauldron([
@@ -708,8 +708,8 @@ add(a, *build_chest_glacis([
 
 c = "canopy_polar"
 add(c, *build_box_canopy([
-    (-4.5, 41.65, -1.0, 9.0, 0.5, 8.0),
-    (-3.0, 41.65, 7.0, 6.0, 0.8, 1.5)
+    (-4.5, 34.7, -1.0, 9.0, 0.5, 8.0),
+    (-3.0, 34.7, 7.0, 6.0, 0.8, 1.5)
 ]))
 
 SHOULDERS["polar"] = build_box_pauldron([
@@ -754,8 +754,8 @@ add(a, *build_chest_glacis([
 
 c = "canopy_hood"
 add(c, *build_box_canopy([
-    (-5.0, 41.65, -1.0, 10.0, 0.8, 0.6),
-    (-4.0, 41.65, 4.0, 8.0, 0.4, 0.6)
+    (-5.0, 34.7, -1.0, 10.0, 0.8, 0.6),
+    (-4.0, 34.7, 4.0, 8.0, 0.4, 0.6)
 ]))
 
 SHOULDERS["outlander"] = build_box_pauldron([
@@ -780,8 +780,8 @@ add("armor_chest_salvage", *build_chest_glacis([
     (1.5, 24.0, -7.6, 2.5, 0.4, 0.4)
 ]))
 add("canopy_salvage", *build_box_canopy([
-    (-4.0, 41.65, 0.0, 6.0, 0.4, 5.0),
-    (-1.0, 42.05, 2.0, 2.0, 1.2, 0.4)
+    (-4.0, 34.7, 0.0, 6.0, 0.4, 5.0),
+    (-1.0, 35.1, 2.0, 2.0, 1.2, 0.4)
 ]))
 SHOULDERS["salvage"] = build_box_pauldron([
     (10.8, 31.5, -1.0, 0.6, 2.0, 2.0),
@@ -805,8 +805,8 @@ add("armor_chest_shiden", *build_chest_glacis([
     (1.8, 29.5, -4.0, 0.8, 0.8, 0.4)
 ]))
 add("canopy_shiden", *build_box_canopy([
-    (-2.0, 41.65, 4.0, 4.0, 1.0, 3.0),
-    (-0.3, 42.65, 5.0, 0.6, 3.0, 0.8)
+    (-2.0, 34.7, 4.0, 4.0, 1.0, 3.0),
+    (-0.3, 35.7, 5.0, 0.6, 3.0, 0.8)
 ]))
 SHOULDERS["shiden"] = build_box_pauldron([
     (5.4, 32.6, -3.2, 4.8, 0.6, 5.0),
@@ -829,7 +829,7 @@ add("armor_chest_khamsin", *build_chest_glacis([
     rot_box(-3.5, 23.5, -7.5, 7.0, 3.0, 0.6, 0, 22.0, -6.5, -26, 0, 0)
 ]))
 add("canopy_khamsin", *build_box_canopy([
-    (-4.5, 41.65, 3.0, 9.0, 1.2, 4.0)
+    (-4.5, 34.7, 3.0, 9.0, 1.2, 4.0)
 ]))
 SHOULDERS["khamsin"] = build_box_pauldron([
     (5.2, 32.4, -4.0, 5.8, 0.8, 7.0)
@@ -852,8 +852,8 @@ add("armor_chest_riverine", *build_chest_glacis([
     rot_box(-5.6, 22.5, -6.8, 2.4, 6.0, 1.8, -3.2, 23.0, -5.5, -20, -16, 8)
 ]))
 add("canopy_riverine", *build_box_canopy([
-    *disc_z(-3.5, 41.65, 7.0, 0.8, 2.0),
-    *disc_z(3.5, 41.65, 7.0, 0.8, 2.0)
+    *disc_z(-3.5, 34.7, 7.0, 0.8, 2.0),
+    *disc_z(3.5, 34.7, 7.0, 0.8, 2.0)
 ]))
 SHOULDERS["riverine"] = build_box_pauldron([
     (11.5, 28.0, -1.0, 0.5, 1.2, 2.0)
@@ -876,7 +876,7 @@ add("armor_chest_specter", *build_chest_glacis([
     rot_box(-2.5, 23.5, -7.5, 5.0, 5.0, 0.6, 0, 22.0, -6.5, -26, 0, 0)
 ]))
 add("canopy_specter", *build_box_canopy([
-    (-0.6, 41.65, -1.0, 1.2, 1.0, 9.0)
+    (-0.6, 34.7, -1.0, 1.2, 1.0, 9.0)
 ]))
 SHOULDERS["specter"] = build_box_pauldron([
     rot_box(10.2, 25.0, -3.8, 1.2, 6.8, 7.6, 10.5, 28.0, 0, 0, 0, 6)
@@ -897,8 +897,8 @@ add("armor_chest_valkyrie", *build_chest_glacis([
     rot_box(-2.0, 24.0, -7.4, 4.0, 3.5, 0.4, 0, 22.0, -6.5, -26, 0, 0)
 ]))
 add("canopy_valkyrie", *build_box_canopy([
-    (-2.5, 41.65, 2.0, 5.0, 0.8, 4.0),
-    (0.0, 42.45, 4.0, 0.4, 3.5, 0.4)
+    (-2.5, 34.7, 2.0, 5.0, 0.8, 4.0),
+    (0.0, 35.5, 4.0, 0.4, 3.5, 0.4)
 ]))
 SHOULDERS["valkyrie"] = build_box_pauldron([
     rot_box(10.2, 25.5, -3.8, 1.4, 6.5, 7.6, 10.5, 29.0, 0, 0, 0, -8)
@@ -1265,8 +1265,8 @@ add("armor_head_police", *build_throat_head(
 
 c = "canopy_police"
 add(c, *build_box_canopy([
-    (-4.5, 38.8, -3.7, 4.2, 0.8, 0.8), # Blue emergency strobe bar
-    (0.3, 38.8, -3.7, 4.2, 0.8, 0.8)   # Red emergency strobe bar
+    (-4.5, 31.85, -3.7, 4.2, 0.8, 0.8), # Blue emergency strobe bar
+    (0.3, 31.85, -3.7, 4.2, 0.8, 0.8)   # Red emergency strobe bar
 ]))
 
 add("armor_chest_police", *build_chest_glacis([

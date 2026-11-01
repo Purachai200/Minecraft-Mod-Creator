@@ -29,7 +29,10 @@ public class ClientForgeEvents {
                     || overlayId.equals(VanillaGuiOverlay.ARMOR_LEVEL.id().toString())
                     || overlayId.equals(VanillaGuiOverlay.AIR_LEVEL.id().toString())
                     || overlayId.equals(VanillaGuiOverlay.EXPERIENCE_BAR.id().toString())
-                    || overlayId.equals(VanillaGuiOverlay.MOUNT_HEALTH.id().toString())) {
+                    || overlayId.equals(VanillaGuiOverlay.MOUNT_HEALTH.id().toString())
+                    || overlayId.equals(VanillaGuiOverlay.HOTBAR.id().toString())
+                    || overlayId.equals(VanillaGuiOverlay.CROSSHAIR.id().toString())
+                    || overlayId.equals(VanillaGuiOverlay.RECORD_OVERLAY.id().toString())) {
                 event.setCanceled(true);
             }
         }

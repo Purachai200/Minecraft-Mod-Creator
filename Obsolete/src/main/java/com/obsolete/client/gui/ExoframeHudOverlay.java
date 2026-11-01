@@ -42,13 +42,26 @@ public class ExoframeHudOverlay {
     private static int cachedIron = 0;
     private static int cachedDebris = 0;
 
+    // Boarding cinematic tracking
+    private static int boardedVehicleId = Integer.MIN_VALUE;
+    private static long boardTick = -100000;
+    private static final int BOOT_TICKS = 45;
+
     public static final IGuiOverlay HUD_EXOFRAME = (ForgeGui gui, GuiGraphics graphics, float partialTick, int width, int height) -> {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.screen != null) {
             return;
         }
         if (mc.player == null || mc.level == null || !(mc.player.getVehicle() instanceof ExoframeEntity exoframe)) {
+            boardedVehicleId = Integer.MIN_VALUE;
             return;
+        }
+
+        // Detect new boarding event and trigger sound & boot cinematic
+        if (exoframe.getId() != boardedVehicleId) {
+            boardedVehicleId = exoframe.getId();
+            boardTick = mc.player.tickCount;
+            mc.player.playSound(com.obsolete.sound.ModSounds.EXOFRAME_COCKPIT_CLOSE.get(), 1.0F, 1.0F);
         }
 
         Font font = mc.font;
@@ -129,52 +142,72 @@ public class ExoframeHudOverlay {
         }
 
         // ==================== 0. FIRST-PERSON IN-COCKPIT MONITOR & CAMERA PASS-THROUGH ====================
-        if (mc.options.getCameraType().isFirstPerson()) {
-            renderCockpitMonitorScreen(graphics, font, width, height, mc, exoframe, headStack, chestStack, utilStack, tier);
+        boolean isFirstPerson = mc.options.getCameraType().isFirstPerson();
+        boolean isCombat = exoframe.isCombatArmored();
+        float bootTime = (mc.player.tickCount - boardTick) + partialTick;
+
+        if (isFirstPerson) {
+            ExoframeVariantRegistry.SensorProfile profile = ExoframeVariantRegistry.resolveSensorProfile(headStack, chestStack, utilStack, exoframe.isInWater());
+            if (bootTime < BOOT_TICKS) {
+                renderBootCinematic(graphics, font, width, height, bootTime, profileName, mc.player.getScoreboardName(), profile.borderColor());
+            }
+
+            if (bootTime >= 24) {
+                if (isCombat) {
+                    renderCombatOpticSensorFeed(graphics, font, width, height, mc, exoframe, profile, tier);
+                } else {
+                    renderOnboardConsoleMonitor(graphics, font, width, height, mc, exoframe, tier);
+                }
+            }
         }
 
-        // ==================== 1. TOP CENTER: COMPASS HEADING TAPE ====================
-        renderCompassHeadingTape(graphics, font, centerX, 22, mc.player.getYRot(), mc.player.getXRot(), exoframe, tier);
+        // Widgets power on after initial cold-boot sequence
+        if (!isFirstPerson || bootTime >= 24) {
+            // ==================== 1. TOP CENTER: COMPASS HEADING TAPE ====================
+            renderCompassHeadingTape(graphics, font, centerX, 22, mc.player.getYRot(), mc.player.getXRot(), exoframe, tier);
 
-        // ==================== 2. CENTER SCREEN: CROSSHAIR & TARGET LOCK ====================
-        renderTargetingFCS(graphics, font, centerX, centerY, mc, exoframe, tier);
+            // ==================== 2. CENTER SCREEN: CROSSHAIR & TARGET LOCK ====================
+            renderTargetingFCS(graphics, font, centerX, centerY, mc, exoframe, tier);
 
-        // ==================== 3. BOTTOM-LEFT: CHASSIS & ARMOR DIAGNOSTICS ====================
-        renderChassisDiagnostics(graphics, font, 12, height - 76, exoframe, mc.player, profileName, profileColor, utilStack, tier);
+            // ==================== 3. BOTTOM-LEFT: CHASSIS & ARMOR DIAGNOSTICS ====================
+            if (!isFirstPerson || isCombat || width >= 540) {
+                renderChassisDiagnostics(graphics, font, 12, height - 76, exoframe, mc.player, profileName, profileColor, utilStack, tier);
+            }
 
-        // ==================== 3B. TIER 3 RADAR MINI-MAP WIDGET ====================
-        if (tier == 3) {
-            renderRadarWidget(graphics, font, width - 45, 45, mc, exoframe);
-        }
+            // ==================== 3B. TIER 3 RADAR MINI-MAP WIDGET ====================
+            if (tier == 3) {
+                renderRadarWidget(graphics, font, width - 45, 45, mc, exoframe);
+            }
 
-        // ==================== 4. MODULAR ROLE TELEMETRY PANELS (STACKED ON RIGHT) ====================
-        int rightX = width - 180;
-        int currentRightY = height - 76;
+            // ==================== 4. MODULAR ROLE TELEMETRY PANELS (STACKED ON RIGHT) ====================
+            int rightX = width - 148;
+            int currentRightY = height - 76;
 
-        // Render each active role widget
-        if (hasCombat) {
-            renderCombatWidget(graphics, font, rightX, currentRightY, exoframe, mc.player, weaponStack);
-            currentRightY -= 68;
-        }
-        if (hasMining) {
-            renderMiningWidget(graphics, font, rightX, currentRightY, exoframe, mc);
-            currentRightY -= 68;
-        }
-        if (hasSpecOps) {
-            renderSpecOpsWidget(graphics, font, rightX, currentRightY, exoframe, mc.player, mc);
-            currentRightY -= 68;
-        }
-        if (hasForestry) {
-            renderForestryWidget(graphics, font, rightX, currentRightY, exoframe, mc.player, weaponStack);
-            currentRightY -= 68;
-        }
-        if (hasAgri) {
-            renderAgriWidget(graphics, font, rightX, currentRightY, exoframe, mc.player);
-            currentRightY -= 68;
-        }
-        if (hasSubmarine) {
-            renderSubmarineWidget(graphics, font, rightX, currentRightY, exoframe, mc.player);
-            currentRightY -= 68;
+            // Render each active role widget
+            if (hasCombat) {
+                renderCombatWidget(graphics, font, rightX, currentRightY, exoframe, mc.player, weaponStack);
+                currentRightY -= 68;
+            }
+            if (hasMining) {
+                renderMiningWidget(graphics, font, rightX, currentRightY, exoframe, mc);
+                currentRightY -= 68;
+            }
+            if (hasSpecOps) {
+                renderSpecOpsWidget(graphics, font, rightX, currentRightY, exoframe, mc.player, mc);
+                currentRightY -= 68;
+            }
+            if (hasForestry) {
+                renderForestryWidget(graphics, font, rightX, currentRightY, exoframe, mc.player, weaponStack);
+                currentRightY -= 68;
+            }
+            if (hasAgri) {
+                renderAgriWidget(graphics, font, rightX, currentRightY, exoframe, mc.player);
+                currentRightY -= 68;
+            }
+            if (hasSubmarine) {
+                renderSubmarineWidget(graphics, font, rightX, currentRightY, exoframe, mc.player);
+                currentRightY -= 68;
+            }
         }
     };
 
@@ -678,9 +711,97 @@ public class ExoframeHudOverlay {
     }
 
     // ==================== IN-COCKPIT DIGITAL MONITOR SCREEN & CAMERA PASS-THROUGH ====================
-    private static void renderCockpitMonitorScreen(GuiGraphics g, Font font, int width, int height, Minecraft mc, ExoframeEntity exoframe, ItemStack headStack, ItemStack chestStack, ItemStack utilStack, int tier) {
-        // 1. Determine Camera Sensor Type & Accent Color based on Armor / Modules
-        ExoframeVariantRegistry.SensorProfile profile = ExoframeVariantRegistry.resolveSensorProfile(headStack, chestStack, utilStack, exoframe.isInWater());
+
+    // 1. Boarding Cold Boot Cinematic
+    private static void renderBootCinematic(GuiGraphics g, Font font, int width, int height, float t, String profileName, String pilotName, int borderCol) {
+        // Shutter split: top and bottom black bars retracting vertically from screen center
+        float open = Mth.clamp((t - 4.0F) / 16.0F, 0.0F, 1.0F);
+        float smoothOpen = open * open * (3.0F - 2.0F * open);
+        int bar = (int) ((height / 2.0F) * (1.0F - smoothOpen));
+        if (bar > 0) {
+            // Top and bottom shutter plates
+            g.fill(0, 0, width, bar, 0xFF000000);
+            g.fill(0, height - bar, width, height, 0xFF000000);
+            // Neon edge seam
+            g.fill(0, bar - 1, width, bar + 1, borderCol);
+            g.fill(0, height - bar - 1, width, height - bar + 1, borderCol);
+        }
+
+        // Cold boot dark visor tint fading out
+        float fade = 1.0F - Mth.clamp((t - 22.0F) / 20.0F, 0.0F, 1.0F);
+        if (fade > 0.01F) {
+            int darkAlpha = (int) (0xCC * fade);
+            g.fill(0, 0, width, height, (darkAlpha << 24) | 0x02060A);
+        }
+
+        // Rolling CRT scanlines
+        int bandY = (int) ((t * 14.0F) % (height + 30)) - 15;
+        if (t < 38.0F) {
+            g.fill(0, bandY, width, bandY + 4, 0x4400FFFF);
+            for (int y = 0; y < height; y += 4) {
+                g.fill(0, y, width, y + 1, 0x1200FFFF);
+            }
+        }
+
+        // Typewriter Diagnostic Terminal
+        float termFade = 1.0F - Mth.clamp((t - 36.0F) / 9.0F, 0.0F, 1.0F);
+        if (termFade > 0.01F) {
+            int lx = Math.max(20, width / 2 - 110);
+            int ly = height / 2 - 45;
+
+            // Card backdrop
+            g.fill(lx - 8, ly - 6, lx + 220, ly + 90, 0xCC040A10);
+            g.renderOutline(lx - 8, ly - 6, 228, 96, borderCol);
+
+            typeLine(g, font, "EXOFRAME OS v2.4 // COLD BOOT", lx, ly, 4.0F, t, 0xFF7FB8C8);
+            typeLine(g, font, "OPTIC SENSOR FEED // NEURAL LINK ESTABLISHED", lx, ly + 11, 8.0F, t, 0xFF00E5FF);
+            typeLine(g, font, "CHASSIS: " + profileName, lx, ly + 22, 13.0F, t, 0xFFFFFFFF);
+            typeLine(g, font, "PILOT: " + pilotName, lx, ly + 32, 17.0F, t, 0xFFFFFFFF);
+
+            // Subsystem Checks
+            String[] checks = {"OPTIC SENSOR MATRIX", "HYDRAULIC SERVOS", "POWER CORE COUPLING", "FIRE CONTROL LINK"};
+            for (int i = 0; i < checks.length; i++) {
+                float st = 20.0F + i * 4.0F;
+                if (t >= st) {
+                    int cy = ly + 46 + i * 9;
+                    typeLine(g, font, checks[i], lx, cy, st, t, 0xFFD8FBFF);
+                    boolean ok = t >= st + 5.0F;
+                    if (ok) {
+                        g.drawString(font, "[OK]", lx + 185, cy, 0xFF00FF66, false);
+                    } else if (((int) (t * 2)) % 2 == 0) {
+                        g.drawString(font, "..", lx + 185, cy, 0xFFFFCC00, false);
+                    }
+                }
+            }
+
+            // Neural sync progress bar
+            if (t >= 10.0F) {
+                float sync = Mth.clamp((t - 10.0F) / 24.0F, 0.0F, 1.0F);
+                int barY = ly + 84;
+                int syncW = 120;
+                g.drawString(font, "SYNC", lx, barY - 1, 0xFF7FB8C8, false);
+                g.fill(lx + 32, barY, lx + 32 + syncW, barY + 5, 0xFF142430);
+                g.fill(lx + 32, barY, lx + 32 + (int) (syncW * sync), barY + 5, 0xFF00E5FF);
+                g.drawString(font, String.format("%d%%", (int) (sync * 100)), lx + 32 + syncW + 6, barY - 1, 0xFFFFFFFF, false);
+            }
+        }
+    }
+
+    private static void typeLine(GuiGraphics g, Font font, String text, int x, int y, float startTick, float t, int color) {
+        if (t < startTick) return;
+        int fullWidth = font.width(text);
+        int shown = Math.min(fullWidth, (int) ((t - startTick) * 16.0F));
+        if (shown <= 0) return;
+        g.enableScissor(x - 1, y - 1, x + shown, y + 10);
+        g.drawString(font, text, x, y, color, false);
+        g.disableScissor();
+        if (shown < fullWidth) {
+            g.fill(x + shown, y, x + shown + 4, y + 8, color);
+        }
+    }
+
+    // 2. Full-Screen Optic Sensor Feed (Combat Armored Sealed Hull)
+    private static void renderCombatOpticSensorFeed(GuiGraphics g, Font font, int width, int height, Minecraft mc, ExoframeEntity exoframe, ExoframeVariantRegistry.SensorProfile profile, int tier) {
         String camName = profile.camName();
         String camSub = profile.camSub();
         int camCol = profile.camColor();
@@ -689,7 +810,6 @@ public class ExoframeHudOverlay {
         long time = mc.level != null ? mc.level.getGameTime() : 0;
 
         if (tier == 0) {
-            // Tier 0: CRT Monitor Raster & Amber Phosphor
             int sweepY = (int) ((time * 4) % height);
             g.fill(0, sweepY, width, sweepY + 4, 0x33FFAA00);
             for (int sy = 0; sy < height; sy += 3) {
@@ -711,14 +831,14 @@ public class ExoframeHudOverlay {
             camSub = "ENHANCED OPTICAL MATRIX";
         }
 
-        // 2. Cockpit Monitor Frame (Outer Bezel & Vignette)
+        // Screen Outer Vignette Frame
         g.fill(0, 0, width, 3, 0xCC050A0E);
         g.fill(0, height - 3, width, height, 0xCC050A0E);
         g.fill(0, 0, 3, height, 0xCC050A0E);
         g.fill(width - 3, 0, width, height, 0xCC050A0E);
 
-        // Cockpit Monitor Corner Brackets
-        int brLen = 40;
+        // 4 High-tech Corner Brackets
+        int brLen = 42;
         int mX = 6;
         int mY = 6;
         // Top-Left
@@ -738,7 +858,7 @@ public class ExoframeHudOverlay {
         g.fill(width - mX - 2, height - mY - brLen, width - mX, height - mY, borderCol);
         g.fill(width - mX - 8, height - mY - 8, width - mX - 4, height - mY - 4, borderCol);
 
-        // 3. Subtle Digital Scanline Raster (gives authentic in-cockpit monitor texture)
+        // Digital Scanline Raster
         if (tier != 0) {
             int scanAlpha = 0x07000000;
             for (int sy = 0; sy < height; sy += 4) {
@@ -746,11 +866,11 @@ public class ExoframeHudOverlay {
             }
         }
 
-        // 4. Top-Left Camera Channel & Lens Meta
+        // Top-Left Camera Channel & Lens Meta
         g.drawString(font, "[CAM: " + camName + "]", mX + 10, mY + 2, camCol, true);
         g.drawString(font, camSub, mX + 10, mY + 11, 0x88FFFFFF, true);
 
-        // 5. Top-Right Live Feed & Optics Telemetry
+        // Top-Right Live Feed & Optics Telemetry
         boolean blink = (time / 15) % 2 == 0;
         String liveStr = blink ? "● REC [LIVE]" : "○ REC [LIVE]";
         int liveCol = blink ? 0xFFFF3333 : 0x88AA2222;
@@ -762,7 +882,7 @@ public class ExoframeHudOverlay {
         g.drawString(font, rightLine1, width - mX - font.width(rightLine1) - 10, mY + 2, liveCol, true);
         g.drawString(font, fovStr, width - mX - font.width(fovStr) - 10, mY + 11, 0x88FFFFFF, true);
 
-        // 6. Horizon Ladder Wings (Subtle attitude line)
+        // Horizon Ladder Wings (Attitude line)
         int cx = width / 2;
         int cy = height / 2;
         int wingLen = 32;
@@ -775,10 +895,126 @@ public class ExoframeHudOverlay {
         g.fill(cx + wingDist, cy, cx + wingDist + wingLen, cy + 1, wingCol);
         g.fill(cx + wingDist, cy - 3, cx + wingDist + 1, cy + 4, wingCol);
 
-        // Pitch Angle readout near left wing
+        // Pitch Angle readout
         float pitch = -mc.player.getXRot();
         String pitchStr = String.format("%+.0f°", pitch);
         g.drawString(font, pitchStr, cx - wingDist - font.width(pitchStr) - 4, cy - 4, 0x88FFFFFF, true);
+    }
+
+    // 3. Onboard Cockpit Console Monitor (Open Cockpit / Bare Frame / Worksite Rig)
+    private static void renderOnboardConsoleMonitor(GuiGraphics g, Font font, int width, int height, Minecraft mc, ExoframeEntity exoframe, int tier) {
+        int monW = 146;
+        int monH = 66;
+        int monX = (width - monW) / 2;
+        int monY = height - monH - 4;
+
+        // Base housing & bevels
+        g.fill(monX - 4, monY - 12, monX + monW + 4, monY + monH + 4, 0xFF161D22);
+        g.fill(monX - 4, monY - 12, monX + monW + 4, monY - 11, 0xFF354450); // top highlight
+        g.fill(monX - 4, monY - 12, monX - 3, monY + monH + 4, 0xFF354450); // left highlight
+        g.fill(monX + monW + 3, monY - 11, monX + monW + 4, monY + monH + 4, 0xFF0D1216); // right shadow
+        g.fill(monX - 3, monY + monH + 3, monX + monW + 4, monY + monH + 4, 0xFF0D1216); // bottom shadow
+
+        // Corner Screws / Rivets
+        int rivetCol = 0xFF768798;
+        g.fill(monX - 2, monY - 10, monX, monY - 8, rivetCol);
+        g.fill(monX + monW, monY - 10, monX + monW + 2, monY - 8, rivetCol);
+        g.fill(monX - 2, monY + monH + 1, monX, monY + monH + 3, rivetCol);
+        g.fill(monX + monW, monY + monH + 1, monX + monW + 2, monY + monH + 3, rivetCol);
+
+        // Top Header Plate
+        g.drawString(font, "CHASSIS AUX MONITOR", monX + 4, monY - 10, 0xFFAAB8C6, false);
+        // Power LED
+        g.fill(monX + monW - 28, monY - 9, monX + monW - 24, monY - 5, 0xFF00FF66);
+        g.drawString(font, "PWR", monX + monW - 22, monY - 10, 0xFF00FF66, false);
+
+        // Inner Screen
+        int screenBg = tier == 0 ? 0xEE1A1208 : 0xEE09140C;
+        int textPrimary = tier == 0 ? 0xFFFFCC00 : 0xFF00FF88;
+        int textDim = tier == 0 ? 0xFFAA8800 : 0xFF00AA55;
+        int textHighlight = tier == 0 ? 0xFFFFAA00 : 0xFF00FFEE;
+
+        g.fill(monX, monY, monX + monW, monY + monH, screenBg);
+        g.renderOutline(monX, monY, monW, monH, textDim);
+
+        // Subtle Screen Scanlines
+        int scanCol = tier == 0 ? 0x14FFAA00 : 0x1200FF66;
+        for (int sy = monY; sy < monY + monH; sy += 3) {
+            g.fill(monX, sy, monX + monW, sy + 1, scanCol);
+        }
+
+        // Telemetry Readouts
+        Vec3 vel = exoframe.getDeltaMovement();
+        double hSpeedBps = vel.horizontalDistance() * 20.0D;
+        double speedKmh = hSpeedBps * 3.6D;
+
+        // Line 1: Live Speedometer + Speed Bar
+        String spdStr = String.format("SPD: %4.1f km/h", speedKmh);
+        g.drawString(font, spdStr, monX + 4, monY + 4, textPrimary, false);
+
+        // 5-segment Dynamic Speed Gauge Bar
+        int barLeft = monX + 76;
+        int barY = monY + 4;
+        int activeSegs = Math.min(5, (int) Math.round((speedKmh / 20.0D) * 5));
+        for (int s = 0; s < 5; s++) {
+            int segCol = (s < activeSegs) ? (s >= 4 ? 0xFFFF4444 : textPrimary) : 0xFF14241A;
+            g.fill(barLeft + s * 11, barY, barLeft + s * 11 + 8, barY + 7, segCol);
+        }
+
+        // Line 2: Movement Drive Gear State
+        String driveMode;
+        int driveCol;
+        if (mc.player != null && mc.player.isSprinting()) {
+            driveMode = "⚡ [SPRINT]";
+            driveCol = textHighlight;
+        } else if (mc.options.keyUp.isDown()) {
+            driveMode = "▲ [CRUISE]";
+            driveCol = textPrimary;
+        } else if (mc.options.keyDown.isDown()) {
+            driveMode = "▼ [REVERSE]";
+            driveCol = 0xFFFFBB33;
+        } else if (mc.options.keyLeft.isDown() || mc.options.keyRight.isDown()) {
+            driveMode = "◄► [PIVOT]";
+            driveCol = textPrimary;
+        } else {
+            driveMode = "■ [IDLE]";
+            driveCol = textDim;
+        }
+        g.drawString(font, driveMode, monX + 4, monY + 16, driveCol, false);
+
+        // Heading and Attitude
+        float heading = (exoframe.getYRot() % 360.0F + 360.0F) % 360.0F;
+        String hdgCard = (heading >= 315 || heading < 45) ? "N" : (heading < 135 ? "E" : (heading < 225 ? "S" : "W"));
+        String hdgStr = String.format("HDG: %03.0f° %s", heading, hdgCard);
+        g.drawString(font, hdgStr, monX + 76, monY + 16, textDim, false);
+
+        // Line 3: Gyro Pitch & Simulated Servo Load
+        float pitch = -mc.player.getXRot();
+        int servoLoad = 10;
+        if (mc.player != null && mc.player.isSprinting()) servoLoad = 85;
+        else if (speedKmh > 1.0) servoLoad = 48;
+        String gyroStr = String.format("PITCH: %+03.0f°", pitch);
+        String srvStr = String.format("SRV: %2d%%", servoLoad);
+        g.drawString(font, gyroStr, monX + 4, monY + 28, textDim, false);
+        g.drawString(font, srvStr, monX + 76, monY + 28, textDim, false);
+
+        // Line 4: Chassis Health Bar
+        float hp = exoframe.getHealth();
+        float maxHp = exoframe.getMaxHealth();
+        float hpRatio = Mth.clamp(hp / maxHp, 0.0F, 1.0F);
+        int hpBarW = 42;
+        g.drawString(font, "HULL", monX + 4, monY + 41, textPrimary, false);
+        g.fill(monX + 28, monY + 42, monX + 28 + hpBarW, monY + 48, 0xFF14241A);
+        int hpFillCol = hpRatio > 0.5F ? textPrimary : (hpRatio > 0.25F ? 0xFFFFCC00 : 0xFFFF3333);
+        g.fill(monX + 28, monY + 42, monX + 28 + (int) (hpBarW * hpRatio), monY + 48, hpFillCol);
+        g.drawString(font, String.format("%d%%", (int) (hpRatio * 100)), monX + 76, monY + 41, hpFillCol, false);
+
+        // Line 5: Power & Status
+        String pwrStr = tier == 0 ? "HYDR: OK" : "CELL: 100%";
+        g.drawString(font, pwrStr, monX + 4, monY + 53, textDim, false);
+        String statStr = hpRatio > 0.3F ? "SYS: [NOMINAL]" : "SYS: [CRIT]";
+        int statCol = hpRatio > 0.3F ? textPrimary : 0xFFFF3333;
+        g.drawString(font, statStr, monX + 76, monY + 53, statCol, false);
     }
 
     // ==================== TIER 3: MINI-RADAR SITUATIONAL MAP ====================

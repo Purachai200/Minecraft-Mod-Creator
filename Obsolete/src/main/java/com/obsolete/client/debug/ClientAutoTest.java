@@ -1477,8 +1477,15 @@ public final class ClientAutoTest {
             t += 60;
         }
         // Every set again with a pilot aboard: capsules must enclose the rider and vanish in first person.
+        steps.add(new Step(t - 5, mc -> {
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            mc.options.hideGui = false;
+        }));
         steps.add(new Step(t, mc -> serverExoById(mc, (p, exo) -> p.startRiding(exo, true))));
-        t += 10;
+        steps.add(new Step(t + 12, mc -> shot(mc, "boot_cinematic_mid")));
+        steps.add(new Step(t + 35, mc -> shot(mc, "boot_cinematic_sync")));
+        steps.add(new Step(t + 39, mc -> mc.options.hideGui = true));
+        t += 40;
         for (Set s : sets) {
             steps.add(new Step(t, mc -> serverExoById(mc, (p, exo) -> {
                 var inv = exo.getModularInventory();
@@ -1526,8 +1533,10 @@ public final class ClientAutoTest {
                     exo.setDeltaMovement(0, 0, 0);
                 });
                 mc.options.setCameraType(CameraType.FIRST_PERSON);
+                mc.options.hideGui = false;
             }));
             steps.add(new Step(t + 115, mc -> shot(mc, "c_" + s.name() + "_firstperson")));
+            steps.add(new Step(t + 120, mc -> mc.options.hideGui = true));
             t += 125;
         }
 

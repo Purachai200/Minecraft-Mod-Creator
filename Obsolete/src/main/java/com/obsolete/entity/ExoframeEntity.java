@@ -243,6 +243,12 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         return (getArmorMask() & (1 << slot.getIndex())) != 0;
     }
 
+    public boolean isCombatArmored() {
+        if (isSlotEquipped(ExoframeArmorSlot.HEAD)) return true;
+        ItemStack chest = getEquippedSlot(ExoframeArmorSlot.CHEST);
+        return !chest.isEmpty() && !chest.is(ModItems.ARMOR_ROLL_CAGE.get());
+    }
+
     public void syncArmorMaskAndNotify() {
         int mask = 0;
         for (int i = 0; i < ExoframeInventory.SLOT_COUNT; i++) {
