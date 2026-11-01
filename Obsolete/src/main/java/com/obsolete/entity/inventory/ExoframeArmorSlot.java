@@ -6,7 +6,8 @@ public enum ExoframeArmorSlot {
     ARMS(2, "arms", "armor_left_shoulder,armor_right_shoulder"),
     LEGS(3, "legs", "armor_left_leg,armor_right_leg"),
     UTILITY(4, "utility", ""),
-    MAIN_WEAPON(5, "main_weapon", "right_hand_weapon_mount");
+    MAIN_WEAPON(5, "main_weapon", "right_hand_weapon_mount"),
+    BACK(6, "back", "torso");
 
     private final int index;
     private final String name;

@@ -1,5 +1,6 @@
 package com.obsolete.entity.inventory;
 
+import com.obsolete.item.ExoframeFlightBoosterItem;
 import com.obsolete.item.ExoframeAmmoItem;
 import com.obsolete.item.ExoframeArmorItem;
 import com.obsolete.item.ExoframeWeaponItem;
@@ -16,7 +17,7 @@ import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 
 public class ExoframeInventory extends ItemStackHandler implements Container {
-    public static final int SLOT_COUNT = 6;
+    public static final int SLOT_COUNT = 7;
     private final Runnable changeListener;
 
     public ExoframeInventory(Runnable changeListener) {
@@ -44,9 +45,14 @@ public class ExoframeInventory extends ItemStackHandler implements Container {
                         || stack.is(com.obsolete.item.ModItems.MODULE_SHOULDER_MISSILE.get())
                         || stack.getItem() instanceof ExoframeRocketLauncherItem
                         || stack.getItem() instanceof ExoframeRPG7Item
-                        || !(stack.getItem() instanceof ExoframeArmorItem) && !(stack.getItem() instanceof ExoframeWeaponItem) && !isHandTool(stack);
+                        || !(stack.getItem() instanceof ExoframeArmorItem) && !(stack.getItem() instanceof ExoframeWeaponItem) && !(stack.getItem() instanceof ExoframeFlightBoosterItem) && !isHandTool(stack);
             case MAIN_WEAPON:
                 return stack.getItem() instanceof ExoframeWeaponItem || isHandTool(stack);
+            case BACK:
+                return stack.getItem() instanceof ExoframeFlightBoosterItem
+                        || stack.is(com.obsolete.item.ModItems.MODULE_FLIGHT_BOOSTER.get())
+                        || stack.getItem().getClass().getName().contains("FlightUnitItem")
+                        || stack.getItem().getDescriptionId().contains("flight_unit");
             default:
                 return false;
         }
@@ -127,6 +133,9 @@ public class ExoframeInventory extends ItemStackHandler implements Container {
     public void loadFromNbt(CompoundTag tag) {
         if (tag.contains("ModularInventory")) {
             deserializeNBT(tag.getCompound("ModularInventory"));
+            if (this.stacks.size() < SLOT_COUNT) {
+                setSize(SLOT_COUNT);
+            }
         }
     }
 }

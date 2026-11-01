@@ -97,12 +97,16 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Integer> DATA_FRAME_TIER =
             SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Boolean> DATA_IS_FLYING =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Boolean> DATA_IS_BOOSTING =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
 
     // Chassis momentum response
     private float smoothedForward = 0.0F;
     private float smoothedStrafe = 0.0F;
 
-    // Modular 6-slot Inventory
+    // Modular 7-slot Inventory
     private final ExoframeInventory modularInventory;
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
@@ -134,6 +138,8 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     public static final float MODEL_SCALE = 1.8F;
 
     protected static final RawAnimation ANIM_CROUCH_WALK = RawAnimation.begin().thenLoop("animation.exoframe.crouch_walk");
+    protected static final RawAnimation ANIM_FLIGHT = RawAnimation.begin().thenLoop("animation.exoframe.flight");
+    protected static final RawAnimation ANIM_FLIGHT_BOOST = RawAnimation.begin().thenLoop("animation.exoframe.flight_boost");
 
     /** Client-only render state: eased 0..1 blend between rest carry and shouldered aim. */
     public float clientAimBlend;
@@ -172,6 +178,33 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         this.entityData.define(DATA_CAMO_PATTERN, 0);
         this.entityData.define(DATA_IS_AIMING, false);
         this.entityData.define(DATA_FRAME_TIER, 1);
+        this.entityData.define(DATA_IS_FLYING, false);
+        this.entityData.define(DATA_IS_BOOSTING, false);
+    }
+
+    public boolean hasFlightBooster() {
+        ItemStack backStack = getModularInventory().getStackInSlot(com.obsolete.entity.inventory.ExoframeArmorSlot.BACK.getIndex());
+        if (backStack.isEmpty()) return false;
+        return backStack.getItem() instanceof com.obsolete.item.ExoframeFlightBoosterItem
+                || backStack.is(com.obsolete.item.ModItems.MODULE_FLIGHT_BOOSTER.get())
+                || backStack.getItem().getClass().getName().contains("FlightUnitItem")
+                || backStack.getItem().getDescriptionId().contains("flight_unit");
+    }
+
+    public boolean isFlying() {
+        return this.entityData.get(DATA_IS_FLYING);
+    }
+
+    public void setFlying(boolean flying) {
+        this.entityData.set(DATA_IS_FLYING, flying);
+    }
+
+    public boolean isFlightBoosting() {
+        return this.entityData.get(DATA_IS_BOOSTING);
+    }
+
+    public void setFlightBoosting(boolean boosting) {
+        this.entityData.set(DATA_IS_BOOSTING, boosting);
     }
 
     public int getFrameTier() {
@@ -251,7 +284,8 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
 
     public void syncArmorMaskAndNotify() {
         int mask = 0;
-        for (int i = 0; i < ExoframeInventory.SLOT_COUNT; i++) {
+        int slots = modularInventory.getSlots();
+        for (int i = 0; i < slots; i++) {
             ItemStack stack = modularInventory.getStackInSlot(i);
             if (!stack.isEmpty()) {
                 mask |= (1 << i);
@@ -260,7 +294,7 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         this.entityData.set(DATA_ARMOR_MASK, mask);
 
         if (!this.level().isClientSide) {
-            for (int i = 0; i < ExoframeInventory.SLOT_COUNT; i++) {
+            for (int i = 0; i < slots; i++) {
                 ModNetworking.sendToTracking(new ExoframeInventorySyncS2CPacket(this.getId(), i, modularInventory.getStackInSlot(i)), this);
             }
         }
@@ -455,6 +489,76 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             speed *= 1.35F; // Sprint boost
         }
 
+        // Flight booster mechanics (Gundam 3D Aerial Free Flight)
+        if (hasFlightBooster()) {
+            boolean jumping = InputHelper.isJumping(rider);
+            boolean crouching = isMechCrouching() || (rider instanceof Player p && p.isShiftKeyDown());
+
+            if (!isFlying() && !this.onGround() && jumping) {
+                setFlying(true);
+            }
+
+            if (isFlying()) {
+                this.resetFallDistance();
+
+                boolean boosting = rider.isSprinting();
+                setFlightBoosting(boosting);
+
+                Vec3 look = rider.getLookAngle();
+                float yawRad = this.getYRot() * ((float) Math.PI / 180.0F);
+                double sin = Math.sin(yawRad);
+                double cos = Math.cos(yawRad);
+
+                // High performance Gundam flight speed
+                double baseFlightSpeed = 0.44D;
+                if (boosting) {
+                    baseFlightSpeed = 0.88D; // Supersonic boost dash
+                }
+
+                double fwdThrust = smoothedForward * baseFlightSpeed;
+                double strafeThrust = smoothedStrafe * (baseFlightSpeed * 0.70D);
+
+                double targetVx = -sin * fwdThrust + cos * strafeThrust;
+                double targetVz = cos * fwdThrust + sin * strafeThrust;
+
+                // Vertical flight thrust & hover
+                double targetVy;
+                if (jumping) {
+                    targetVy = boosting ? 0.60D : 0.38D;
+                } else if (crouching) {
+                    targetVy = -0.42D;
+                } else {
+                    // Hovering: neutral buoyancy with look-pitch vectoring when moving forward
+                    if (Math.abs(smoothedForward) > 0.15F) {
+                        targetVy = look.y * fwdThrust * 0.75D;
+                    } else {
+                        targetVy = 0.0D;
+                    }
+                }
+
+                Vec3 cur = this.getDeltaMovement();
+                double blendH = boosting ? 0.32D : 0.20D;
+                double blendV = 0.22D;
+
+                double nextVx = cur.x + (targetVx - cur.x) * blendH;
+                double nextVy = cur.y + (targetVy - cur.y) * blendV;
+                double nextVz = cur.z + (targetVz - cur.z) * blendH;
+
+                if (this.onGround() && targetVy <= 0.0D && !jumping) {
+                    setFlying(false);
+                    setFlightBoosting(false);
+                }
+
+                this.setDeltaMovement(nextVx, nextVy, nextVz);
+                this.move(MoverType.SELF, this.getDeltaMovement());
+
+                if (boosting && this.level().isClientSide) {
+                    triggerPilotCameraShake(0.12F, 2);
+                }
+                return;
+            }
+        }
+
         // Amphibious float ring: surface paddling & buoyancy
         if (hasItemEquipped(ModItems.ARMOR_FLOAT_RING.get()) && this.isInWater()) {
             double fluidHeight = this.getFluidHeight(FluidTags.WATER);
@@ -514,6 +618,52 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         wasSprintingLastTick = isSprinting;
 
         if (this.level() instanceof ServerLevel serverLevel) {
+            // Gundam aerial flight booster thruster VFX & sound
+            if (hasFlightBooster() && isFlying()) {
+                this.resetFallDistance();
+
+                float yawRad = (float) Math.toRadians(this.getYRot());
+                double sin = Math.sin(yawRad);
+                double cos = Math.cos(yawRad);
+
+                // Twin nozzles offset: left = -0.38, right = +0.38, rear = -0.52
+                double bz = -0.52D;
+                double bx = 0.38D;
+                double leftX = this.getX() + (-bx * cos + bz * -sin);
+                double leftZ = this.getZ() + (-bx * sin + bz * cos);
+                double rightX = this.getX() + (bx * cos + bz * -sin);
+                double rightZ = this.getZ() + (bx * sin + bz * cos);
+                double nozzleY = this.getY() + 1.25D;
+
+                boolean boosting = isFlightBoosting();
+
+                // Thruster flames
+                double flameSpeed = boosting ? 0.22D : 0.10D;
+                double pvx = -sin * -flameSpeed + (this.random.nextDouble() - 0.5D) * 0.04D;
+                double pvz = cos * -flameSpeed + (this.random.nextDouble() - 0.5D) * 0.04D;
+                double pvy = boosting ? -0.12D : -0.20D;
+
+                net.minecraft.core.particles.ParticleOptions flameType =
+                        boosting ? ParticleTypes.SOUL_FIRE_FLAME : ParticleTypes.FLAME;
+
+                serverLevel.sendParticles(flameType, leftX, nozzleY, leftZ, boosting ? 3 : 1, pvx * 0.5, pvy, pvz * 0.5, 0.02D);
+                serverLevel.sendParticles(flameType, rightX, nozzleY, rightZ, boosting ? 3 : 1, pvx * 0.5, pvy, pvz * 0.5, 0.02D);
+
+                if (boosting && this.tickCount % 2 == 0) {
+                    serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, leftX, nozzleY, leftZ, 1, 0, 0, 0, 0.05D);
+                    serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, rightX, nozzleY, rightZ, 1, 0, 0, 0, 0.05D);
+                    serverLevel.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, (leftX + rightX) * 0.5, nozzleY, (leftZ + rightZ) * 0.5, 1, pvx, pvy * 0.5, pvz, 0.01D);
+                } else if (this.tickCount % 4 == 0) {
+                    serverLevel.sendParticles(ParticleTypes.POOF, (leftX + rightX) * 0.5, nozzleY, (leftZ + rightZ) * 0.5, 1, 0, -0.05, 0, 0.01D);
+                }
+
+                if (this.tickCount % (boosting ? 10 : 18) == 0) {
+                    this.level().playSound(null, this.blockPosition(),
+                            SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS,
+                            boosting ? 1.4F : 0.85F, boosting ? 1.45F : 1.15F);
+                }
+            }
+
             // Footsteps & dust puffs
             if (isMoving && this.onGround()) {
                 int stepInterval = isSprinting ? 10 : 18;
@@ -1221,6 +1371,9 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         controllers.add(new AnimationController<>(this, "movement", 3, state -> {
             if (isDying()) {
                 return state.setAndContinue(ANIM_DEATH);
+            }
+            if (isFlying()) {
+                return state.setAndContinue(isFlightBoosting() ? ANIM_FLIGHT_BOOST : ANIM_FLIGHT);
             }
             if (isMechCrouching()) {
                 return state.setAndContinue(state.isMoving() ? ANIM_CROUCH_WALK : ANIM_CROUCH);

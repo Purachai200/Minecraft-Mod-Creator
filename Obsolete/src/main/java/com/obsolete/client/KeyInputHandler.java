@@ -6,6 +6,7 @@ import com.obsolete.entity.inventory.ExoframeArmorSlot;
 import com.obsolete.network.ExoframeAimC2SPacket;
 import com.obsolete.network.ExoframeCrouchC2SPacket;
 import com.obsolete.network.ExoframeEmoteC2SPacket;
+import com.obsolete.network.ExoframeFlightC2SPacket;
 import com.obsolete.network.ExoframeOpenMenuC2SPacket;
 import com.obsolete.network.ExoframeFireC2SPacket;
 import com.obsolete.network.ExoframeMeleeC2SPacket;
@@ -26,6 +27,8 @@ import net.minecraftforge.fml.common.Mod;
 public class KeyInputHandler {
     private static boolean lastCrouchState = false;
     private static boolean lastAimState = false;
+    private static boolean lastFlightState = false;
+    private static boolean lastBoostState = false;
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -72,9 +75,41 @@ public class KeyInputHandler {
                     ModNetworking.sendToServer(new ExoframeEmoteC2SPacket(ExoframeEntity.EMOTES[i]));
                 }
             }
+
+            // Flight booster toggle & boost controls
+            if (exoframe.hasFlightBooster()) {
+                boolean jumpPressed = mc.options.keyJump.isDown();
+                boolean sprintPressed = mc.options.keySprint.isDown();
+
+                boolean flying = exoframe.isFlying();
+                if (!flying && !exoframe.onGround() && jumpPressed) {
+                    flying = true;
+                    exoframe.setFlying(true);
+                } else if (flying && exoframe.onGround() && !jumpPressed) {
+                    flying = false;
+                    exoframe.setFlying(false);
+                }
+
+                boolean boosting = flying && sprintPressed;
+                exoframe.setFlightBoosting(boosting);
+
+                if (flying != lastFlightState || boosting != lastBoostState) {
+                    lastFlightState = flying;
+                    lastBoostState = boosting;
+                    ModNetworking.sendToServer(new ExoframeFlightC2SPacket(flying, boosting));
+                }
+            } else if (lastFlightState) {
+                lastFlightState = false;
+                lastBoostState = false;
+                exoframe.setFlying(false);
+                exoframe.setFlightBoosting(false);
+                ModNetworking.sendToServer(new ExoframeFlightC2SPacket(false, false));
+            }
         } else {
             lastCrouchState = false;
             lastAimState = false;
+            lastFlightState = false;
+            lastBoostState = false;
         }
     }
 

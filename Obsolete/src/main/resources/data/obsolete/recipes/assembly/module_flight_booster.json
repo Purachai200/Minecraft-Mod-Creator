@@ -1,0 +1,21 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "minecraft:blaze_rod"
+    },
+    {
+      "item": "obsolete:servo_motor"
+    },
+    {
+      "item": "obsolete:hydraulic_cylinder"
+    }
+  ],
+  "result": {
+    "item": "obsolete:module_flight_booster",
+    "count": 1
+  }
+}

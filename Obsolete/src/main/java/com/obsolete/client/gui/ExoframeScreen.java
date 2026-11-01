@@ -56,13 +56,14 @@ public class ExoframeScreen extends AbstractContainerScreen<ExoframeMenu> {
             guiGraphics.disableScissor();
         }
 
-        // Draw frames for the 6 modular mech slots
+        // Draw frames for the 7 modular mech slots
         int fHead = tier == 0 ? 0xFFDD7722 : (tier == 3 ? 0xFFFFCC00 : 0xFFE0B020);
         int fChest = tier == 0 ? 0xFFCC5511 : (tier == 3 ? 0xFF00FFFF : 0xFF20C0E0);
         int fArms = tier == 0 ? 0xFF995522 : (tier == 3 ? 0xFF00FF88 : 0xFF60E020);
         int fLegs = tier == 0 ? 0xFF884411 : (tier == 3 ? 0xFF00FF88 : 0xFF60E020);
         int fUtil = tier == 0 ? 0xFFBB6622 : (tier == 3 ? 0xFFDD44FF : 0xFFE08020);
         int fWpn = tier == 0 ? 0xFFDD3311 : (tier == 3 ? 0xFFFF3366 : 0xFFE02020);
+        int fBack = tier == 0 ? 0xFFDD8833 : (tier == 3 ? 0xFF00EEFF : 0xFF00D4FF);
 
         drawSlotFrame(guiGraphics, left + 80, top + 18, fHead);  // Head
         drawSlotFrame(guiGraphics, left + 80, top + 38, fChest); // Chest
@@ -70,6 +71,7 @@ public class ExoframeScreen extends AbstractContainerScreen<ExoframeMenu> {
         drawSlotFrame(guiGraphics, left + 80, top + 60, fLegs);  // Legs
         drawSlotFrame(guiGraphics, left + 104, top + 38, fUtil); // Utility
         drawSlotFrame(guiGraphics, left + 130, top + 38, fWpn);  // Weapon
+        drawSlotFrame(guiGraphics, left + 104, top + 18, fBack); // Back (Flight Booster)
 
         // Draw Player Inventory slot backgrounds
         int invFrameCol = tier == 0 ? 0xFF4A3225 : (tier == 3 ? 0xFF242646 : (tier == 2 ? 0xFF1C342A : 0xFF323B44));

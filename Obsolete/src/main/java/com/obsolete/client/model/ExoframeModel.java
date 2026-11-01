@@ -57,7 +57,7 @@ public class ExoframeModel extends GeoModel<ExoframeEntity> {
         boolean shouldHideFrameHead = false;
 
         for (ExoframeArmorSlot slot : ExoframeArmorSlot.values()) {
-            if (slot == ExoframeArmorSlot.MAIN_WEAPON) continue;
+            if (slot == ExoframeArmorSlot.MAIN_WEAPON || slot == ExoframeArmorSlot.BACK) continue;
             ItemStack stack = exoframe.getModularInventory().getStackInSlot(slot.getIndex());
             if (stack.isEmpty()) continue;
 

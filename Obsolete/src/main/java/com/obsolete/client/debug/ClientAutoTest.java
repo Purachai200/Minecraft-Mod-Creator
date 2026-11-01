@@ -1404,7 +1404,33 @@ public final class ClientAutoTest {
         })));
         steps.add(new Step(wt + 305, mc -> shot(mc, "g_sound_and_effects_pass")));
 
-        wt += 315;
+        steps.add(new Step(wt + 310, mc -> serverExoById(mc, (p, exo) -> {
+            var inv = exo.getModularInventory();
+            inv.setStackInSlot(ExoframeArmorSlot.BACK.getIndex(), new ItemStack(ModItems.MODULE_FLIGHT_BOOSTER.get()));
+            exo.syncArmorMaskAndNotify();
+            if (!exo.hasFlightBooster()) {
+                throw new AssertionError("[autotest] Flight booster was equipped in BACK slot but hasFlightBooster() returned false!");
+            }
+            // Test aerial flight activation
+            exo.setFlying(true);
+            exo.setFlightBoosting(false);
+            if (!exo.isFlying()) {
+                throw new AssertionError("[autotest] exo.setFlying(true) failed to set flight state!");
+            }
+            // Test Gundam boost dash state
+            exo.setFlightBoosting(true);
+            if (!exo.isFlightBoosting()) {
+                throw new AssertionError("[autotest] exo.setFlightBoosting(true) failed to set boost state!");
+            }
+            ObsoleteMod.LOGGER.info("[autotest] FLIGHT TEST: Gundam Flight Booster equipped, verified in slot BACK, hover and supersonic boost confirmed!");
+        })));
+        steps.add(new Step(wt + 315, mc -> shot(mc, "g_gundam_flight_booster_pass")));
+        steps.add(new Step(wt + 320, mc -> serverExoById(mc, (p, exo) -> {
+            exo.setFlying(false);
+            exo.setFlightBoosting(false);
+        })));
+
+        wt += 330;
 
         steps.add(new Step(wt + 10, mc -> {
             ObsoleteMod.LOGGER.info("[autotest] gameplay scenario completed with all checks passing!");

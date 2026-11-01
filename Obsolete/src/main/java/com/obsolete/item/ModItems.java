@@ -252,6 +252,10 @@ public class ModItems {
     public static final RegistryObject<Item> MODULE_TARGETING_COMPUTER =
             ITEMS.register("module_targeting_computer", () -> new Item(new Item.Properties().stacksTo(1)));
 
+    public static final RegistryObject<Item> MODULE_FLIGHT_BOOSTER =
+            ITEMS.register("module_flight_booster", () -> new ExoframeFlightBoosterItem(
+                    new Item.Properties().stacksTo(1).durability(600), "Gundam Aerial Jump-Jet Flight Booster"));
+
     // ==================== 8. SPECIALIZED WORKING TOOLS ====================
     public static final RegistryObject<Item> TOOL_MINING_DRILL =
             ITEMS.register("tool_mining_drill", () -> new ExoframeMiningDrillItem(new Item.Properties()));

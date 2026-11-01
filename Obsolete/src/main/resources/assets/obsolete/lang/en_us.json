@@ -153,5 +153,7 @@
   "item.obsolete.module_rescue_winch": "Disaster Relief Evacuation Winch & Rebreather",
   "item.obsolete.armor_float_ring": "Expeditionary Inflatable Buoyancy Float Ring",
   "item.obsolete.module_search_radar": "Tactical Phased-Array Search Radar Mast",
-  "item.obsolete.exoframe_fishing_rod": "Heavy Dockyard Winch Fishing Rod"
+  "item.obsolete.exoframe_fishing_rod": "Heavy Dockyard Winch Fishing Rod",
+  "item.obsolete.module_flight_booster": "Gundam Aerial Flight Booster Pack",
+  "gui.obsolete.slot_back": "Back (Flight Booster)"
 }

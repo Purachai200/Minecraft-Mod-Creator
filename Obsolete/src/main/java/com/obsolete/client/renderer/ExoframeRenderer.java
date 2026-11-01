@@ -24,6 +24,7 @@ public class ExoframeRenderer extends GeoEntityRenderer<ExoframeEntity> {
         super(renderManager, new ExoframeModel());
         withScale(ExoframeEntity.MODEL_SCALE);
         this.shadowRadius = 1.0F * ExoframeEntity.MODEL_SCALE;
+        addRenderLayer(new ExoframeFlightBoosterLayer(this));
     }
 
     @Override

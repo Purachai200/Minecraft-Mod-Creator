@@ -37,7 +37,7 @@ public class ExoframeMenu extends AbstractContainerMenu {
         this.exoframe = exoframe;
         this.exoframeInventory = exoframe.getModularInventory();
 
-        // 6 Specialized Mech Slots:
+        // 7 Specialized Mech Slots:
         // Slot 0: Head
         this.addSlot(new ExoframeCustomSlot(exoframeInventory, ExoframeArmorSlot.HEAD.getIndex(), 80, 18, ExoframeArmorSlot.HEAD));
         // Slot 1: Chest
@@ -50,6 +50,8 @@ public class ExoframeMenu extends AbstractContainerMenu {
         this.addSlot(new ExoframeCustomSlot(exoframeInventory, ExoframeArmorSlot.UTILITY.getIndex(), 104, 38, ExoframeArmorSlot.UTILITY));
         // Slot 5: Main Weapon
         this.addSlot(new ExoframeCustomSlot(exoframeInventory, ExoframeArmorSlot.MAIN_WEAPON.getIndex(), 130, 38, ExoframeArmorSlot.MAIN_WEAPON));
+        // Slot 6: Back (Flight Booster)
+        this.addSlot(new ExoframeCustomSlot(exoframeInventory, ExoframeArmorSlot.BACK.getIndex(), 104, 18, ExoframeArmorSlot.BACK));
 
         // Player Inventory
         int startX = 8;

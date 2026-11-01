@@ -113,6 +113,7 @@ public class ModCreativeTabs {
                                 output.accept(ModItems.MODULE_AGRI_HOPPER.get());
                                 output.accept(ModItems.MODULE_DIVING_BALLAST.get());
                                 output.accept(ModItems.MODULE_TARGETING_COMPUTER.get());
+                                output.accept(ModItems.MODULE_FLIGHT_BOOSTER.get());
 
                                 // 7. Working Tools
                                 output.accept(ModItems.TOOL_MINING_DRILL.get());
