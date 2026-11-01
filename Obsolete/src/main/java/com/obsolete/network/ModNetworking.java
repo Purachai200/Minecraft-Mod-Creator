@@ -65,6 +65,12 @@ public class ModNetworking {
                 .encoder(ExoframeOpenMenuC2SPacket::toBytes)
                 .consumerMainThread(ExoframeOpenMenuC2SPacket::handle)
                 .add();
+
+        INSTANCE.messageBuilder(ExoframeCameraShakeS2CPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(ExoframeCameraShakeS2CPacket::new)
+                .encoder(ExoframeCameraShakeS2CPacket::toBytes)
+                .consumerMainThread(ExoframeCameraShakeS2CPacket::handle)
+                .add();
     }
 
     public static <MSG> void sendToServer(MSG message) {

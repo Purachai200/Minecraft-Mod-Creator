@@ -43,6 +43,8 @@ public class ObsoleteMod {
         ModMenuTypes.register(modEventBus);
         ModRecipeTypes.register(modEventBus);
 
+        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(net.minecraftforge.fml.config.ModConfig.Type.CLIENT, com.obsolete.client.ExoframeClientConfig.SPEC);
+
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::entityAttributes);
 
@@ -61,12 +63,20 @@ public class ObsoleteMod {
 
     @SubscribeEvent
     public void onEntityMount(EntityMountEvent event) {
-        if (event.isDismounting() && event.getEntityBeingMounted() instanceof ExoframeEntity exoframe) {
-            if (event.getEntityMounting() instanceof Player player) {
+        if (event.getEntityBeingMounted() instanceof ExoframeEntity exoframe) {
+            if (event.isMounting() && event.getEntityMounting() instanceof Player) {
+                if (!exoframe.level().isClientSide) {
+                    exoframe.level().playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_COCKPIT_CLOSE.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1.4F, 1.0F);
+                    exoframe.level().playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_PILOT_MOUNT.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1.2F, 1.0F);
+                }
+            } else if (event.isDismounting() && event.getEntityMounting() instanceof Player player) {
                 // Realistic vehicle safety interlock: cannot dismount while moving at speed unless stopped or crouched
                 if (exoframe.getDeltaMovement().horizontalDistanceSqr() > 0.008D && !exoframe.isMechCrouching() && !exoframe.isDying()) {
                     event.setCanceled(true);
                     player.displayClientMessage(Component.translatable("message.obsolete.must_stop_to_dismount"), true);
+                } else if (!exoframe.level().isClientSide) {
+                    exoframe.level().playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_COCKPIT_OPEN.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1.4F, 1.0F);
+                    exoframe.level().playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_PILOT_DISMOUNT.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1.2F, 1.0F);
                 }
             }
         }

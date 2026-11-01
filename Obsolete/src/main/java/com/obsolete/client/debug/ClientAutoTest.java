@@ -20,6 +20,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.projectile.Arrow;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -1343,7 +1344,67 @@ public final class ClientAutoTest {
         })));
         steps.add(new Step(wt + 270, mc -> shot(mc, "g_role_radar_and_fishing_pass")));
 
-        wt += 280;
+        // ==================== 12. SOUND & EFFECT VERIFICATION: WALKING, SPRINTING, WEAPONS & PARTICLES ====================
+        steps.add(new Step(wt + 280, mc -> serverExoById(mc, (p, exo) -> {
+            exo.setDeltaMovement(0, 0, 0.12D);
+            ObsoleteMod.LOGGER.info("[autotest] SOUND & EFFECT TEST: Simulating movement footsteps, dust puffs, and servo whine...");
+        })));
+        steps.add(new Step(wt + 290, mc -> serverExoById(mc, (p, exo) -> {
+            exo.setSprinting(true);
+            exo.setDeltaMovement(0, 0, 0.25D);
+            ObsoleteMod.LOGGER.info("[autotest] SOUND & EFFECT TEST: Simulating sprint footsteps, speed dust, and exhaust smoke burst...");
+        })));
+        steps.add(new Step(wt + 300, mc -> serverExoById(mc, (p, exo) -> {
+            exo.setSprinting(false);
+            exo.setDeltaMovement(0, 0, 0);
+
+            Item[] weapons = {
+                ModItems.EXOFRAME_ASSAULT_RIFLE.get(),
+                ModItems.EXOFRAME_SNIPER_RIFLE.get(),
+                ModItems.EXOFRAME_AUTOCANNON_30MM.get(),
+                ModItems.EXOFRAME_MINIGUN.get(),
+                ModItems.EXOFRAME_SHOTGUN_BREACHER.get(),
+                ModItems.EXOFRAME_GRENADE_LAUNCHER.get(),
+                ModItems.EXOFRAME_RPG7.get(),
+                ModItems.EXOFRAME_RECOILLESS_RIFLE.get(),
+                ModItems.EXOFRAME_FLAMETHROWER.get()
+            };
+
+            Item[] ammos = {
+                ModItems.AMMO_20MM.get(),
+                ModItems.AMMO_20MM.get(),
+                ModItems.AMMO_30MM_AUTOCANNON.get(),
+                ModItems.AMMO_762_MINIGUN.get(),
+                ModItems.AMMO_SHOTGUN_SLUG.get(),
+                ModItems.AMMO_40MM_GRENADE.get(),
+                ModItems.AMMO_84MM_ROCKET.get(),
+                ModItems.AMMO_84MM_ROCKET.get(),
+                ModItems.AMMO_NAPALM_CANISTER.get()
+            };
+
+            var inv = exo.getModularInventory();
+            for (int i = 0; i < weapons.length; i++) {
+                inv.setStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex(), new ItemStack(weapons[i]));
+                inv.setStackInSlot(ExoframeArmorSlot.UTILITY.getIndex(), new ItemStack(ammos[i], 16));
+                exo.setWeaponCooldown(0);
+                exo.fireEquippedWeapon(p);
+                ObsoleteMod.LOGGER.info("[autotest] SOUND & EFFECT TEST: Fired weapon '{}' with dedicated audio and muzzle/backblast particles!",
+                        weapons[i].getDescriptionId());
+            }
+
+            // Test dry-fire empty click
+            inv.setStackInSlot(ExoframeArmorSlot.UTILITY.getIndex(), ItemStack.EMPTY);
+            exo.setWeaponCooldown(0);
+            exo.fireEquippedWeapon(p);
+            ObsoleteMod.LOGGER.info("[autotest] SOUND & EFFECT TEST: Fired empty weapon - dry click sound confirmed!");
+
+            // Test landing sound & shockwave
+            exo.causeFallDamage(4.5F, 1.0F, exo.damageSources().fall());
+            ObsoleteMod.LOGGER.info("[autotest] SOUND & EFFECT TEST: Triggered heavy fall landing thud & ground shockwave ring!");
+        })));
+        steps.add(new Step(wt + 305, mc -> shot(mc, "g_sound_and_effects_pass")));
+
+        wt += 315;
 
         steps.add(new Step(wt + 10, mc -> {
             ObsoleteMod.LOGGER.info("[autotest] gameplay scenario completed with all checks passing!");

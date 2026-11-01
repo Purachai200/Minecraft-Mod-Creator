@@ -9,7 +9,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -61,12 +60,13 @@ public class ExoframeFlamethrowerItem extends ExoframeWeaponItem {
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
+        Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
+            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.2F, 1.0F);
             pilot.displayClientMessage(Component.literal("§c[Munitions Depleted] Required: Liquid Napalm Canister"), true);
             return false;
         }
 
-        Level level = exoframe.level();
         Vec3 look = pilot.getLookAngle();
         Vec3 forward = look.normalize();
         Vec3 right = new Vec3(-forward.z, 0, forward.x).normalize();
@@ -112,7 +112,7 @@ public class ExoframeFlamethrowerItem extends ExoframeWeaponItem {
             }
         }
 
-        level.playSound(null, exoframe.blockPosition(), SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 2.0F, 0.8F);
+        level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_FLAMETHROWER_FIRE.get(), SoundSource.PLAYERS, 2.2F, 1.0F);
         return true;
     }
 

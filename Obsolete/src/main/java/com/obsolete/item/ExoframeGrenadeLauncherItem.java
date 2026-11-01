@@ -44,12 +44,13 @@ public class ExoframeGrenadeLauncherItem extends ExoframeWeaponItem {
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
+        Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
+            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.2F, 1.0F);
             pilot.displayClientMessage(Component.literal("§c[Munitions Depleted] Required: 40mm HE Grenade Rounds"), true);
             return false;
         }
 
-        Level level = exoframe.level();
         Vec3 look = pilot.getLookAngle();
         Vec3 forward = look.normalize();
         Vec3 right = new Vec3(-forward.z, 0, forward.x).normalize();
@@ -62,11 +63,15 @@ public class ExoframeGrenadeLauncherItem extends ExoframeWeaponItem {
 
         ExoframeRocketEntity grenade = new ExoframeRocketEntity(level, pilot);
         grenade.setPos(muzzlePos.x, muzzlePos.y, muzzlePos.z);
-        grenade.shoot(shootDir.x, shootDir.y, shootDir.z, 2.8F, 0.02F); // High-velocity direct-fire 40mm round with precision convergence
+        grenade.shoot(shootDir.x, shootDir.y, shootDir.z, 2.8F, 0.02F);
         level.addFreshEntity(grenade);
 
-        level.playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_ROCKET_FIRE.get(), SoundSource.PLAYERS, 2.5F, 1.4F);
+        spawnMuzzleFlashAndCasing(level, muzzlePos, forward, right, false);
+
+        float pitch = 0.95F + (exoframe.getRandom().nextFloat() * 0.1F);
+        level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_GRENADE_THUMP.get(), SoundSource.PLAYERS, 2.6F, pitch);
         exoframe.triggerRecoilAnim();
+        exoframe.triggerPilotCameraShake(0.4F, 4);
         return true;
     }
 

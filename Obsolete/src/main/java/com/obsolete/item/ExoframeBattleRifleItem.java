@@ -24,7 +24,6 @@ public class ExoframeBattleRifleItem extends ExoframeWeaponItem {
 
     @Override
     public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        // 1. Check utility slot
         ItemStack util = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
         if (util.getItem() instanceof ExoframeAmmoItem ammo && ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.CALIBER_762_MINIGUN) {
             if (consume) {
@@ -33,7 +32,6 @@ public class ExoframeBattleRifleItem extends ExoframeWeaponItem {
             }
             return true;
         }
-        // 2. Check player inventory
         for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
             ItemStack s = pilot.getInventory().getItem(i);
             if (s.getItem() instanceof ExoframeAmmoItem ammo && ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.CALIBER_762_MINIGUN) {
@@ -46,12 +44,13 @@ public class ExoframeBattleRifleItem extends ExoframeWeaponItem {
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
+        Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
-            pilot.displayClientMessage(Component.translatable("message.obsolete.out_of_ammo_20mm").withStyle(ChatFormatting.RED), true);
+            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.2F, 1.0F);
+            pilot.displayClientMessage(Component.literal("§c[Munitions Depleted] Required: 7.62x51mm Linked Ammo Belt"), true);
             return false;
         }
 
-        Level level = exoframe.level();
         Vec3 look = pilot.getLookAngle();
         Vec3 forward = look.normalize();
         Vec3 right = new Vec3(-forward.z, 0, forward.x).normalize();
@@ -67,8 +66,12 @@ public class ExoframeBattleRifleItem extends ExoframeWeaponItem {
         bullet.shoot(shootDir.x, shootDir.y, shootDir.z, 5.2F, 0.2F);
         level.addFreshEntity(bullet);
 
-        level.playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_RIFLE_FIRE.get(), SoundSource.PLAYERS, 2.8F, 1.1F);
+        spawnMuzzleFlashAndCasing(level, muzzlePos, forward, right, true);
+
+        float pitch = 0.85F + (exoframe.getRandom().nextFloat() * 0.1F);
+        level.playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_RIFLE_FIRE.get(), SoundSource.PLAYERS, 2.8F, pitch);
         exoframe.triggerRecoilAnim();
+        exoframe.triggerPilotCameraShake(0.35F, 4);
         return true;
     }
 

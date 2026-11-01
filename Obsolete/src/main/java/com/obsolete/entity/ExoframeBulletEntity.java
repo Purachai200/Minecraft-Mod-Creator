@@ -96,11 +96,15 @@ public class ExoframeBulletEntity extends ThrowableProjectile {
             target.hurt(dmgSource, this.bulletDamage);
 
             if (this.level() instanceof ServerLevel serverLevel) {
+                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                        target.getX(), target.getY() + target.getEyeHeight() * 0.6D, target.getZ(),
+                        8, 0.2D, 0.2D, 0.2D, 0.15D);
                 serverLevel.sendParticles(ParticleTypes.CRIT,
                         target.getX(), target.getY() + target.getEyeHeight() * 0.6D, target.getZ(),
-                        10, 0.2D, 0.2D, 0.2D, 0.1D);
+                        8, 0.2D, 0.2D, 0.2D, 0.1D);
             }
-            this.level().playSound(null, this.blockPosition(), SoundEvents.ANVIL_PLACE, SoundSource.PLAYERS, 1.2F, 1.8F);
+            float pitch = 0.9F + this.random.nextFloat() * 0.2F;
+            this.level().playSound(null, this.blockPosition(), com.obsolete.sound.ModSounds.WEAPON_IMPACT_METAL.get(), SoundSource.PLAYERS, 1.4F, pitch);
             this.discard();
         }
     }
@@ -110,11 +114,15 @@ public class ExoframeBulletEntity extends ThrowableProjectile {
         super.onHitBlock(result);
         if (!this.level().isClientSide) {
             if (this.level() instanceof ServerLevel serverLevel) {
+                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                        result.getLocation().x, result.getLocation().y, result.getLocation().z,
+                        4, 0.1D, 0.1D, 0.1D, 0.08D);
                 serverLevel.sendParticles(ParticleTypes.SMOKE,
                         result.getLocation().x, result.getLocation().y, result.getLocation().z,
                         6, 0.1D, 0.1D, 0.1D, 0.05D);
             }
-            this.level().playSound(null, this.blockPosition(), SoundEvents.ANVIL_HIT, SoundSource.PLAYERS, 0.8F, 1.6F);
+            float pitch = 1.0F + this.random.nextFloat() * 0.2F;
+            this.level().playSound(null, this.blockPosition(), com.obsolete.sound.ModSounds.WEAPON_IMPACT_METAL.get(), SoundSource.PLAYERS, 1.0F, pitch);
             this.discard();
         }
     }

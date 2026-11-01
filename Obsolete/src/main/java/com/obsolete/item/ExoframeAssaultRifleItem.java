@@ -24,7 +24,6 @@ public class ExoframeAssaultRifleItem extends ExoframeWeaponItem {
 
     @Override
     public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        // 1. Check Exoframe utility slot (slot index 4)
         ItemStack utilityStack = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
         if (utilityStack.getItem() instanceof ExoframeAmmoItem ammoItem && ammoItem.getAmmoType() == ExoframeAmmoItem.AmmoType.CALIBER_20MM) {
             if (consume) {
@@ -34,7 +33,6 @@ public class ExoframeAssaultRifleItem extends ExoframeWeaponItem {
             return true;
         }
 
-        // 2. Check pilot player inventory
         for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
             ItemStack stack = pilot.getInventory().getItem(i);
             if (stack.getItem() instanceof ExoframeAmmoItem ammoItem && ammoItem.getAmmoType() == ExoframeAmmoItem.AmmoType.CALIBER_20MM) {
@@ -49,14 +47,14 @@ public class ExoframeAssaultRifleItem extends ExoframeWeaponItem {
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
+        Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
+            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.2F, 1.0F);
             pilot.displayClientMessage(Component.translatable("message.obsolete.out_of_ammo_20mm").withStyle(ChatFormatting.RED), true);
             return false;
         }
 
-        Level level = exoframe.level();
         Vec3 look = pilot.getLookAngle();
-        // Weapon muzzle position: offset to right arm weapon mount
         Vec3 forward = look.normalize();
         Vec3 right = new Vec3(-forward.z, 0, forward.x).normalize();
         Vec3 muzzlePos = exoframe.position().add(0, 1.8D * ExoframeEntity.MODEL_SCALE, 0)
@@ -71,9 +69,12 @@ public class ExoframeAssaultRifleItem extends ExoframeWeaponItem {
         bullet.shoot(shootDir.x, shootDir.y, shootDir.z, 4.5F, 0.4F);
         level.addFreshEntity(bullet);
 
-        // Sound & recoil
-        level.playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_RIFLE_FIRE.get(), SoundSource.PLAYERS, 2.5F, 1.0F);
+        spawnMuzzleFlashAndCasing(level, muzzlePos, forward, right, true);
+
+        float pitch = 0.95F + (exoframe.getRandom().nextFloat() * 0.1F);
+        level.playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_RIFLE_FIRE.get(), SoundSource.PLAYERS, 2.5F, pitch);
         exoframe.triggerRecoilAnim();
+        exoframe.triggerPilotCameraShake(0.3F, 3);
         return true;
     }
 

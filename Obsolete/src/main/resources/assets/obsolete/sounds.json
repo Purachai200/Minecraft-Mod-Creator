@@ -3,60 +3,233 @@
     "category": "player",
     "subtitle": "subtitles.obsolete.exoframe_step",
     "sounds": [
-      "minecraft:mob/iron_golem/step1",
-      "minecraft:mob/iron_golem/step2",
-      "minecraft:mob/iron_golem/step3"
+      "obsolete:exoframe_step_walk_1",
+      "obsolete:exoframe_step_walk_2",
+      "obsolete:exoframe_step_walk_3",
+      "obsolete:exoframe_step_walk_4"
+    ]
+  },
+  "exoframe_step_sprint": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_step_sprint",
+    "sounds": [
+      "obsolete:exoframe_step_sprint_1",
+      "obsolete:exoframe_step_sprint_2",
+      "obsolete:exoframe_step_sprint_3",
+      "obsolete:exoframe_step_sprint_4"
     ]
   },
   "exoframe_servo": {
     "category": "player",
     "subtitle": "subtitles.obsolete.exoframe_servo",
     "sounds": [
-      "minecraft:item/armor/equip_iron1",
-      "minecraft:item/armor/equip_iron2"
+      "obsolete:exoframe_servo_1",
+      "obsolete:exoframe_servo_2",
+      "obsolete:exoframe_servo_3"
+    ]
+  },
+  "exoframe_engine_idle": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_engine_idle",
+    "sounds": [
+      "obsolete:exoframe_engine_idle"
+    ]
+  },
+  "exoframe_land": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_land",
+    "sounds": [
+      "obsolete:exoframe_land"
+    ]
+  },
+  "exoframe_land_heavy": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_land_heavy",
+    "sounds": [
+      "obsolete:exoframe_land_heavy"
+    ]
+  },
+  "exoframe_cockpit_open": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_cockpit_open",
+    "sounds": [
+      "obsolete:exoframe_cockpit_open"
+    ]
+  },
+  "exoframe_cockpit_close": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_cockpit_close",
+    "sounds": [
+      "obsolete:exoframe_cockpit_close"
+    ]
+  },
+  "exoframe_pilot_mount": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_pilot_mount",
+    "sounds": [
+      "obsolete:exoframe_pilot_mount"
+    ]
+  },
+  "exoframe_pilot_dismount": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_pilot_dismount",
+    "sounds": [
+      "obsolete:exoframe_pilot_dismount"
+    ]
+  },
+  "exoframe_alarm_low_hull": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_alarm_low_hull",
+    "sounds": [
+      "obsolete:exoframe_alarm_low_hull"
     ]
   },
   "exoframe_rifle_fire": {
     "category": "player",
     "subtitle": "subtitles.obsolete.exoframe_rifle_fire",
     "sounds": [
-      "minecraft:random/explode",
-      "minecraft:mob/warden/sonic_boom"
+      "obsolete:weapon_rifle_fire_1",
+      "obsolete:weapon_rifle_fire_2",
+      "obsolete:weapon_rifle_fire_3"
+    ]
+  },
+  "weapon_sniper_fire": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_sniper_fire",
+    "sounds": [
+      "obsolete:weapon_sniper_fire"
+    ]
+  },
+  "weapon_autocannon_fire": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_autocannon_fire",
+    "sounds": [
+      "obsolete:weapon_autocannon_fire_1",
+      "obsolete:weapon_autocannon_fire_2",
+      "obsolete:weapon_autocannon_fire_3"
+    ]
+  },
+  "weapon_minigun_spinup": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_minigun_spinup",
+    "sounds": [
+      "obsolete:weapon_minigun_spinup"
+    ]
+  },
+  "weapon_minigun_fire": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_minigun_fire",
+    "sounds": [
+      "obsolete:weapon_minigun_fire_loop"
+    ]
+  },
+  "weapon_minigun_spindown": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_minigun_spindown",
+    "sounds": [
+      "obsolete:weapon_minigun_spindown"
+    ]
+  },
+  "weapon_shotgun_fire": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_shotgun_fire",
+    "sounds": [
+      "obsolete:weapon_shotgun_fire"
+    ]
+  },
+  "weapon_grenade_thump": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_grenade_thump",
+    "sounds": [
+      "obsolete:weapon_grenade_thump"
     ]
   },
   "exoframe_rocket_fire": {
     "category": "player",
     "subtitle": "subtitles.obsolete.exoframe_rocket_fire",
     "sounds": [
-      "minecraft:entity/firework_rocket/launch"
+      "obsolete:weapon_rocket_launch"
+    ]
+  },
+  "weapon_recoilless_fire": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_recoilless_fire",
+    "sounds": [
+      "obsolete:weapon_recoilless_fire"
+    ]
+  },
+  "weapon_flamethrower_fire": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_flamethrower_fire",
+    "sounds": [
+      "obsolete:weapon_flamethrower_fire"
     ]
   },
   "exoframe_melee": {
     "category": "player",
     "subtitle": "subtitles.obsolete.exoframe_melee",
     "sounds": [
-      "minecraft:mob/iron_golem/hit"
+      "obsolete:weapon_melee_swing"
+    ]
+  },
+  "weapon_melee_impact": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_melee_impact",
+    "sounds": [
+      "obsolete:weapon_melee_impact"
+    ]
+  },
+  "weapon_stun_zap": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_stun_zap",
+    "sounds": [
+      "obsolete:weapon_stun_zap"
+    ]
+  },
+  "weapon_empty_click": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_empty_click",
+    "sounds": [
+      "obsolete:weapon_empty_click"
+    ]
+  },
+  "weapon_reload": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_reload",
+    "sounds": [
+      "obsolete:weapon_reload"
+    ]
+  },
+  "weapon_impact_metal": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.weapon_impact_metal",
+    "sounds": [
+      "obsolete:weapon_impact_metal_1",
+      "obsolete:weapon_impact_metal_2",
+      "obsolete:weapon_impact_metal_3"
     ]
   },
   "exoframe_armor_break": {
     "category": "player",
     "subtitle": "subtitles.obsolete.exoframe_armor_break",
     "sounds": [
-      "minecraft:item/shield/break"
+      "obsolete:weapon_melee_impact",
+      "obsolete:weapon_impact_metal_1"
     ]
   },
   "exoframe_death": {
     "category": "player",
     "subtitle": "subtitles.obsolete.exoframe_death",
     "sounds": [
-      "minecraft:mob/iron_golem/death"
+      "obsolete:exoframe_land_heavy"
     ]
   },
   "assembly_process": {
     "category": "block",
     "subtitle": "subtitles.obsolete.assembly_process",
     "sounds": [
-      "minecraft:block/anvil/use"
+      "obsolete:weapon_impact_metal_2",
+      "obsolete:exoframe_servo_1"
     ]
   }
 }

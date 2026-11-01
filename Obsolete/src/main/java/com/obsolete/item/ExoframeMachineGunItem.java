@@ -47,12 +47,13 @@ public class ExoframeMachineGunItem extends ExoframeWeaponItem {
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
+        Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
+            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.2F, 1.0F);
             pilot.displayClientMessage(Component.translatable("message.obsolete.out_of_ammo_20mm").withStyle(ChatFormatting.RED), true);
             return false;
         }
 
-        Level level = exoframe.level();
         Vec3 look = pilot.getLookAngle();
         Vec3 forward = look.normalize();
         Vec3 right = new Vec3(-forward.z, 0, forward.x).normalize();
@@ -69,8 +70,12 @@ public class ExoframeMachineGunItem extends ExoframeWeaponItem {
         bullet.shoot(shootDir.x, shootDir.y, shootDir.z, 4.2F, 1.2F);
         level.addFreshEntity(bullet);
 
-        level.playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_RIFLE_FIRE.get(), SoundSource.PLAYERS, 2.0F, 1.4F);
+        spawnMuzzleFlashAndCasing(level, muzzlePos, forward, right, true);
+
+        float pitch = 1.1F + (exoframe.getRandom().nextFloat() * 0.2F);
+        level.playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_RIFLE_FIRE.get(), SoundSource.PLAYERS, 2.2F, pitch);
         exoframe.triggerRecoilAnim();
+        exoframe.triggerPilotCameraShake(0.25F, 2);
         return true;
     }
 

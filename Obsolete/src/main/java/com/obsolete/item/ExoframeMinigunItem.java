@@ -7,6 +7,7 @@ import com.obsolete.sound.ModSounds;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 public class ExoframeMinigunItem extends ExoframeWeaponItem {
@@ -17,7 +18,6 @@ public class ExoframeMinigunItem extends ExoframeWeaponItem {
 
     @Override
     public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        // Check utility slot first for 7.62mm minigun ammo or 20mm
         ItemStack utilStack = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
         if (utilStack.getItem() instanceof ExoframeAmmoItem ammo &&
                 (ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.CALIBER_762_MINIGUN || ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.CALIBER_20MM)) {
@@ -27,7 +27,6 @@ public class ExoframeMinigunItem extends ExoframeWeaponItem {
             return true;
         }
 
-        // Check pilot inventory
         for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
             ItemStack stack = pilot.getInventory().getItem(i);
             if (stack.getItem() instanceof ExoframeAmmoItem ammo &&
@@ -43,9 +42,9 @@ public class ExoframeMinigunItem extends ExoframeWeaponItem {
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
+        Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
-            exoframe.level().playSound(null, exoframe.blockPosition(), net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.get(),
-                    SoundSource.PLAYERS, 0.8F, 1.4F);
+            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.0F, 1.4F);
             return false;
         }
 
@@ -56,21 +55,22 @@ public class ExoframeMinigunItem extends ExoframeWeaponItem {
                 .add(right.scale(0.65D * ExoframeEntity.MODEL_SCALE))
                 .add(forward.scale(1.1D * ExoframeEntity.MODEL_SCALE));
 
-        Vec3 target = ExoframeEntity.computeTargetConvergence(exoframe.level(), pilot, exoframe);
+        Vec3 target = ExoframeEntity.computeTargetConvergence(level, pilot, exoframe);
         Vec3 shootDir = target.subtract(muzzlePos).normalize();
 
         // Rapid fire 7.62mm minigun burst (damage 14.0F, speed 6.5F, spread 1.2F)
-        ExoframeBulletEntity bullet = new ExoframeBulletEntity(exoframe.level(), pilot, 14.0F);
+        ExoframeBulletEntity bullet = new ExoframeBulletEntity(level, pilot, 14.0F);
         bullet.setPos(muzzlePos.x, muzzlePos.y, muzzlePos.z);
         bullet.shoot(shootDir.x, shootDir.y, shootDir.z, 6.5F, 1.2F);
-        exoframe.level().addFreshEntity(bullet);
+        level.addFreshEntity(bullet);
 
-        // Rapid fire sound
-        float pitch = 1.2F + (exoframe.getRandom().nextFloat() * 0.3F);
-        exoframe.level().playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_RIFLE_FIRE.get(),
-                SoundSource.PLAYERS, 1.8F, pitch);
+        spawnMuzzleFlashAndCasing(level, muzzlePos, forward, right, true);
+
+        float pitch = 0.95F + (exoframe.getRandom().nextFloat() * 0.15F);
+        level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_MINIGUN_FIRE.get(), SoundSource.PLAYERS, 2.0F, pitch);
 
         exoframe.triggerRecoilAnim();
+        exoframe.triggerPilotCameraShake(0.2F, 2);
         return true;
     }
 }

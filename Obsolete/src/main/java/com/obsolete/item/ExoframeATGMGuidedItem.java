@@ -44,12 +44,13 @@ public class ExoframeATGMGuidedItem extends ExoframeWeaponItem {
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
+        Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
+            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.2F, 1.0F);
             pilot.displayClientMessage(Component.literal("§c[Munitions Depleted] Required: Tandem-Warhead Guided ATGM Missile"), true);
             return false;
         }
 
-        Level level = exoframe.level();
         Vec3 look = pilot.getLookAngle();
         Vec3 forward = look.normalize();
         Vec3 right = new Vec3(-forward.z, 0, forward.x).normalize();
@@ -65,8 +66,12 @@ public class ExoframeATGMGuidedItem extends ExoframeWeaponItem {
         missile.shoot(shootDir.x, shootDir.y, shootDir.z, 2.8F, 0.02F);
         level.addFreshEntity(missile);
 
-        level.playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_ROCKET_FIRE.get(), SoundSource.PLAYERS, 3.8F, 1.0F);
+        spawnRocketBackblast(level, muzzlePos, forward);
+
+        float pitch = 0.95F + (exoframe.getRandom().nextFloat() * 0.1F);
+        level.playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_ROCKET_FIRE.get(), SoundSource.PLAYERS, 3.8F, pitch);
         exoframe.triggerRecoilAnim();
+        exoframe.triggerPilotCameraShake(0.8F, 7);
         return true;
     }
 

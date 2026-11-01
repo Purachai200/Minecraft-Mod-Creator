@@ -24,7 +24,6 @@ public class ExoframeRocketLauncherItem extends ExoframeWeaponItem {
 
     @Override
     public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        // 1. Check Exoframe utility slot (slot index 4)
         ItemStack utilityStack = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
         if (utilityStack.getItem() instanceof ExoframeAmmoItem ammoItem && ammoItem.getAmmoType() == ExoframeAmmoItem.AmmoType.AT_ROCKET) {
             if (consume) {
@@ -34,7 +33,6 @@ public class ExoframeRocketLauncherItem extends ExoframeWeaponItem {
             return true;
         }
 
-        // 2. Check pilot player inventory
         for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
             ItemStack stack = pilot.getInventory().getItem(i);
             if (stack.getItem() instanceof ExoframeAmmoItem ammoItem && ammoItem.getAmmoType() == ExoframeAmmoItem.AmmoType.AT_ROCKET) {
@@ -49,12 +47,13 @@ public class ExoframeRocketLauncherItem extends ExoframeWeaponItem {
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
+        Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
+            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.2F, 1.0F);
             pilot.displayClientMessage(Component.translatable("message.obsolete.out_of_ammo_rocket").withStyle(ChatFormatting.RED), true);
             return false;
         }
 
-        Level level = exoframe.level();
         Vec3 look = pilot.getLookAngle();
         Vec3 forward = look.normalize();
         Vec3 right = new Vec3(-forward.z, 0, forward.x).normalize();
@@ -70,8 +69,12 @@ public class ExoframeRocketLauncherItem extends ExoframeWeaponItem {
         rocket.shoot(shootDir.x, shootDir.y, shootDir.z, 2.4F, 0.1F);
         level.addFreshEntity(rocket);
 
-        level.playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_ROCKET_FIRE.get(), SoundSource.PLAYERS, 3.0F, 1.0F);
+        spawnRocketBackblast(level, podPos, forward);
+
+        float pitch = 0.95F + (exoframe.getRandom().nextFloat() * 0.1F);
+        level.playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_ROCKET_FIRE.get(), SoundSource.PLAYERS, 3.0F, pitch);
         exoframe.triggerRecoilAnim();
+        exoframe.triggerPilotCameraShake(0.7F, 6);
         return true;
     }
 

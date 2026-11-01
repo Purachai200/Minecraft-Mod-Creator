@@ -7,6 +7,7 @@ import com.obsolete.sound.ModSounds;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 public class ExoframeSniperRifleItem extends ExoframeWeaponItem {
@@ -17,7 +18,6 @@ public class ExoframeSniperRifleItem extends ExoframeWeaponItem {
 
     @Override
     public boolean checkOrConsumeAmmo(ExoframeEntity exoframe, ServerPlayer pilot, boolean consume) {
-        // Check utility slot first
         ItemStack utilStack = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.UTILITY.getIndex());
         if (utilStack.getItem() instanceof ExoframeAmmoItem ammo && ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.CALIBER_20MM) {
             if (consume) {
@@ -26,7 +26,6 @@ public class ExoframeSniperRifleItem extends ExoframeWeaponItem {
             return true;
         }
 
-        // Check pilot inventory
         for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
             ItemStack stack = pilot.getInventory().getItem(i);
             if (stack.getItem() instanceof ExoframeAmmoItem ammo && ammo.getAmmoType() == ExoframeAmmoItem.AmmoType.CALIBER_20MM) {
@@ -41,9 +40,9 @@ public class ExoframeSniperRifleItem extends ExoframeWeaponItem {
 
     @Override
     public boolean performFire(ExoframeEntity exoframe, ServerPlayer pilot) {
+        Level level = exoframe.level();
         if (!checkOrConsumeAmmo(exoframe, pilot, true)) {
-            exoframe.level().playSound(null, exoframe.blockPosition(), net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.get(),
-                    SoundSource.PLAYERS, 1.0F, 1.2F);
+            level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_EMPTY_CLICK.get(), SoundSource.PLAYERS, 1.2F, 1.0F);
             return false;
         }
 
@@ -54,21 +53,21 @@ public class ExoframeSniperRifleItem extends ExoframeWeaponItem {
                 .add(right.scale(0.65D * ExoframeEntity.MODEL_SCALE))
                 .add(forward.scale(1.4D * ExoframeEntity.MODEL_SCALE));
 
-        Vec3 target = ExoframeEntity.computeTargetConvergence(exoframe.level(), pilot, exoframe);
+        Vec3 target = ExoframeEntity.computeTargetConvergence(level, pilot, exoframe);
         Vec3 shootDir = target.subtract(muzzlePos).normalize();
 
         // High velocity 20mm Anti-Materiel Round (damage 50.0F, velocity 9.0F)
-        ExoframeBulletEntity bullet = new ExoframeBulletEntity(exoframe.level(), pilot, 50.0F);
+        ExoframeBulletEntity bullet = new ExoframeBulletEntity(level, pilot, 50.0F);
         bullet.setPos(muzzlePos.x, muzzlePos.y, muzzlePos.z);
         bullet.shoot(shootDir.x, shootDir.y, shootDir.z, 9.0F, 0.05F);
-        exoframe.level().addFreshEntity(bullet);
+        level.addFreshEntity(bullet);
+
+        spawnMuzzleFlashAndCasing(level, muzzlePos, forward, right, false);
 
         // Loud sniper firing report
-        exoframe.level().playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_RIFLE_FIRE.get(),
-                SoundSource.PLAYERS, 2.5F, 0.85F);
-
-        // Trigger recoil
+        level.playSound(null, exoframe.blockPosition(), ModSounds.WEAPON_SNIPER_FIRE.get(), SoundSource.PLAYERS, 3.5F, 1.0F);
         exoframe.triggerRecoilAnim();
+        exoframe.triggerPilotCameraShake(0.8F, 7);
         return true;
     }
 }

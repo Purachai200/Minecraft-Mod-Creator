@@ -112,6 +112,12 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     private int deathTimer = -1;
     private static final int DEATH_ANIMATION_TICKS = 50; // 2.5 seconds collapse
     private BlockPos lastLightPos = null;
+
+    // Locomotion & effect states
+    private int footstepTimer = 0;
+    private boolean wasSprintingLastTick = false;
+    private int sprintPuffTimer = 0;
+
     /** Seat cushion height in model px; mirrored as 30.8 - SEAT_LOWER in tools/build_exoframe_geo.py (capsules are fitted to it). */
     public static final double SEAT_CUSHION_Y = 26.8D;
 
@@ -262,9 +268,39 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         return EntityDimensions.scalable(1.2F * MODEL_SCALE, 2.2F * MODEL_SCALE);
     }
 
+    public void triggerPilotCameraShake(float intensity, int ticks) {
+        if (!this.level().isClientSide && this.getControllingPassenger() instanceof ServerPlayer serverPlayer) {
+            com.obsolete.network.ModNetworking.sendToPlayer(new com.obsolete.network.ExoframeCameraShakeS2CPacket(intensity, ticks), serverPlayer);
+        } else if (this.level().isClientSide) {
+            com.obsolete.client.CameraShakeManager.addShake(intensity, ticks);
+        }
+    }
+
     @Override
     public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource source) {
-        // High-mobility hydraulic shock absorption: immune to fall damage
+        if (fallDistance > 0.8F) {
+            boolean heavy = fallDistance > 2.8F;
+            float pitch = 0.95F + (this.random.nextFloat() * 0.1F);
+            this.level().playSound(null, this.blockPosition(),
+                    heavy ? ModSounds.EXOFRAME_LAND_HEAVY.get() : ModSounds.EXOFRAME_LAND.get(),
+                    SoundSource.PLAYERS, heavy ? 2.8F : 1.6F, pitch);
+
+            if (this.level() instanceof ServerLevel serverLevel) {
+                if (heavy) {
+                    for (int i = 0; i < 16; i++) {
+                        double angle = (2.0D * Math.PI * i) / 16.0D;
+                        double px = this.getX() + Math.cos(angle) * 2.2D;
+                        double pz = this.getZ() + Math.sin(angle) * 2.2D;
+                        serverLevel.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, px, this.getY() + 0.1D, pz, 1, Math.cos(angle) * 0.15D, 0.02D, Math.sin(angle) * 0.15D, 0.02D);
+                        serverLevel.sendParticles(ParticleTypes.POOF, px, this.getY() + 0.1D, pz, 1, Math.cos(angle) * 0.1D, 0.05D, Math.sin(angle) * 0.1D, 0.02D);
+                    }
+                    triggerPilotCameraShake(1.2F, 12);
+                } else {
+                    serverLevel.sendParticles(ParticleTypes.POOF, this.getX(), this.getY() + 0.1D, this.getZ(), 8, 0.4D, 0.1D, 0.4D, 0.05D);
+                    triggerPilotCameraShake(0.4F, 6);
+                }
+            }
+        }
         return false;
     }
 
@@ -458,11 +494,89 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             return;
         }
 
-        // Hydraulic servo hum while moving
-        if (this.level().isClientSide && this.isVehicle() && this.getDeltaMovement().horizontalDistanceSqr() > 0.005D) {
-            if (this.tickCount % 18 == 0) {
-                this.level().playLocalSound(this.getX(), this.getY(), this.getZ(),
-                        ModSounds.EXOFRAME_STEP.get(), SoundSource.PLAYERS, 0.8F, 1.0F, false);
+        // Locomotion, footsteps, servos, exhaust, damage effects
+        double horizDistSqr = this.getDeltaMovement().horizontalDistanceSqr();
+        boolean isMoving = horizDistSqr > 0.003D;
+        boolean isPiloted = this.isVehicle() && this.isAlive() && !isDying();
+        LivingEntity rider = this.getControllingPassenger();
+        boolean isSprinting = isMoving && (this.isSprinting() || (rider != null && rider.isSprinting()) || horizDistSqr > 0.035D);
+
+        // Sprint start dark exhaust puff detection
+        if (isSprinting && !wasSprintingLastTick) {
+            sprintPuffTimer = 6;
+        }
+        wasSprintingLastTick = isSprinting;
+
+        if (this.level() instanceof ServerLevel serverLevel) {
+            // Footsteps & dust puffs
+            if (isMoving && this.onGround()) {
+                int stepInterval = isSprinting ? 10 : 18;
+                footstepTimer++;
+                if (footstepTimer >= stepInterval) {
+                    footstepTimer = 0;
+                    float stepPitch = 0.92F + this.random.nextFloat() * 0.16F;
+                    this.level().playSound(null, this.blockPosition(),
+                            isSprinting ? ModSounds.EXOFRAME_STEP_SPRINT.get() : ModSounds.EXOFRAME_STEP.get(),
+                            SoundSource.PLAYERS, isSprinting ? 1.4F : 1.0F, stepPitch);
+
+                    // Scaled ground dust puff at foot position
+                    boolean leftFoot = (this.tickCount / stepInterval) % 2 == 0;
+                    float footAngle = (float) Math.toRadians(this.getYRot() + (leftFoot ? 90 : -90));
+                    double fx = this.getX() + Math.cos(footAngle) * 0.45D;
+                    double fz = this.getZ() + Math.sin(footAngle) * 0.45D;
+                    serverLevel.sendParticles(ParticleTypes.POOF, fx, this.getY() + 0.1D, fz, isSprinting ? 6 : 3, 0.15D, 0.05D, 0.15D, 0.02D);
+                    triggerPilotCameraShake(isSprinting ? 0.35F : 0.18F, 4);
+                }
+            } else {
+                footstepTimer = 0;
+            }
+
+            // Servo whine following movement velocity
+            if (isMoving && this.tickCount % 22 == 0) {
+                float servoPitch = 0.85F + (float) Math.min(0.65D, Math.sqrt(horizDistSqr) * 1.5D);
+                this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_SERVO.get(), SoundSource.PLAYERS, 0.9F, servoPitch);
+            }
+
+            // Engine / APU idle hum while piloted
+            if (isPiloted && this.tickCount % 40 == 0) {
+                this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_ENGINE_IDLE.get(), SoundSource.PLAYERS, 0.45F, 1.0F);
+            }
+
+            // Exhaust smoke from rear manifold
+            if (isMoving) {
+                boolean emitExhaust = isSprinting || (this.tickCount % 3 == 0);
+                if (emitExhaust) {
+                    float yawRad = (float) Math.toRadians(this.getYRot());
+                    double exX = this.getX() + Math.sin(yawRad) * 0.55D;
+                    double exZ = this.getZ() - Math.cos(yawRad) * 0.55D;
+                    double exY = this.getY() + 1.8D;
+                    if (sprintPuffTimer > 0) {
+                        sprintPuffTimer--;
+                        serverLevel.sendParticles(ParticleTypes.LARGE_SMOKE, exX, exY, exZ, 3, 0.08D, 0.08D, 0.08D, 0.03D);
+                    } else {
+                        serverLevel.sendParticles(ParticleTypes.SMOKE, exX, exY, exZ, 1, 0.03D, 0.05D, 0.03D, 0.01D);
+                    }
+                }
+            }
+
+            // Water splashes when wading
+            if (this.isInWater() && isMoving && this.tickCount % 4 == 0) {
+                serverLevel.sendParticles(ParticleTypes.SPLASH, this.getX(), this.getY() + 0.3D, this.getZ(), 8, 0.4D, 0.1D, 0.4D, 0.1D);
+                serverLevel.sendParticles(ParticleTypes.BUBBLE, this.getX(), this.getY() + 0.2D, this.getZ(), 4, 0.3D, 0.1D, 0.3D, 0.05D);
+            }
+
+            // Low hull health damage sparks & smoke, and cockpit breach alarm
+            if (this.isAlive() && !isDying() && this.getHealth() < this.getMaxHealth() * 0.40F) {
+                if (this.tickCount % 8 == 0) {
+                    double ox = (this.random.nextDouble() - 0.5D) * 0.8D;
+                    double oy = 1.0D + this.random.nextDouble() * 0.8D;
+                    double oz = (this.random.nextDouble() - 0.5D) * 0.8D;
+                    serverLevel.sendParticles(ParticleTypes.SMOKE, this.getX() + ox, this.getY() + oy, this.getZ() + oz, 2, 0.05D, 0.05D, 0.05D, 0.02D);
+                    serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, this.getX() + ox, this.getY() + oy, this.getZ() + oz, 1, 0.04D, 0.04D, 0.04D, 0.05D);
+                }
+                if (this.getHealth() < this.getMaxHealth() * 0.25F && isPiloted && this.tickCount % 50 == 0) {
+                    this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_ALARM_LOW_HULL.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+                }
             }
         }
 
@@ -496,7 +610,6 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
 
         // Active module effects for pilot
         if (this.isVehicle()) {
-            LivingEntity rider = this.getControllingPassenger();
             if (rider != null) {
                 // 1. Diving ballast module: provides rebreather life support (water breathing) while submerged
                 if (hasItemEquipped(ModItems.MODULE_DIVING_BALLAST.get()) && this.isInWater()) {
@@ -691,6 +804,10 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     /**
      * Weapon firing server execution.
      */
+    public void setWeaponCooldown(int cd) {
+        this.weaponCooldown = cd;
+    }
+
     public boolean fireEquippedWeapon(ServerPlayer pilot) {
         if (weaponCooldown > 0 || isDying()) return false;
 
@@ -798,8 +915,11 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         rocket.shoot(shootDir.x, shootDir.y, shootDir.z, 2.5F, 0.08F);
         level.addFreshEntity(rocket);
 
+        com.obsolete.item.ExoframeWeaponItem.spawnRocketBackblast(level, podPos, forward);
+
         level.playSound(null, this.blockPosition(), ModSounds.EXOFRAME_ROCKET_FIRE.get(), SoundSource.PLAYERS, 3.2F, 1.0F);
         this.triggerRecoilAnim();
+        triggerPilotCameraShake(0.7F, 6);
         this.weaponCooldown = 25; // 1.25s cooldown between shoulder missile salvos
         return true;
     }
@@ -840,9 +960,14 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
 
         Level level = this.level();
         if (isStunBaton) {
-            level.playSound(null, this.blockPosition(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 1.2F, 1.8F);
+            level.playSound(null, this.blockPosition(), ModSounds.WEAPON_STUN_ZAP.get(), SoundSource.PLAYERS, 1.8F, 1.0F);
         } else {
             level.playSound(null, this.blockPosition(), ModSounds.EXOFRAME_MELEE.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
+        }
+
+        if (!targets.isEmpty()) {
+            level.playSound(null, this.blockPosition(), ModSounds.WEAPON_MELEE_IMPACT.get(), SoundSource.PLAYERS, 2.2F, 1.0F);
+            triggerPilotCameraShake(0.5F, 5);
         }
 
         if (level instanceof ServerLevel serverLevel) {
