@@ -453,38 +453,59 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     @Override
     protected void addPassenger(Entity passenger) {
         super.addPassenger(passenger);
-        // Ensure clean stationary state when a pilot enters
+        // Stand up from park pose when pilot enters
+        this.setMechCrouching(false);
         this.setFlying(false);
         this.setFlightBoosting(false);
         this.setAiming(false);
-        this.setMechCrouching(false);
         this.smoothedForward = 0.0F;
         this.smoothedStrafe = 0.0F;
+        if (passenger != null) {
+            passenger.resetFallDistance();
+            passenger.fallDistance = 0.0F;
+        }
     }
 
     @Override
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
+        if (passenger != null) {
+            passenger.resetFallDistance();
+            passenger.fallDistance = 0.0F;
+        }
         if (this.getPassengers().isEmpty()) {
-            // When pilot dismounts, terminate all active flight and posture states cleanly
+            // When pilot dismounts, terminate all active flight and lower the mech into kneeling park crouch
             this.setFlying(false);
             this.setFlightBoosting(false);
             this.setAiming(false);
-            this.setMechCrouching(false);
+            this.setMechCrouching(true);
             this.smoothedForward = 0.0F;
             this.smoothedStrafe = 0.0F;
             this.setDeltaMovement(this.getDeltaMovement().multiply(0.2D, 1.0D, 0.2D));
+            if (!this.level().isClientSide) {
+                this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_SERVO.get(), SoundSource.PLAYERS, 1.2F, 0.85F);
+            }
         }
     }
 
     @Override
     public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
+        passenger.resetFallDistance();
+        passenger.fallDistance = 0.0F;
+
         // Place dismounting pilot safely 1.35 blocks behind the rear entry of the chassis
         float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
         double rearDist = 1.35D;
         double dx = Mth.sin(yawRad) * rearDist;
         double dz = -Mth.cos(yawRad) * rearDist;
         BlockPos rearPos = BlockPos.containing(this.getX() + dx, this.getY(), this.getZ() + dz);
+
+        Vec3 safePos = net.minecraft.world.entity.vehicle.DismountHelper.findSafeDismountLocation(
+                passenger.getType(), this.level(), rearPos, false);
+        if (safePos != null) {
+            return safePos;
+        }
+
         if (!this.level().getBlockState(rearPos).isSolid() && !this.level().getBlockState(rearPos.above()).isSolid()) {
             return new Vec3(this.getX() + dx, this.getY(), this.getZ() + dz);
         }

@@ -1434,7 +1434,10 @@ public final class ClientAutoTest {
             if (exo.isFlying() || exo.isFlightBoosting()) {
                 throw new AssertionError("[autotest] Exoframe retained active flight state after pilot dismount!");
             }
-            ObsoleteMod.LOGGER.info("[autotest] MOUNT-DISMOUNT TEST: First dismount cycle successful, flight state cleanly reset.");
+            if (!exo.isMechCrouching()) {
+                throw new AssertionError("[autotest] Exoframe failed to enter parked crouch pose upon dismount!");
+            }
+            ObsoleteMod.LOGGER.info("[autotest] MOUNT-DISMOUNT TEST: First dismount cycle successful, mech parked in crouch pose, flight state cleanly reset.");
         })));
 
         steps.add(new Step(wt + 325, mc -> serverExoById(mc, (p, exo) -> {
@@ -1443,10 +1446,13 @@ public final class ClientAutoTest {
             if (!p.isPassenger() || !exo.hasPassenger(p)) {
                 throw new AssertionError("[autotest] Player failed to remount Exoframe on second cycle!");
             }
+            if (exo.isMechCrouching()) {
+                throw new AssertionError("[autotest] Exoframe failed to stand up from parked crouch upon boarding!");
+            }
             // Flight / movement reactivation
             exo.setFlying(true);
             exo.setFlightBoosting(true);
-            ObsoleteMod.LOGGER.info("[autotest] MOUNT-DISMOUNT TEST: Second mount cycle successful, flight reactivated.");
+            ObsoleteMod.LOGGER.info("[autotest] MOUNT-DISMOUNT TEST: Second mount cycle successful, mech stood up, flight reactivated.");
         })));
 
         steps.add(new Step(wt + 330, mc -> serverExoById(mc, (p, exo) -> {
@@ -1458,7 +1464,10 @@ public final class ClientAutoTest {
             if (exo.isFlying() || exo.isFlightBoosting()) {
                 throw new AssertionError("[autotest] Exoframe retained active flight state after second pilot dismount!");
             }
-            ObsoleteMod.LOGGER.info("[autotest] MOUNT-DISMOUNT TEST: Second dismount cycle PASS - no freeze, no stuck in mech!");
+            if (!exo.isMechCrouching()) {
+                throw new AssertionError("[autotest] Exoframe failed to enter parked crouch pose upon second dismount!");
+            }
+            ObsoleteMod.LOGGER.info("[autotest] MOUNT-DISMOUNT TEST: Second dismount cycle PASS - no freeze, no fall damage, parked in crouch pose!");
         })));
         steps.add(new Step(wt + 335, mc -> shot(mc, "g_flight_remount_dismount_pass")));
 

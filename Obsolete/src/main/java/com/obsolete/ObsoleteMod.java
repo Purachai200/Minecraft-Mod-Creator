@@ -64,12 +64,16 @@ public class ObsoleteMod {
     @SubscribeEvent
     public void onEntityMount(EntityMountEvent event) {
         if (event.getEntityBeingMounted() instanceof ExoframeEntity exoframe) {
-            if (event.isMounting() && event.getEntityMounting() instanceof Player) {
+            if (event.isMounting() && event.getEntityMounting() instanceof Player player) {
+                player.resetFallDistance();
+                player.fallDistance = 0.0F;
                 if (!exoframe.level().isClientSide) {
                     exoframe.level().playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_COCKPIT_CLOSE.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1.4F, 1.0F);
                     exoframe.level().playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_PILOT_MOUNT.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1.2F, 1.0F);
                 }
             } else if (event.isDismounting() && event.getEntityMounting() instanceof Player player) {
+                player.resetFallDistance();
+                player.fallDistance = 0.0F;
                 if (!exoframe.level().isClientSide) {
                     exoframe.level().playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_COCKPIT_OPEN.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1.4F, 1.0F);
                     exoframe.level().playSound(null, exoframe.blockPosition(), ModSounds.EXOFRAME_PILOT_DISMOUNT.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1.2F, 1.0F);

@@ -44,4 +44,19 @@ public class ExoframeDamageEvents {
             }
         }
     }
+
+    /**
+     * Completely suppresses fall damage on the pilot player while riding or transitioning out of an Exoframe.
+     */
+    @SubscribeEvent
+    public static void onPilotFall(net.minecraftforge.event.entity.living.LivingFallEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            if (player.getVehicle() instanceof ExoframeEntity) {
+                event.setCanceled(true);
+                event.setDistance(0.0F);
+                player.resetFallDistance();
+                player.fallDistance = 0.0F;
+            }
+        }
+    }
 }
