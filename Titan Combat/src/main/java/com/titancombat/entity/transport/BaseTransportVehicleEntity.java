@@ -175,6 +175,11 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         return canMountCargo(titan);
     }
 
+    /** Cargo hangs under the belly on a cable (Chinook, Osprey) instead of standing on a deck. */
+    protected boolean slingsCargo() {
+        return false;
+    }
+
     /** Whether mounted Titans / Exoframes should be locked into a kneeling parking stance (truck/barge) or suspended upright (sky-crane drone/chinook). */
     protected boolean shouldTitanKneel() {
         return true;
@@ -232,9 +237,11 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
                 }
                 p.setDeltaMovement(0, 0.1D, 0);
 
-                // Small boost away from vehicle deck so it doesn't clip
-                Vec3 exitDir = Vec3.directionFromRotation(0, this.getYRot() + 180.0F);
-                p.moveTo(p.getX() + exitDir.x * 2.0D, this.getY(), p.getZ() + exitDir.z * 2.0D);
+                if (!slingsCargo()) {
+                    // Small boost away from vehicle deck so it doesn't clip
+                    Vec3 exitDir = Vec3.directionFromRotation(0, this.getYRot() + 180.0F);
+                    p.moveTo(p.getX() + exitDir.x * 2.0D, this.getY(), p.getZ() + exitDir.z * 2.0D);
+                } // a sling load just drops from where it hangs instead of being pulled up into the cabin
 
                 this.level().playSound(null, this.blockPosition(), SoundEvents.PISTON_CONTRACT, SoundSource.PLAYERS, 1.5F, 1.1F);
                 this.level().playSound(null, this.blockPosition(), SoundEvents.IRON_TRAPDOOR_CLOSE, SoundSource.PLAYERS, 1.2F, 0.7F);
@@ -307,6 +314,21 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
 
+        // 2b. Load cargo (Shift + Right-Click empty hand): the nearest unmounted Titan / Exoframe within 10 blocks
+        if (held.isEmpty() && player.isShiftKeyDown()) {
+            if (!this.level().isClientSide) {
+                List<LivingEntity> nearby = this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(10.0D),
+                        e -> !e.isPassenger() && com.titancombat.util.CrossModCargoHelper.isCargoEligible(e));
+                nearby.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(this)));
+                if (nearby.isEmpty()) {
+                    player.sendSystemMessage(Component.literal("§7[LOGISTICS] No Titan or Exoframe within 10 blocks to load."));
+                } else {
+                    lockCargoToDeck(nearby.get(0), player);
+                }
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
         // 3. Board as Driver (Right-Click empty hand)
         if (held.isEmpty() && !player.isPassenger()) {
             if (!this.level().isClientSide) {
@@ -337,6 +359,7 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
             this.visYawRate += (Mth.wrapDegrees(this.getYRot() - this.yRotO) - this.visYawRate) * 0.3F;
             this.wheelRotO = this.wheelRot;
             this.wheelRot += forward / 0.875F; // radians rolled by the truck's 14px-radius wheel
+            com.titancombat.client.VehicleEngineSound.ensure(this); // client-only branch, so the class never loads on a server
         }
 
         // Sync cargo state & lock docked Mechs into static weight
@@ -562,6 +585,10 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
                 if (com.titancombat.util.CrossModCargoHelper.isCargoEligible(p)) cargoIndex++;
             }
             localOffset = getTitanCargoOffset(cargoIndex);
+            if (slingsCargo()) {
+                // Hang the load just under the belly whatever its height, so small Exoframes don't dangle 5 blocks down
+                localOffset = new Vec3(localOffset.x, -passenger.getBbHeight() - 0.6D, localOffset.z);
+            }
         } else {
             localOffset = Vec3.ZERO;
         }

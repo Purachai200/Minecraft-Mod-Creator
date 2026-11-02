@@ -1197,6 +1197,7 @@ public final class ClientAutoTest {
     private static int trailerId = -1;
 
     private static float yawBefore;
+    private static int slingTitanId = -1;
     private static double yBefore;
     private static final Step[] TRANSPORT_NEW = buildTransportNew();
 
@@ -1473,8 +1474,44 @@ public final class ClientAutoTest {
             shot(mc, "12_osprey_descended");
         }));
 
-        // Behaviour: wrench returns each vehicle's own item
+        // Behaviour: shift + right-click (empty hand) loads the nearest titan onto the Osprey sling; release drops it
         steps.add(new Step(515, mc -> server2(mc, (p, l) -> {
+            p.stopRiding();
+            if (!(l.getEntity(ospreyId) instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity v)) return;
+            v.setNoGravity(true);
+            v.moveTo(v.getX(), tBaseY + 12.0D, v.getZ());
+            var titan = ModEntities.ION_TITAN.get().create(l);
+            titan.moveTo(v.getX() + 3.0D, tBaseY + 1.0D, v.getZ(), 0.0F, 0.0F);
+            l.addFreshEntity(titan);
+            slingTitanId = titan.getId();
+            p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+            p.setShiftKeyDown(true);
+            v.mobInteract(p, net.minecraft.world.InteractionHand.MAIN_HAND);
+            p.setShiftKeyDown(false);
+            TitanCombatMod.LOGGER.info("[autotest] CHECK shift_load {} : {}", titan.getVehicle(), titan.getVehicle() == v ? "PASS" : "FAIL");
+        })));
+        steps.add(new Step(525, mc -> server2(mc, (p, l) -> {
+            var v = l.getEntity(ospreyId);
+            var titan = l.getEntity(slingTitanId);
+            double gap = v.getY() - (titan.getY() + titan.getBbHeight());
+            TitanCombatMod.LOGGER.info("[autotest] CHECK osprey_sling titanTop below hull by {} : {}", String.format("%.2f", gap), gap > 0 && gap < 1.5 ? "PASS" : "FAIL");
+        })));
+        steps.add(new Step(530, mc -> aimCameraAt(mc, tBaseX - 14.0D, tBaseY + 8.0D, tBaseZ - 4.0D, 22.0D, 2.0D, 90.0D)));
+        steps.add(new Step(540, mc -> shot(mc, "13_osprey_sling_load")));
+        steps.add(new Step(545, mc -> server2(mc, (p, l) -> {
+            p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            if (l.getEntity(ospreyId) instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity v) p.startRiding(v, true);
+        })));
+        steps.add(new Step(555, mc -> {
+            com.titancombat.network.ModNetworking.sendToServer(new com.titancombat.network.TitanWeaponActionC2SPacket(com.titancombat.network.TitanWeaponActionC2SPacket.RELEASE_CARGO));
+        }));
+        steps.add(new Step(565, mc -> server2(mc, (p, l) -> {
+            var t = l.getEntity(slingTitanId);
+            TitanCombatMod.LOGGER.info("[autotest] CHECK osprey_release driver={} titanVehicle={} : {}", p.getVehicle(), t == null ? "gone" : t.getVehicle(), t != null && !t.isPassenger() ? "PASS" : "FAIL");
+        })));
+
+        // Behaviour: wrench returns each vehicle's own item
+        steps.add(new Step(575, mc -> server2(mc, (p, l) -> {
             p.stopRiding();
             p.setShiftKeyDown(true);
             var wrench = new net.minecraft.world.item.ItemStack(com.titancombat.item.ModItems.VEHICLE_WRENCH.get());
@@ -1490,7 +1527,7 @@ public final class ClientAutoTest {
         })));
 
         // Test finish
-        steps.add(new Step(530, mc -> {
+        steps.add(new Step(590, mc -> {
             TitanCombatMod.LOGGER.info("[autotest] Completed expanded transport test suite successfully!");
             mc.stop();
         }));

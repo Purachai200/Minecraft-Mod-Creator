@@ -27,8 +27,8 @@ import java.util.List;
 public class TitanV22OspreyEntity extends BaseTransportVehicleEntity {
     // Cockpit Pilot Seat (x: 0, y: 16, z: -74 in model; +Z forward in vehicle coords: z = +74/16)
     private static final Vec3 PILOT_SEAT_OFFSET = new Vec3(0.0D, 16 / 16.0D - 0.7D, 74 / 16.0D);
-    // Ventral Sling Hook for Titan / Exoframe (under fuselage belly, z: 0)
-    private static final Vec3 VENTRAL_SLING_OFFSET = new Vec3(0.0D, 4 / 16.0D, 0.0D);
+    // Ventral Sling Hook for Titan / Exoframe: cargo hangs below the belly like the Chinook's sling load
+    private static final Vec3 VENTRAL_SLING_OFFSET = new Vec3(0.0D, -7.5D, 0.0D);
 
     // Passenger Troop Benches inside Cabin (4 Seats along z: -30, -10, 10, 30)
     private static final Vec3[] TROOP_SEATS = {
@@ -54,6 +54,11 @@ public class TitanV22OspreyEntity extends BaseTransportVehicleEntity {
     @Override
     public int getCargoCapacity() {
         return 1; // 1 heavy slung Titan or Exoframe
+    }
+
+    @Override
+    protected boolean slingsCargo() {
+        return true;
     }
 
     @Override

@@ -4,6 +4,12 @@ All notable changes to the **Titan Combat** mod will be documented in this file.
 
 ---
 
+## [2.7.4] - 2026-11-02 (Sling Loads, Cargo Loading & Engine Audio)
+- V-22 Osprey and Chinook now carry Titans/Exoframes hanging under the belly on a sling instead of riding on top; the load hangs just below the hull whatever its size.
+- Quick release (cargo release key) from the Chinook/Osprey drops the sling load from where it hangs.
+- Shift + Right-Click a vehicle with an empty hand loads the nearest unmounted Titan or Exoframe within 10 blocks.
+- New looping engine audio: tandem-rotor chop (Chinook), tiltrotor (V-22), multirotor (Sky-Crane), heavy and light diesel (trucks, APC, trailer) and ship engine with bow wash (barge, carrier). Volume and pitch follow throttle, speed and rotor spool-up.
+
 ## [2.7.3] - 2026-11-02 (Ocean Carrier Overhaul)
 - Rebuilt Oceanic Super-Carrier as an LHD-style amphibious assault ship (island, rotating radars, CIWS, numbered flight deck, red antifouling waterline).
 - Fixed mirrored "MARINES" stencil on one side of the V-22.

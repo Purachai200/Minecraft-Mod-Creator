@@ -33,6 +33,15 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> LEGION_FIRE = registerSoundEvent("legion_fire");
     public static final RegistryObject<SoundEvent> NORTHSTAR_FIRE = registerSoundEvent("northstar_fire");
 
+
+    // Transport vehicle engine loops (scripts/gen_vehicle_sounds.py)
+    public static final RegistryObject<SoundEvent> VEHICLE_ROTOR_TANDEM = registerSoundEvent("vehicle_rotor_tandem");
+    public static final RegistryObject<SoundEvent> VEHICLE_ROTOR_TILTROTOR = registerSoundEvent("vehicle_rotor_tiltrotor");
+    public static final RegistryObject<SoundEvent> VEHICLE_ROTOR_DRONE = registerSoundEvent("vehicle_rotor_drone");
+    public static final RegistryObject<SoundEvent> VEHICLE_ENGINE_DIESEL_HEAVY = registerSoundEvent("vehicle_engine_diesel_heavy");
+    public static final RegistryObject<SoundEvent> VEHICLE_ENGINE_DIESEL_LIGHT = registerSoundEvent("vehicle_engine_diesel_light");
+    public static final RegistryObject<SoundEvent> VEHICLE_ENGINE_SHIP = registerSoundEvent("vehicle_engine_ship");
+
     private static RegistryObject<SoundEvent> registerSoundEvent(String name) {
         return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(TitanCombatMod.MODID, name)));
     }

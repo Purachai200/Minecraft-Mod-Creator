@@ -105,5 +105,41 @@
     "sounds": [
       "titancombat:titan/northstar_fire"
     ]
+  },
+  "vehicle_rotor_tandem": {
+    "category": "neutral",
+    "sounds": [
+      "titancombat:vehicle/rotor_tandem"
+    ]
+  },
+  "vehicle_rotor_tiltrotor": {
+    "category": "neutral",
+    "sounds": [
+      "titancombat:vehicle/rotor_tiltrotor"
+    ]
+  },
+  "vehicle_rotor_drone": {
+    "category": "neutral",
+    "sounds": [
+      "titancombat:vehicle/rotor_drone"
+    ]
+  },
+  "vehicle_engine_diesel_heavy": {
+    "category": "neutral",
+    "sounds": [
+      "titancombat:vehicle/engine_diesel_heavy"
+    ]
+  },
+  "vehicle_engine_diesel_light": {
+    "category": "neutral",
+    "sounds": [
+      "titancombat:vehicle/engine_diesel_light"
+    ]
+  },
+  "vehicle_engine_ship": {
+    "category": "neutral",
+    "sounds": [
+      "titancombat:vehicle/engine_ship"
+    ]
   }
 }

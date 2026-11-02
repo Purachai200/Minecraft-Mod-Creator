@@ -37,6 +37,11 @@ public class TitanChinookTransporterEntity extends BaseTransportVehicleEntity {
     }
 
     @Override
+    protected boolean slingsCargo() {
+        return true;
+    }
+
+    @Override
     protected boolean shouldTitanKneel() {
         return false; // Titans / Exoframes are airlifted suspended in sling-load or upright
     }
@@ -130,10 +135,6 @@ public class TitanChinookTransporterEntity extends BaseTransportVehicleEntity {
         this.move(MoverType.SELF, this.getDeltaMovement());
         this.resetFallDistance();
 
-        // Sound effect for dual turboshaft engines
-        if (this.tickCount % 20 == 0 && Math.abs(this.currentSpeed) > 0.1D) {
-            this.level().playSound(null, this.blockPosition(), SoundEvents.PHANTOM_FLAP, SoundSource.PLAYERS, 1.8F, 0.75F);
-        }
     }
 
     @Override
