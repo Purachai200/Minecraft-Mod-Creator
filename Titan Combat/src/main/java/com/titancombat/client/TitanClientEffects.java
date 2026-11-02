@@ -65,17 +65,50 @@ public final class TitanClientEffects {
         shakeNearby(titan, base, 18.0D);
     }
 
-    /** Howitzer shot: muzzle flash and a cloud of smoke around the back mount, and a camera kick for the pilot. */
+    /** Howitzer shot: concussive muzzle blast, backblast smoke ring, ground shockwave, and camera kick. */
     public static void onHowitzerFired(BaseTitanEntity titan) {
         Level level = titan.level();
         RandomSource r = titan.getRandom();
         Vec3 m = titan.getArtilleryMuzzle();
+
+        // 1. Muzzle concussive flash & expanding smoke ring
         level.addParticle(ParticleTypes.FLASH, m.x, m.y + 1.0D, m.z, 0, 0, 0);
-        for (int i = 0; i < 14; i++) {
-            level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, m.x, m.y, m.z,
-                    (r.nextDouble() - 0.5D) * 0.15D, 0.05D + r.nextDouble() * 0.08D, (r.nextDouble() - 0.5D) * 0.15D);
+        for (int i = 0; i < 36; i++) {
+            double angle = (i / 36.0D) * Math.PI * 2.0D;
+            double speed = 0.25D + r.nextDouble() * 0.15D;
+            double vx = Math.cos(angle) * speed;
+            double vz = Math.sin(angle) * speed;
+            double vy = 0.08D + r.nextDouble() * 0.12D;
+            level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, m.x, m.y, m.z, vx, vy, vz);
+            if (i % 3 == 0) {
+                level.addParticle(ParticleTypes.LARGE_SMOKE, m.x, m.y, m.z, vx * 0.6D, vy, vz * 0.6D);
+            }
         }
-        if (isPilot(titan)) CockpitCamera.addRecoil(3.0F);
+
+        // 2. Breech backblast smoke venting backward from shoulder mount
+        float yawRad = titan.yBodyRot * ((float) Math.PI / 180.0F);
+        double bx = Math.sin(yawRad), bz = -Math.cos(yawRad);
+        for (int i = 0; i < 16; i++) {
+            level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                    m.x + bx * 0.8D, m.y - 0.2D, m.z + bz * 0.8D,
+                    bx * 0.2D + (r.nextDouble() - 0.5D) * 0.1D,
+                    0.05D + r.nextDouble() * 0.05D,
+                    bz * 0.2D + (r.nextDouble() - 0.5D) * 0.1D);
+        }
+
+        // 3. Ground dust shockwave around the titan's feet
+        double groundY = titan.getY() + 0.1D;
+        for (int i = 0; i < 24; i++) {
+            double angle = r.nextDouble() * Math.PI * 2.0D;
+            double dist = 1.2D + r.nextDouble() * 1.8D;
+            double px = titan.getX() + Math.cos(angle) * dist;
+            double pz = titan.getZ() + Math.sin(angle) * dist;
+            level.addParticle(ParticleTypes.POOF, px, groundY, pz,
+                    Math.cos(angle) * 0.18D, 0.04D, Math.sin(angle) * 0.18D);
+        }
+
+        shakeNearby(titan, 0.65F, 24.0D);
+        if (isPilot(titan)) CockpitCamera.addRecoil(4.5F);
     }
 
     public static void onEntityEvent(BaseTitanEntity titan, byte id) {

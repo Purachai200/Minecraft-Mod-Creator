@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "titancombat:item/mobile_suit_trailer"
+  }
+}

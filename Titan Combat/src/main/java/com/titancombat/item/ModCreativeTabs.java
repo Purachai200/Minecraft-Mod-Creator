@@ -22,12 +22,47 @@ public class ModCreativeTabs {
                         // Deployers & Transponders
                         output.accept(ModItems.TITAN_DROP_BEACON.get());
                         output.accept(ModItems.TROOPER_BEACON.get());
+                        output.accept(ModItems.TITAN_FRAME_BEACON.get());
+                        output.accept(ModItems.STRIKER_FRAME_BEACON.get());
+                        output.accept(ModItems.VANGUARD_FRAME_BEACON.get());
+                        output.accept(ModItems.COLOSSUS_FRAME_BEACON.get());
+                        output.accept(ModItems.TERRAIN_FRAME_BEACON.get());
+                        output.accept(ModItems.CYCLOPS_FRAME_BEACON.get());
+                        output.accept(ModItems.SPIDER_FRAME_BEACON.get());
+                        // Modular Frame Armor Archetypes (All 17 Theme Variants registered into JEI / Creative Tab)
+                        for (com.titancombat.entity.TitanArmorTheme theme : com.titancombat.entity.TitanArmorTheme.values()) {
+                            ItemStack head = new ItemStack(ModItems.TITAN_ARMOR_HEAD.get());
+                            TitanArmorItem.setTheme(head, theme);
+                            output.accept(head);
+
+                            ItemStack chest = new ItemStack(ModItems.TITAN_ARMOR_CHEST.get());
+                            TitanArmorItem.setTheme(chest, theme);
+                            output.accept(chest);
+
+                            ItemStack arms = new ItemStack(ModItems.TITAN_ARMOR_ARMS.get());
+                            TitanArmorItem.setTheme(arms, theme);
+                            output.accept(arms);
+
+                            ItemStack legs = new ItemStack(ModItems.TITAN_ARMOR_LEGS.get());
+                            TitanArmorItem.setTheme(legs, theme);
+                            output.accept(legs);
+                        }
+                        output.accept(ModItems.MODULE_CLOAKING.get());
+                        output.accept(ModItems.MODULE_PHASE_WARP.get());
+                        output.accept(ModItems.MODULE_SONAR_SCANNER.get());
                         output.accept(ModItems.HANGAR_TRANSPONDER.get());
                         output.accept(ModItems.PILOT_LICENSE.get());
                         output.accept(ModItems.TRANSPORT_WINCH.get());
+                        output.accept(ModItems.VEHICLE_WRENCH.get());
                         output.accept(ModItems.HAULER_TRUCK.get());
                         output.accept(ModItems.CARGO_BARGE.get());
                         output.accept(ModItems.SKYCRANE_DRONE.get());
+                        output.accept(ModItems.OCEAN_CARRIER.get());
+                        output.accept(ModItems.TACTICAL_TRUCK.get());
+                        output.accept(ModItems.CHINOOK_TRANSPORTER.get());
+                        output.accept(ModItems.V22_OSPREY.get());
+                        output.accept(ModItems.ARMORED_APC.get());
+                        output.accept(ModItems.MOBILE_SUIT_TRAILER.get());
                         output.accept(ModBlocks.HANGAR_DOCK.get());
 
                         // Maintenance & Weaponry
@@ -47,6 +82,9 @@ public class ModCreativeTabs {
                         }
                         output.accept(ModItems.HOWITZER_MODULE.get());
                         output.accept(ModItems.HOWITZER_SHELLS.get());
+                        output.accept(ModItems.HOWITZER_SMOKE_SHELLS.get());
+                        output.accept(ModItems.ROCKET_LAUNCHER_MODULE.get());
+                        output.accept(ModItems.AMMO_ROCKET_SALVO.get());
                         output.accept(ModItems.PAINT_SPRAY_CAN.get());
 
                         // Modular Assembly Components

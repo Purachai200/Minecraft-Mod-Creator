@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "ICI",
+    "IMI",
+    "III"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_block"
+    },
+    "C": {
+      "item": "minecraft:copper_block"
+    },
+    "M": {
+      "item": "titancombat:weapon_mount"
+    }
+  },
+  "result": {
+    "item": "titancombat:weapon_rotary_machine_gun",
+    "count": 1
+  }
+}

@@ -38,6 +38,14 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
             new ResourceLocation(TitanCombatMod.MODID, "textures/item/weapon_mount.png");
     private static final ResourceLocation GHOST_FLIGHT =
             new ResourceLocation(TitanCombatMod.MODID, "textures/item/flight_module_rocket_jetpack.png");
+    private static final ResourceLocation GHOST_HEAD =
+            new ResourceLocation(TitanCombatMod.MODID, "textures/item/titan_armor_head.png");
+    private static final ResourceLocation GHOST_CHEST =
+            new ResourceLocation(TitanCombatMod.MODID, "textures/item/titan_armor_chest.png");
+    private static final ResourceLocation GHOST_ARMS =
+            new ResourceLocation(TitanCombatMod.MODID, "textures/item/titan_armor_arms.png");
+    private static final ResourceLocation GHOST_LEGS =
+            new ResourceLocation(TitanCombatMod.MODID, "textures/item/titan_armor_legs.png");
 
     private static final int W = 300;
     private static final int H = 222;
@@ -172,6 +180,7 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
         groupBox(g, x + MUNI_X0, y + MUNI_Y0, x + MUNI_X1, y + MUNI_Y1, CYAN);
         groupBox(g, x + CARGO_X0, y + CARGO_Y0, x + CARGO_X1, y + CARGO_Y1, DIM);
         groupBox(g, x + WEAPON_X0, y + WEAPON_Y0, x + WEAPON_X1, y + WEAPON_Y1, GOLD);
+        groupBox(g, x + 18, y + 130, x + 44, y + 218, CYAN);
 
         // ---------------------------------------------------------------- slot frames (from real slot positions)
         for (int i = 0; i < this.menu.slots.size(); i++) {
@@ -181,6 +190,7 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
             else if (i == TitanMenu.WEAPON_SLOT) accent = GOLD;
             else if (i == TitanMenu.FLIGHT_SLOT) accent = CYAN;
             else if (i == TitanMenu.AMMO_SLOT_1 || i == TitanMenu.AMMO_SLOT_2) accent = CYAN;
+            else if (i >= TitanMenu.ARMOR_HEAD_SLOT && i <= TitanMenu.ARMOR_LEGS_SLOT) accent = CYAN;
             else if (i < TitanMenu.CONTAINER_SIZE) accent = DIM;
             else if (i >= TitanMenu.CONTAINER_SIZE + 27) accent = CYAN; // hotbar
             else accent = 0x3E6A78;
@@ -207,6 +217,23 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
         Slot flightSlot = this.menu.slots.get(TitanMenu.FLIGHT_SLOT);
         if (!flightSlot.hasItem()) {
             tex(g, GHOST_FLIGHT, x + flightSlot.x, y + flightSlot.y, 16, 16, 0, 0, 16, 16, 16, 16, 0x9FB8C0, 0.28F);
+        }
+
+        Slot headSlot = this.menu.slots.get(TitanMenu.ARMOR_HEAD_SLOT);
+        if (!headSlot.hasItem()) {
+            tex(g, GHOST_HEAD, x + headSlot.x, y + headSlot.y, 16, 16, 0, 0, 16, 16, 16, 16, 0x9FB8C0, 0.28F);
+        }
+        Slot chestSlot = this.menu.slots.get(TitanMenu.ARMOR_CHEST_SLOT);
+        if (!chestSlot.hasItem()) {
+            tex(g, GHOST_CHEST, x + chestSlot.x, y + chestSlot.y, 16, 16, 0, 0, 16, 16, 16, 16, 0x9FB8C0, 0.28F);
+        }
+        Slot armsSlot = this.menu.slots.get(TitanMenu.ARMOR_ARMS_SLOT);
+        if (!armsSlot.hasItem()) {
+            tex(g, GHOST_ARMS, x + armsSlot.x, y + armsSlot.y, 16, 16, 0, 0, 16, 16, 16, 16, 0x9FB8C0, 0.28F);
+        }
+        Slot legsSlot = this.menu.slots.get(TitanMenu.ARMOR_LEGS_SLOT);
+        if (!legsSlot.hasItem()) {
+            tex(g, GHOST_LEGS, x + legsSlot.x, y + legsSlot.y, 16, 16, 0, 0, 16, 16, 16, 16, 0x9FB8C0, 0.28F);
         }
 
         // pilot hotbar marker
@@ -339,6 +366,7 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
         }
 
         // cargo + pilot
+        g.drawString(this.font, "ARMOR", 14, 126, 0xFF00E5FF, false);
         g.drawString(this.font, lblCargo, CARGO_X0 + 5, CARGO_Y0 + 4, 0xFFAFC4CC, false);
         g.drawString(this.font, lblPilot, TitanMenu.INV_X, this.inventoryLabelY, 0xFF7FB8C8, false);
     }

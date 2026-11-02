@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    { "item": "titancombat:chassis_frame" },
+    { "item": "minecraft:iron_block" },
+    { "item": "minecraft:iron_ingot" },
+    { "item": "minecraft:copper_ingot" },
+    { "item": "minecraft:redstone" }
+  ],
+  "result": {
+    "item": "titancombat:titan_armor_chest",
+    "count": 1
+  }
+}

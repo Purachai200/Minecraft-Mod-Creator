@@ -1,0 +1,183 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.mobile_suit_trailer.idle": {
+      "loop": true,
+      "bones": {}
+    },
+    "animation.mobile_suit_trailer.drive": {
+      "loop": true,
+      "animation_length": 1.0,
+      "bones": {
+        "cab_wheel_l1": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "1.0": [
+              360,
+              0,
+              0
+            ]
+          }
+        },
+        "cab_wheel_l2": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "1.0": [
+              360,
+              0,
+              0
+            ]
+          }
+        },
+        "cab_wheel_r1": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "1.0": [
+              360,
+              0,
+              0
+            ]
+          }
+        },
+        "cab_wheel_r2": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "1.0": [
+              360,
+              0,
+              0
+            ]
+          }
+        },
+        "trailer_wheel_l1": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "1.0": [
+              360,
+              0,
+              0
+            ]
+          }
+        },
+        "trailer_wheel_l2": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "1.0": [
+              360,
+              0,
+              0
+            ]
+          }
+        },
+        "trailer_wheel_l3": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "1.0": [
+              360,
+              0,
+              0
+            ]
+          }
+        },
+        "trailer_wheel_l4": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "1.0": [
+              360,
+              0,
+              0
+            ]
+          }
+        },
+        "trailer_wheel_r1": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "1.0": [
+              360,
+              0,
+              0
+            ]
+          }
+        },
+        "trailer_wheel_r2": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "1.0": [
+              360,
+              0,
+              0
+            ]
+          }
+        },
+        "trailer_wheel_r3": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "1.0": [
+              360,
+              0,
+              0
+            ]
+          }
+        },
+        "trailer_wheel_r4": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "1.0": [
+              360,
+              0,
+              0
+            ]
+          }
+        }
+      }
+    }
+  }
+}

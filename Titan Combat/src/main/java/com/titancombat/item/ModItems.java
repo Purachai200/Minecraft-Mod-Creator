@@ -61,6 +61,27 @@ public class ModItems {
     public static final RegistryObject<Item> SKYCRANE_DRONE = ITEMS.register("skycrane_drone",
             () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.SKYCRANE_DRONE::get, "Heavy Sky-Crane Drone", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
+    public static final RegistryObject<Item> OCEAN_CARRIER = ITEMS.register("ocean_carrier",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.OCEAN_CARRIER::get, "Oceanic Super-Carrier Barge", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> TACTICAL_TRUCK = ITEMS.register("tactical_truck",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.TACTICAL_TRUCK::get, "Heavy Tactical Technical", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> CHINOOK_TRANSPORTER = ITEMS.register("chinook_transporter",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.CHINOOK_TRANSPORTER::get, "CH-47 Chinook Transporter", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> V22_OSPREY = ITEMS.register("v22_osprey",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.V22_OSPREY::get, "V-22 Osprey Tiltrotor", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> ARMORED_APC = ITEMS.register("armored_apc",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.ARMORED_APC::get, "Armored Combat 8x8 APC", new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+
+    public static final RegistryObject<Item> MOBILE_SUIT_TRAILER = ITEMS.register("mobile_suit_trailer",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.MOBILE_SUIT_TRAILER::get, "Mobile Suit Flatbed Trailer", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> VEHICLE_WRENCH = ITEMS.register("vehicle_wrench",
+            () -> new VehicleWrenchItem(new Item.Properties().stacksTo(1).durability(250).rarity(Rarity.RARE)));
+
     // Assembly Components
     public static final RegistryObject<Item> CHASSIS_FRAME = ITEMS.register("chassis_frame",
             () -> new Item(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
@@ -83,6 +104,48 @@ public class ModItems {
             () -> new HowitzerModuleItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     public static final RegistryObject<Item> HOWITZER_SHELLS = ITEMS.register("ammo_artillery",
             () -> new Item(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
+    public static final RegistryObject<Item> HOWITZER_SMOKE_SHELLS = ITEMS.register("ammo_artillery_smoke",
+            () -> new Item(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
+
+    // Back-mounted rocket pod module and ammo
+    public static final RegistryObject<Item> ROCKET_LAUNCHER_MODULE = ITEMS.register("rocket_launcher_module",
+            () -> new RocketLauncherModuleItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> AMMO_ROCKET_SALVO = ITEMS.register("ammo_rocket_salvo",
+            () -> new Item(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
+
+    // Modular Titan Armor Parts
+    public static final RegistryObject<Item> TITAN_ARMOR_HEAD = ITEMS.register("titan_armor_head",
+            () -> new TitanArmorItem(TitanArmorItem.ArmorSlot.HEAD, new Item.Properties()));
+    public static final RegistryObject<Item> TITAN_ARMOR_CHEST = ITEMS.register("titan_armor_chest",
+            () -> new TitanArmorItem(TitanArmorItem.ArmorSlot.CHEST, new Item.Properties()));
+    public static final RegistryObject<Item> TITAN_ARMOR_ARMS = ITEMS.register("titan_armor_arms",
+            () -> new TitanArmorItem(TitanArmorItem.ArmorSlot.ARMS, new Item.Properties()));
+    public static final RegistryObject<Item> TITAN_ARMOR_LEGS = ITEMS.register("titan_armor_legs",
+            () -> new TitanArmorItem(TitanArmorItem.ArmorSlot.LEGS, new Item.Properties()));
+
+    // Back-Mounted Core Function Modules (Slot 13)
+    public static final RegistryObject<Item> MODULE_CLOAKING = ITEMS.register("module_cloaking",
+            () -> new TitanCoreModuleItem(TitanCoreModuleItem.CoreType.CLOAKING, new Item.Properties()));
+    public static final RegistryObject<Item> MODULE_PHASE_WARP = ITEMS.register("module_phase_warp",
+            () -> new TitanCoreModuleItem(TitanCoreModuleItem.CoreType.PHASE_WARP, new Item.Properties()));
+    public static final RegistryObject<Item> MODULE_SONAR_SCANNER = ITEMS.register("module_sonar_scanner",
+            () -> new TitanCoreModuleItem(TitanCoreModuleItem.CoreType.SONAR_SCANNER, new Item.Properties()));
+
+    // Dedicated Frame Beacons for quick deployment
+    public static final RegistryObject<Item> TITAN_FRAME_BEACON = ITEMS.register("titan_frame_beacon",
+            () -> new TitanFrameBeaconItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> STRIKER_FRAME_BEACON = ITEMS.register("striker_frame_beacon",
+            () -> new TitanFrameBeaconItem(com.titancombat.entity.TitanClass.STRIKER_FRAME, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> VANGUARD_FRAME_BEACON = ITEMS.register("vanguard_frame_beacon",
+            () -> new TitanFrameBeaconItem(com.titancombat.entity.TitanClass.VANGUARD_FRAME, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> COLOSSUS_FRAME_BEACON = ITEMS.register("colossus_frame_beacon",
+            () -> new TitanFrameBeaconItem(com.titancombat.entity.TitanClass.COLOSSUS_FRAME, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> TERRAIN_FRAME_BEACON = ITEMS.register("terrain_frame_beacon",
+            () -> new TitanFrameBeaconItem(com.titancombat.entity.TitanClass.TERRAIN_FRAME, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> CYCLOPS_FRAME_BEACON = ITEMS.register("cyclops_frame_beacon",
+            () -> new TitanFrameBeaconItem(com.titancombat.entity.TitanClass.CYCLOPS_FRAME, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> SPIDER_FRAME_BEACON = ITEMS.register("spider_frame_beacon",
+            () -> new TitanFrameBeaconItem(com.titancombat.entity.TitanClass.SPIDER_FRAME, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
     public static final Map<TitanWeapon, RegistryObject<Item>> WEAPON_MODULES = new EnumMap<>(TitanWeapon.class);
     public static final Map<TitanWeapon, RegistryObject<Item>> WEAPON_MAGAZINES = new EnumMap<>(TitanWeapon.class);

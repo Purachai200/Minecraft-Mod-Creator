@@ -258,19 +258,34 @@ public class KeyInputHandler {
             }
         }
 
+        // Open Titan Customization / Cockpit Bay via 'E' (keyInventory) when looking at a Titan or Riding
+        if (mc.player != null && mc.screen == null && mc.options.keyInventory.consumeClick()) {
+            if (mc.player.isPassenger() && mc.player.getVehicle() instanceof BaseTitanEntity) {
+                mc.player.sendOpenInventory();
+            } else if (mc.hitResult instanceof net.minecraft.world.phys.EntityHitResult eHit
+                    && eHit.getEntity() instanceof BaseTitanEntity targetTitan
+                    && mc.player.distanceToSqr(targetTitan) <= 49.0D) {
+                ModNetworking.sendToServer(new com.titancombat.network.OpenTitanInventoryC2SPacket(targetTitan.getId()));
+            } else {
+                mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player));
+            }
+        }
+
         if (!piloting || mc.screen != null) return;
 
-        // Artillery fire control: rangefinder mark, coordinate entry, and a marker ring on the target.
-        if (mc.player.getVehicle() instanceof BaseTitanEntity t && t.hasHowitzer()) {
-            while (KEY_MARK_TARGET.consumeClick()) {
-                net.minecraft.world.phys.Vec3 p = crosshairTarget(mc, 320.0D);
-                ModNetworking.sendToServer(new com.titancombat.network.ArtilleryTargetC2SPacket(
-                        net.minecraft.util.Mth.floor(p.x), true, net.minecraft.util.Mth.floor(p.y), net.minecraft.util.Mth.floor(p.z)));
+        // Back weapon fire control (Howitzer / Rocket Launcher Pod)
+        if (mc.player.getVehicle() instanceof BaseTitanEntity t && (t.hasHowitzer() || t.hasRocketPod())) {
+            if (t.hasHowitzer()) {
+                while (KEY_MARK_TARGET.consumeClick()) {
+                    net.minecraft.world.phys.Vec3 p = crosshairTarget(mc, 320.0D);
+                    ModNetworking.sendToServer(new com.titancombat.network.ArtilleryTargetC2SPacket(
+                            net.minecraft.util.Mth.floor(p.x), true, net.minecraft.util.Mth.floor(p.y), net.minecraft.util.Mth.floor(p.z)));
+                }
             }
             while (KEY_FIRE_HOWITZER.consumeClick()) {
                 ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.FIRE_HOWITZER));
             }
-            if (KEY_TACTICAL_MAP.consumeClick()) {
+            if (t.hasHowitzer() && KEY_TACTICAL_MAP.consumeClick()) {
                 mc.setScreen(new com.titancombat.client.gui.ArtilleryMapScreen(t));
                 return;
             }

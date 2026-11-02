@@ -34,6 +34,16 @@ public class PaintSprayCanItem extends Item {
             }
             return InteractionResult.sidedSuccess(player.level().isClientSide);
         }
+        if (target instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity vehicle) {
+            if (!player.level().isClientSide) {
+                MechFaction[] factions = MechFaction.values();
+                int nextIndex = (vehicle.getFaction().ordinal() + (player.isShiftKeyDown() ? -1 : 1) + factions.length) % factions.length;
+                vehicle.setFaction(factions[nextIndex]);
+                player.sendSystemMessage(Component.translatable("message.titancombat.faction_switched", factions[nextIndex].getDisplayName()));
+                player.level().playSound(null, vehicle.blockPosition(), SoundEvents.ANVIL_USE, SoundSource.PLAYERS, 0.8F, 1.6F);
+            }
+            return InteractionResult.sidedSuccess(player.level().isClientSide);
+        }
         return super.interactLivingEntity(stack, player, target, hand);
     }
 }

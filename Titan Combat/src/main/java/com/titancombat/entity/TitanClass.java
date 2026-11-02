@@ -25,7 +25,20 @@ public enum TitanClass {
             4.8F, 6.2F, 5.70F, 0.50F, 4.10F, 1.40F),
     // Mass-produced cloaked infiltrator, also on the Trooper skeleton; Defense key toggles the cloak.
     SHADE("shade", "Shade", "Cloaked Infiltrator Frame", 200.0D, 70.0F, 0.34D, 18.0D, 2.4F, 4.6F,
-            4.8F, 6.2F, 5.70F, 0.50F, 4.10F, 1.40F);
+            4.8F, 6.2F, 5.70F, 0.50F, 4.10F, 1.40F),
+    // Modular Titan Frames: starting bare, accepting modular armor attachments
+    STRIKER_FRAME("striker_frame", "Striker Frame", "Agile Modular Frame", 220.0D, 60.0F, 0.38D, 22.0D, 2.4F, 4.6F,
+            4.8F, 7.2F, 5.70F, 0.50F, 4.10F, 1.40F),
+    VANGUARD_FRAME("vanguard_frame", "Vanguard Frame", "Medium Modular Frame", 320.0D, 100.0F, 0.31D, 28.0D, 2.6F, 4.8F,
+            4.8F, 6.4F, 5.70F, 0.50F, 4.10F, 1.40F),
+    COLOSSUS_FRAME("colossus_frame", "Colossus Frame", "Heavy Modular Frame", 480.0D, 140.0F, 0.24D, 35.0D, 2.9F, 5.1F,
+            4.2F, 5.6F, 5.70F, 0.50F, 4.10F, 1.40F),
+    TERRAIN_FRAME("terrain_frame", "Terrain Frame", "Tactical Ground Frame", 380.0D, 110.0F, 0.28D, 26.0D, 2.6F, 4.8F,
+            4.8F, 6.4F, 5.70F, 0.50F, 4.10F, 1.40F),
+    CYCLOPS_FRAME("cyclops_frame", "Cyclops Frame", "Industrial Enforcer Frame", 440.0D, 130.0F, 0.25D, 32.0D, 2.8F, 4.9F,
+            4.4F, 5.8F, 5.50F, 0.60F, 4.00F, 1.30F),
+    SPIDER_FRAME("spider_frame", "Spider Frame", "Heavy Anti-Tank Hexapod", 420.0D, 120.0F, 0.30D, 30.0D, 4.8F, 4.3F,
+            5.0F, 7.0F, 3.24F, -1.08F, 2.84F, -1.08F);
 
     private final String id;
     private final String displayName;
@@ -72,7 +85,12 @@ public enum TitanClass {
             case ION, TONE, MONARCH, TROOPER -> 1.0F;
             case SCOUT -> 0.7F;
             case SHADE -> 0.85F;
-            case SCORCH, LEGION -> 1.45F;
+            case STRIKER_FRAME -> 0.75F;
+            case VANGUARD_FRAME -> 1.0F;
+            case COLOSSUS_FRAME, SCORCH, LEGION -> 1.45F;
+            case TERRAIN_FRAME -> 1.15F;
+            case CYCLOPS_FRAME -> 1.35F;
+            case SPIDER_FRAME -> 0.95F;
         };
     }
 
@@ -142,6 +160,12 @@ public enum TitanClass {
             case TROOPER -> new double[]{0.60D, 4.71D, 1.69D};
             case SCOUT -> new double[]{0.60D, 4.45D, 1.41D};
             case SHADE -> new double[]{0.60D, 4.58D, 1.30D};
+            case STRIKER_FRAME -> new double[]{0.55D, 4.60D, 1.50D};
+            case VANGUARD_FRAME -> new double[]{0.60D, 4.75D, 1.70D};
+            case COLOSSUS_FRAME -> new double[]{0.70D, 4.80D, 2.20D};
+            case TERRAIN_FRAME -> new double[]{0.60D, 4.75D, 1.70D};
+            case CYCLOPS_FRAME -> new double[]{0.68D, 4.80D, 2.10D};
+            case SPIDER_FRAME -> new double[]{1.00D, 3.38D, 1.62D};
         };
     }
 
@@ -189,7 +213,7 @@ public enum TitanClass {
             case LEGION -> running ? 0.53F : 0.62F;
             case MONARCH -> running ? 0.13F : 0.25F;
             case NORTHSTAR -> running ? 0.26F : 0.10F;
-            case TROOPER, SCOUT, SHADE -> running ? 0.25F : 0.30F;
+            case TROOPER, SCOUT, SHADE, STRIKER_FRAME, VANGUARD_FRAME, COLOSSUS_FRAME, TERRAIN_FRAME, CYCLOPS_FRAME, SPIDER_FRAME -> running ? 0.25F : 0.30F;
         };
     }
 

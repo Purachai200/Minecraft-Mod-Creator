@@ -1,0 +1,113 @@
+package com.titancombat.client.renderer;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
+import com.titancombat.TitanCombatMod;
+import com.titancombat.entity.TitanBulletEntity;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
+
+public class TitanBulletRenderer extends EntityRenderer<TitanBulletEntity> {
+    private static final ResourceLocation TEXTURE = new ResourceLocation(TitanCombatMod.MODID, "textures/entity/projectiles/bullet_cuboid.png");
+
+    public TitanBulletRenderer(EntityRendererProvider.Context context) {
+        super(context);
+    }
+
+    @Override
+    public void render(TitanBulletEntity entity, float entityYaw, float partialTicks, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
+        poseStack.pushPose();
+        poseStack.mulPose(Axis.YP.rotationDegrees(Mth.lerp(partialTicks, entity.yRotO, entity.getYRot()) - 90.0F));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(Mth.lerp(partialTicks, entity.xRotO, entity.getXRot())));
+
+        VertexConsumer vc = buffer.getBuffer(RenderType.entityCutoutNoCull(this.getTextureLocation(entity)));
+        PoseStack.Pose last = poseStack.last();
+        Matrix4f pose = last.pose();
+        Matrix3f normal = last.normal();
+
+        // 3D Titan-Caliber Tracer Cuboid:
+        // Length 1.4m (X from -1.10 to +0.30), Cross-section 0.18m x 0.18m (Y & Z from -0.09 to +0.09)
+        float x0 = -1.10F, x1 = 0.30F;
+        float y0 = -0.09F, y1 = 0.09F;
+        float z0 = -0.09F, z1 = 0.09F;
+
+        int fullBright = LightTexture.FULL_BRIGHT;
+
+        // 1. Front Nose Face (+X) - Incandescent kinetic penetrator tip
+        renderFace(vc, pose, normal,
+                x1, y0, z1, 0.625F, 0.375F,
+                x1, y0, z0, 1.000F, 0.375F,
+                x1, y1, z0, 1.000F, 0.000F,
+                x1, y1, z1, 0.625F, 0.000F,
+                1, 0, 0, 255, 255, 240, 255, fullBright);
+
+        // 2. Rear Tracer Core (-X) - Hot burning tracer rocket combustion base
+        renderFace(vc, pose, normal,
+                x0, y0, z0, 0.625F, 0.750F,
+                x0, y0, z1, 1.000F, 0.750F,
+                x0, y1, z1, 1.000F, 0.375F,
+                x0, y1, z0, 0.625F, 0.375F,
+                -1, 0, 0, 255, 160, 25, 255, fullBright);
+
+        // 3. Top Square Side (+Y) - Golden-amber tracer streak
+        renderFace(vc, pose, normal,
+                x0, y1, z0, 0.000F, 0.000F,
+                x0, y1, z1, 0.000F, 0.500F,
+                x1, y1, z1, 0.625F, 0.500F,
+                x1, y1, z0, 0.625F, 0.000F,
+                0, 1, 0, 255, 240, 120, 255, fullBright);
+
+        // 4. Bottom Square Side (-Y) - Shaded golden-amber underside
+        renderFace(vc, pose, normal,
+                x0, y0, z1, 0.000F, 0.500F,
+                x0, y0, z0, 0.000F, 1.000F,
+                x1, y0, z0, 0.625F, 1.000F,
+                x1, y0, z1, 0.625F, 0.500F,
+                0, -1, 0, 240, 190, 60, 255, fullBright);
+
+        // 5. Right Square Side (+Z) - Kinetic tracer flank
+        renderFace(vc, pose, normal,
+                x0, y0, z1, 0.000F, 0.500F,
+                x1, y0, z1, 0.625F, 0.500F,
+                x1, y1, z1, 0.625F, 0.000F,
+                x0, y1, z1, 0.000F, 0.000F,
+                0, 0, 1, 255, 220, 90, 255, fullBright);
+
+        // 6. Left Square Side (-Z) - Kinetic tracer flank
+        renderFace(vc, pose, normal,
+                x1, y0, z0, 0.625F, 0.500F,
+                x0, y0, z0, 0.000F, 0.500F,
+                x0, y1, z0, 0.000F, 0.000F,
+                x1, y1, z0, 0.625F, 0.000F,
+                0, 0, -1, 245, 210, 80, 255, fullBright);
+
+        poseStack.popPose();
+        super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
+    }
+
+    private static void renderFace(VertexConsumer vc, Matrix4f pose, Matrix3f normal,
+                                  float x1, float y1, float z1, float u1, float v1,
+                                  float x2, float y2, float z2, float u2, float v2,
+                                  float x3, float y3, float z3, float u3, float v3,
+                                  float x4, float y4, float z4, float u4, float v4,
+                                  float nx, float ny, float nz,
+                                  int r, int g, int b, int a, int light) {
+        vc.vertex(pose, x1, y1, z1).color(r, g, b, a).uv(u1, v1).overlayCoords(0, 10).uv2(light).normal(normal, nx, ny, nz).endVertex();
+        vc.vertex(pose, x2, y2, z2).color(r, g, b, a).uv(u2, v2).overlayCoords(0, 10).uv2(light).normal(normal, nx, ny, nz).endVertex();
+        vc.vertex(pose, x3, y3, z3).color(r, g, b, a).uv(u3, v3).overlayCoords(0, 10).uv2(light).normal(normal, nx, ny, nz).endVertex();
+        vc.vertex(pose, x4, y4, z4).color(r, g, b, a).uv(u4, v4).overlayCoords(0, 10).uv2(light).normal(normal, nx, ny, nz).endVertex();
+    }
+
+    @Override
+    public ResourceLocation getTextureLocation(TitanBulletEntity entity) {
+        return TEXTURE;
+    }
+}

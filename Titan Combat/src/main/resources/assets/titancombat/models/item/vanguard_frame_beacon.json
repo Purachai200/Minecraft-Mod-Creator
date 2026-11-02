@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "titancombat:item/vanguard_frame_beacon"
+  }
+}

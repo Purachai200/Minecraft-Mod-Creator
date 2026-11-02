@@ -52,6 +52,12 @@ public class ModNetworking {
                 .encoder(MechEjectC2SPacket::toBytes)
                 .consumerMainThread(MechEjectC2SPacket::handle)
                 .add();
+
+        INSTANCE.messageBuilder(OpenTitanInventoryC2SPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(OpenTitanInventoryC2SPacket::new)
+                .encoder(OpenTitanInventoryC2SPacket::toBytes)
+                .consumerMainThread(OpenTitanInventoryC2SPacket::handle)
+                .add();
     }
 
     public static <MSG> void sendToServer(MSG message) {

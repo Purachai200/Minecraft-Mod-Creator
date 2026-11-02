@@ -61,15 +61,56 @@ public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
         boolean unarmed = !titan.hasWeapon();
         setHidden("weapon", stowed || swapped || unarmed);
         setHidden("weaponBack", !stowed || swapped || unarmed);
-        // Howitzer back module (Trooper model; TitanWeaponSwapLayer draws it on other chassis).
+        // Howitzer & Rocket Pod back modules
         boolean artillery = titan.hasHowitzer();
         setHidden("artillery", !artillery);
-        if (titan.getTitanClass() == TitanClass.TROOPER) {
-            // One weapon bone, two tool models: show only the currently mounted one.
-            boolean saw = titan.getActiveWeapon() == com.titancombat.entity.TitanWeapon.CHAINSAW;
-            boolean drill = titan.getActiveWeapon() == com.titancombat.entity.TitanWeapon.MINING_DRILL;
+        boolean rocketPod = titan.hasRocketPod();
+        setHidden("back_rocket_pod", !rocketPod);
+        if (titan instanceof com.titancombat.entity.TitanFrameEntity frame) {
+            setHidden("armor_head", !frame.hasHeadArmor());
+            setHidden("armor_chest", !frame.hasChestArmor());
+            setHidden("armor_arms", !frame.hasArmsArmor());
+            setHidden("armor_left_arm", !frame.hasArmsArmor());
+            setHidden("armor_right_arm", !frame.hasArmsArmor());
+            setHidden("armor_legs", !frame.hasLegsArmor());
+            setHidden("armor_left_leg", !frame.hasLegsArmor());
+            setHidden("armor_right_leg", !frame.hasLegsArmor());
+
+            com.titancombat.entity.TitanArmorArchetype headArch = frame.getHeadTheme().getArchetype();
+            com.titancombat.entity.TitanArmorArchetype chestArch = frame.getChestTheme().getArchetype();
+            com.titancombat.entity.TitanArmorArchetype armsArch = frame.getArmsTheme().getArchetype();
+            com.titancombat.entity.TitanArmorArchetype legsArch = frame.getLegsTheme().getArchetype();
+
+            for (com.titancombat.entity.TitanArmorArchetype arch : com.titancombat.entity.TitanArmorArchetype.values()) {
+                String aid = arch.getId();
+                setHidden("armor_head_" + aid, !frame.hasHeadArmor() || headArch != arch);
+                setHidden("armor_chest_" + aid, !frame.hasChestArmor() || chestArch != arch);
+                setHidden("armor_left_arm_" + aid, !frame.hasArmsArmor() || armsArch != arch);
+                setHidden("armor_right_arm_" + aid, !frame.hasArmsArmor() || armsArch != arch);
+                setHidden("armor_left_leg_" + aid, !frame.hasLegsArmor() || legsArch != arch);
+                setHidden("armor_right_leg_" + aid, !frame.hasLegsArmor() || legsArch != arch);
+            }
+        }
+        boolean isTrooperOrFrame = titan.getTitanClass() == TitanClass.TROOPER
+                || titan instanceof com.titancombat.entity.TitanFrameEntity;
+        if (isTrooperOrFrame) {
+            // Weapon bones: show only the currently mounted one
+            com.titancombat.entity.TitanWeapon wep = titan.getActiveWeapon();
+            boolean saw = wep == com.titancombat.entity.TitanWeapon.CHAINSAW;
+            boolean drill = wep == com.titancombat.entity.TitanWeapon.MINING_DRILL;
+            boolean rifle = wep == com.titancombat.entity.TitanWeapon.HEAVY_ASSAULT_RIFLE;
+            boolean mg = wep == com.titancombat.entity.TitanWeapon.ROTARY_MACHINE_GUN;
+            boolean rocket = wep == com.titancombat.entity.TitanWeapon.ROCKET_POD;
+
             setHidden("drill", !drill || stowed || swapped || unarmed);
             setHidden("chainsaw", !saw || stowed || swapped || unarmed);
+            setHidden("rifle", !rifle || stowed || swapped || unarmed);
+            setHidden("machine_gun", !mg || stowed || swapped || unarmed);
+            setHidden("rocket_launcher", !rocket || stowed || swapped || unarmed);
+
+            setHidden("stowed_rifle", !stowed || swapped || unarmed || !rifle);
+            setHidden("stowed_machine_gun", !stowed || swapped || unarmed || !mg);
+            setHidden("stowed_rocket_launcher", !stowed || swapped || unarmed || !rocket);
         }
         if (titan.getTitanClass() == TitanClass.SHADE) {
             // Cloak streams back with speed and ripples gently while idle.
@@ -250,6 +291,10 @@ public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
         }
         bendLeg("left", leftLift * 16.0F);
         bendLeg("right", rightLift * 16.0F);
+        bendLeg("midLeft", rightLift * 16.0F);
+        bendLeg("midRight", leftLift * 16.0F);
+        bendLeg("rearLeft", leftLift * 16.0F);
+        bendLeg("rearRight", rightLift * 16.0F);
     }
 
     private float boneRotX(String name) {

@@ -1,0 +1,82 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.tactical_truck.idle": {
+      "loop": true,
+      "animation_length": 1.0,
+      "bones": {
+        "cab": {
+          "position": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.5": [
+              0,
+              -0.1,
+              0
+            ],
+            "1.0": [
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      }
+    },
+    "animation.tactical_truck.drive": {
+      "loop": true,
+      "animation_length": 0.8,
+      "bones": {
+        "chassis": {
+          "position": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0.2,
+              0
+            ],
+            "0.4": [
+              0,
+              -0.2,
+              0
+            ],
+            "0.6": [
+              0,
+              0.2,
+              0
+            ],
+            "0.8": [
+              0,
+              0,
+              0
+            ]
+          },
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.4": [
+              0.4,
+              0,
+              0.3
+            ],
+            "0.8": [
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      }
+    }
+  }
+}

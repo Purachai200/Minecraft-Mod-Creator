@@ -1,6 +1,7 @@
 package com.titancombat.entity;
 
 import com.titancombat.gui.TitanMenu;
+import com.titancombat.item.ModItems;
 import com.titancombat.item.PaintSprayCanItem;
 import com.titancombat.sound.ModSounds;
 import net.minecraft.core.BlockPos;
@@ -11,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -91,6 +93,15 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     public static final EntityDataAccessor<Integer> DATA_HOWITZER_ROUNDS =
             SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
     public static final EntityDataAccessor<Integer> DATA_HOWITZER_RELOAD =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Boolean> DATA_HOWITZER_SMOKE =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.BOOLEAN);
+    /** Back-mounted MLRS-6 rocket launcher pod installed (back equipment slot). */
+    public static final EntityDataAccessor<Boolean> DATA_ROCKET_POD =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Integer> DATA_ROCKET_COOLDOWN =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> DATA_ROCKET_AMMO =
             SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
     /** Ticks left until the howitzer is laid on a new target (turret slewing); it can't fire before. */
     public static final EntityDataAccessor<Integer> DATA_ARTILLERY_LAYING =
@@ -216,6 +227,10 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         this.entityData.define(DATA_HOWITZER, false);
         this.entityData.define(DATA_HOWITZER_ROUNDS, 0);
         this.entityData.define(DATA_HOWITZER_RELOAD, 0);
+        this.entityData.define(DATA_HOWITZER_SMOKE, false);
+        this.entityData.define(DATA_ROCKET_POD, false);
+        this.entityData.define(DATA_ROCKET_COOLDOWN, 0);
+        this.entityData.define(DATA_ROCKET_AMMO, 0);
         this.entityData.define(DATA_FLIGHT_MODULE, -1);
         this.entityData.define(DATA_IS_FLYING, false);
     }
@@ -1506,6 +1521,10 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         return this.entityData.get(DATA_HOWITZER);
     }
 
+    public boolean hasRocketPod() {
+        return this.entityData.get(DATA_ROCKET_POD);
+    }
+
     public int getHowitzerRounds() {
         return this.entityData.get(DATA_HOWITZER_ROUNDS);
     }
@@ -1515,11 +1534,24 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     }
 
     private int howitzerCooldown = 0;
+    private int rocketSalvoCooldown = 0;
     /** Fire on lock: a target picked with "fire" on the map fires by itself once the gun is laid. */
     private boolean fireMissionPending = false;
 
     /** Server tick: install/removal from the back slot, laying countdown, auto-reload, pending fire mission. */
     private void tickHowitzer() {
+        boolean rocketInstalled = this.titanInventory.getItem(TitanMenu.FLIGHT_SLOT).getItem() instanceof com.titancombat.item.RocketLauncherModuleItem;
+        if (rocketInstalled != hasRocketPod()) {
+            this.entityData.set(DATA_ROCKET_POD, rocketInstalled);
+        }
+        if (rocketSalvoCooldown > 0) rocketSalvoCooldown--;
+        if (!this.level().isClientSide) {
+            this.entityData.set(DATA_ROCKET_COOLDOWN, rocketSalvoCooldown);
+            if (this.tickCount % 5 == 0 && (rocketInstalled || hasRocketPod())) {
+                this.entityData.set(DATA_ROCKET_AMMO, countRocketSalvoAmmo());
+            }
+        }
+
         boolean installed = this.titanInventory.getItem(TitanMenu.FLIGHT_SLOT).getItem() instanceof com.titancombat.item.HowitzerModuleItem;
         if (installed != hasHowitzer()) {
             this.entityData.set(DATA_HOWITZER, installed);
@@ -1551,31 +1583,234 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         }
     }
 
+    public boolean isHowitzerSmoke() {
+        return this.entityData.get(DATA_HOWITZER_SMOKE);
+    }
+
+    public void setHowitzerSmoke(boolean smoke) {
+        this.entityData.set(DATA_HOWITZER_SMOKE, smoke);
+    }
+
     /** One shell rack from the titan bay, else from the pilot (creative pilots load for free). */
     private boolean takeShellRack(@Nullable Player pilot) {
-        if (pilot != null && pilot.getAbilities().instabuild) return true;
-        net.minecraft.world.item.Item rack = com.titancombat.item.ModItems.HOWITZER_SHELLS.get();
+        net.minecraft.world.item.Item smokeRack = com.titancombat.item.ModItems.HOWITZER_SMOKE_SHELLS.get();
+        net.minecraft.world.item.Item regularRack = com.titancombat.item.ModItems.HOWITZER_SHELLS.get();
+
+        if (pilot != null && pilot.getAbilities().instabuild) {
+            // In creative mode, if holding smoke shells or titan bay has smoke shells, prioritize smoke
+            boolean wantsSmoke = pilot.getMainHandItem().is(smokeRack) || pilot.getOffhandItem().is(smokeRack);
+            if (!wantsSmoke) {
+                for (int i = 0; i < this.titanInventory.getContainerSize(); i++) {
+                    if (this.titanInventory.getItem(i).is(smokeRack)) {
+                        wantsSmoke = true;
+                        break;
+                    }
+                }
+            }
+            if (!wantsSmoke && isHowitzerSmoke()) wantsSmoke = true;
+            setHowitzerSmoke(wantsSmoke);
+            return true;
+        }
+
+        // Prioritize currently selected shell type, but fall back to the other if unavailable
+        net.minecraft.world.item.Item primary = isHowitzerSmoke() ? smokeRack : regularRack;
+        net.minecraft.world.item.Item secondary = isHowitzerSmoke() ? regularRack : smokeRack;
+
+        // 1. Check titan inventory for primary
         for (int i = 0; i < this.titanInventory.getContainerSize(); i++) {
             ItemStack st = this.titanInventory.getItem(i);
-            if (st.is(rack)) { st.shrink(1); return true; }
+            if (st.is(primary)) {
+                st.shrink(1);
+                setHowitzerSmoke(primary == smokeRack);
+                return true;
+            }
         }
+        // 2. Check pilot inventory for primary
         if (pilot != null) {
             for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
                 ItemStack st = pilot.getInventory().getItem(i);
-                if (st.is(rack)) { st.shrink(1); return true; }
+                if (st.is(primary)) {
+                    st.shrink(1);
+                    setHowitzerSmoke(primary == smokeRack);
+                    return true;
+                }
+            }
+        }
+        // 3. Check titan inventory for secondary fallback
+        for (int i = 0; i < this.titanInventory.getContainerSize(); i++) {
+            ItemStack st = this.titanInventory.getItem(i);
+            if (st.is(secondary)) {
+                st.shrink(1);
+                setHowitzerSmoke(secondary == smokeRack);
+                return true;
+            }
+        }
+        // 4. Check pilot inventory for secondary fallback
+        if (pilot != null) {
+            for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
+                ItemStack st = pilot.getInventory().getItem(i);
+                if (st.is(secondary)) {
+                    st.shrink(1);
+                    setHowitzerSmoke(secondary == smokeRack);
+                    return true;
+                }
             }
         }
         return false;
     }
 
+    public boolean cycleHowitzerShellType(Player pilot) {
+        if (!hasHowitzer()) return false;
+        boolean targetSmoke = !isHowitzerSmoke();
+        net.minecraft.world.item.Item targetItem = targetSmoke
+                ? com.titancombat.item.ModItems.HOWITZER_SMOKE_SHELLS.get()
+                : com.titancombat.item.ModItems.HOWITZER_SHELLS.get();
+
+        boolean hasTarget = (pilot != null && pilot.getAbilities().instabuild);
+        if (!hasTarget) {
+            for (int i = 0; i < this.titanInventory.getContainerSize(); i++) {
+                if (this.titanInventory.getItem(i).is(targetItem)) {
+                    hasTarget = true;
+                    break;
+                }
+            }
+        }
+        if (!hasTarget && pilot != null) {
+            for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
+                if (pilot.getInventory().getItem(i).is(targetItem)) {
+                    hasTarget = true;
+                    break;
+                }
+            }
+        }
+
+        if (hasTarget) {
+            setHowitzerSmoke(targetSmoke);
+            this.entityData.set(DATA_HOWITZER_ROUNDS, Howitzer.ROUNDS_PER_RACK);
+            this.entityData.set(DATA_HOWITZER_RELOAD, Howitzer.RELOAD_TICKS);
+            this.level().playSound(null, this.blockPosition(), SoundEvents.PISTON_CONTRACT, SoundSource.PLAYERS, 1.6F, 0.7F);
+            pilot.displayClientMessage(Component.translatable(targetSmoke ? "message.titancombat.howitzer_loaded_smoke" : "message.titancombat.howitzer_loaded_he"), true);
+            return true;
+        } else {
+            pilot.displayClientMessage(Component.translatable("message.titancombat.howitzer_no_alternate_ammo",
+                    targetSmoke ? "Smoke Shells" : "HE Shells"), true);
+            return false;
+        }
+    }
+
     /** Fire request from the pilot (howitzer key or map). With `onLock`, waits for the gun to be laid. */
     public void requestHowitzerFire(Player pilot, boolean onLock) {
+        if (hasRocketPod()) {
+            fireRocketPodSalvo(pilot);
+            return;
+        }
         if (!hasHowitzer()) return;
         if (onLock && getArtilleryLaying() > 0) {
             this.fireMissionPending = true;
             return;
         }
         fireHowitzer(pilot);
+    }
+
+    public boolean fireRocketPodSalvo(Player pilot) {
+        if (!hasRocketPod() || this.isSitting() || this.isBoarding() || rocketSalvoCooldown > 0) return false;
+        if (!takeRocketAmmo(pilot)) {
+            if (pilot != null) pilot.displayClientMessage(Component.translatable("message.titancombat.rocket_no_ammo"), true);
+            return false;
+        }
+
+        rocketSalvoCooldown = 25; // 1.25s salvo cooldown
+        consumeEnergy(20);
+
+        Vec3 shoulderPos = this.position().add(0, this.getBbHeight() * 0.88D, 0);
+        float yawRad = this.yBodyRot * ((float) Math.PI / 180.0F);
+        Vec3 right = new Vec3(-Math.cos(yawRad), 0, -Math.sin(yawRad));
+        Vec3 forward = new Vec3(-Math.sin(yawRad), 0, Math.cos(yawRad));
+        Vec3 launchOrigin = shoulderPos.add(right.scale(1.2D)).add(forward.scale(-0.2D));
+
+        Vec3 aimTarget = computeAimPoint(pilot);
+        Vec3 baseAim = aimTarget.subtract(launchOrigin).normalize();
+
+        // Launch 4 rockets in a rapid burst
+        for (int i = 0; i < 4; i++) {
+            final int delay = i * 2;
+            final double spreadX = (this.random.nextDouble() - 0.5D) * 0.12D;
+            final double spreadY = (this.random.nextDouble() - 0.5D) * 0.12D;
+            final double spreadZ = (this.random.nextDouble() - 0.5D) * 0.12D;
+
+            if (delay == 0) {
+                spawnRocket(pilot, launchOrigin, baseAim.add(spreadX, spreadY, spreadZ));
+            } else if (this.level() instanceof ServerLevel serverLevel) {
+                serverLevel.getServer().tell(new net.minecraft.server.TickTask(serverLevel.getServer().getTickCount() + delay, () -> {
+                    if (this.isAlive()) {
+                        spawnRocket(pilot, launchOrigin, baseAim.add(spreadX, spreadY, spreadZ));
+                    }
+                }));
+            }
+        }
+
+        this.level().playSound(null, this.blockPosition(), ModSounds.TONE_FIRE.get(), SoundSource.PLAYERS, 2.5F, 1.0F);
+        return true;
+    }
+
+    private void spawnRocket(Player pilot, Vec3 origin, Vec3 dir) {
+        TitanBulletEntity rocket = new TitanBulletEntity(this.level(), pilot, 28.0F).withWeapon(TitanWeapon.ROCKET_POD);
+        rocket.setPos(origin.x, origin.y, origin.z);
+        rocket.shoot(dir.x, dir.y, dir.z, 2.4F, 0.05F);
+        this.level().addFreshEntity(rocket);
+
+        if (this.level() instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, origin.x, origin.y, origin.z, 5, 0.2, 0.2, 0.2, 0.02);
+            serverLevel.sendParticles(ParticleTypes.FLAME, origin.x, origin.y, origin.z, 4, 0.1, 0.1, 0.1, 0.05);
+        }
+    }
+
+    private boolean takeRocketAmmo(@Nullable Player pilot) {
+        if (pilot != null && pilot.getAbilities().instabuild) return true;
+        for (int i = 0; i < this.titanInventory.getContainerSize(); i++) {
+            ItemStack stack = this.titanInventory.getItem(i);
+            if (!stack.isEmpty() && (stack.is(ModItems.AMMO_ROCKET_SALVO.get()) || stack.is(ModItems.WEAPON_MAGAZINES.get(TitanWeapon.ROCKET_POD).get()))) {
+                stack.shrink(1);
+                return true;
+            }
+        }
+        if (pilot != null) {
+            for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
+                ItemStack stack = pilot.getInventory().getItem(i);
+                if (!stack.isEmpty() && (stack.is(ModItems.AMMO_ROCKET_SALVO.get()) || stack.is(ModItems.WEAPON_MAGAZINES.get(TitanWeapon.ROCKET_POD).get()))) {
+                    stack.shrink(1);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public int getRocketSalvoCooldown() {
+        return this.entityData.get(DATA_ROCKET_COOLDOWN);
+    }
+
+    public int getRocketSalvoAmmo() {
+        return this.entityData.get(DATA_ROCKET_AMMO);
+    }
+
+    public int countRocketSalvoAmmo() {
+        int count = 0;
+        for (int i = 0; i < this.titanInventory.getContainerSize(); i++) {
+            ItemStack stack = this.titanInventory.getItem(i);
+            if (!stack.isEmpty() && (stack.is(ModItems.AMMO_ROCKET_SALVO.get()) || stack.is(ModItems.WEAPON_MAGAZINES.get(TitanWeapon.ROCKET_POD).get()))) {
+                count += stack.getCount();
+            }
+        }
+        if (getControllingPassenger() instanceof Player pilot) {
+            for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
+                ItemStack stack = pilot.getInventory().getItem(i);
+                if (!stack.isEmpty() && (stack.is(ModItems.AMMO_ROCKET_SALVO.get()) || stack.is(ModItems.WEAPON_MAGAZINES.get(TitanWeapon.ROCKET_POD).get()))) {
+                    count += stack.getCount();
+                }
+            }
+        }
+        return count;
     }
 
     /** Fires one shell onto the target, if there is one in range, the gun is laid and a round is loaded. */
@@ -1597,11 +1832,18 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         Vec3 velocity = artillerySolution();
         if (velocity == null) return false;
         Vec3 from = getArtilleryMuzzle();
-        TitanEnergyBlastEntity shell = new TitanEnergyBlastEntity(ModEntities.ENERGY_BLAST.get(), pilot, this.level())
-                .withStats(Howitzer.DAMAGE, Howitzer.EXPLOSION).lobbed();
-        shell.setPos(from.x, from.y, from.z);
-        shell.setDeltaMovement(velocity);
-        this.level().addFreshEntity(shell);
+        if (isHowitzerSmoke()) {
+            TitanSmokeShellEntity smokeShell = new TitanSmokeShellEntity(this.level(), pilot);
+            smokeShell.setPos(from.x, from.y, from.z);
+            smokeShell.setDeltaMovement(velocity);
+            this.level().addFreshEntity(smokeShell);
+        } else {
+            TitanEnergyBlastEntity shell = new TitanEnergyBlastEntity(ModEntities.ENERGY_BLAST.get(), pilot, this.level())
+                    .withStats(Howitzer.DAMAGE, Howitzer.EXPLOSION).lobbed();
+            shell.setPos(from.x, from.y, from.z);
+            shell.setDeltaMovement(velocity);
+            this.level().addFreshEntity(shell);
+        }
         this.entityData.set(DATA_HOWITZER_ROUNDS, getHowitzerRounds() - 1);
         howitzerCooldown = Howitzer.COOLDOWN_TICKS;
         this.level().playSound(null, this.blockPosition(), ModSounds.SCORCH_FIRE.get(), SoundSource.PLAYERS, 3.0F, 0.6F);
@@ -1672,12 +1914,130 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         return TitanFlightModule.NONE;
     }
 
+    protected int coreModuleCooldown = 0;
+    protected int cloakedTicks = 0;
+
     /** Server tick: flight equipment swaps (syncs the flight slot with entity flight state). */
     private void tickFlightSystems() {
         TitanFlightModule installed = installedFlightModule();
         if (installed != getFlightModule()) {
             setFlightModule(installed);
         }
+        tickCoreModules();
+    }
+
+    private void tickCoreModules() {
+        if (coreModuleCooldown > 0) coreModuleCooldown--;
+        if (cloakedTicks > 0) {
+            cloakedTicks--;
+            if (cloakedTicks == 0) {
+                this.setInvisible(false);
+                if (getControllingPassenger() instanceof Player pilot) {
+                    pilot.displayClientMessage(Component.translatable("message.titancombat.cloak_off"), true);
+                }
+                this.level().playSound(null, this.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.5F, 1.8F);
+            }
+        }
+    }
+
+    public boolean triggerCoreModule(Player pilot) {
+        ItemStack backStack = this.titanInventory.getItem(TitanMenu.FLIGHT_SLOT);
+        if (!(backStack.getItem() instanceof com.titancombat.item.TitanCoreModuleItem coreMod)) return false;
+
+        if (coreModuleCooldown > 0) {
+            pilot.displayClientMessage(Component.translatable("message.titancombat.core_cooldown", coreModuleCooldown / 20), true);
+            this.level().playSound(null, this.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.8F, 1.4F);
+            return false;
+        }
+
+        switch (coreMod.getCoreType()) {
+            case CLOAKING -> {
+                this.setInvisible(true);
+                this.cloakedTicks = 300; // 15 seconds
+                this.coreModuleCooldown = 400; // 20s cooldown
+                pilot.displayClientMessage(Component.translatable("message.titancombat.cloak_engaged"), true);
+                this.level().playSound(null, this.blockPosition(), SoundEvents.ILLUSIONER_MIRROR_MOVE, SoundSource.PLAYERS, 2.0F, 0.8F);
+                this.level().playSound(null, this.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.8F, 1.4F);
+
+                // Pacify mobs
+                if (this.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    for (net.minecraft.world.entity.Mob mob : sl.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, this.getBoundingBox().inflate(32.0D))) {
+                        if (mob.getTarget() == this || mob.getTarget() == pilot) {
+                            mob.setTarget(null);
+                        }
+                    }
+                    for (int i = 0; i < 20; i++) {
+                        sl.sendParticles(ParticleTypes.PORTAL, this.getX(), this.getY() + 2.0D, this.getZ(), 1,
+                                (this.random.nextDouble() - 0.5D) * 2.0D, (this.random.nextDouble() - 0.5D) * 2.0D, (this.random.nextDouble() - 0.5D) * 2.0D, 0.1D);
+                    }
+                }
+                return true;
+            }
+            case PHASE_WARP -> {
+                this.coreModuleCooldown = 160; // 8s cooldown
+                Vec3 look = this.getLookAngle().multiply(1, 0, 1).normalize();
+                Vec3 target = this.position().add(look.scale(14.0D));
+                int safeY = this.level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, (int) target.x, (int) target.z);
+
+                if (this.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    // Departure effect
+                    for (int i = 0; i < 30; i++) {
+                        sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, this.getX(), this.getY() + 1.5D, this.getZ(), 1,
+                                (this.random.nextDouble() - 0.5D) * 1.5D, (this.random.nextDouble() - 0.5D) * 1.5D, (this.random.nextDouble() - 0.5D) * 1.5D, 0.05D);
+                    }
+                }
+                this.level().playSound(null, this.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 2.5F, 0.9F);
+                this.level().playSound(null, this.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 1.6F, 1.6F);
+
+                // Teleport
+                this.moveTo(target.x, safeY, target.z, this.getYRot(), this.getXRot());
+                pilot.moveTo(target.x, safeY + 1.0D, target.z, pilot.getYRot(), pilot.getXRot());
+
+                if (this.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    // Arrival effect
+                    for (int i = 0; i < 30; i++) {
+                        sl.sendParticles(ParticleTypes.REVERSE_PORTAL, target.x, safeY + 1.5D, target.z, 1,
+                                (this.random.nextDouble() - 0.5D) * 1.5D, (this.random.nextDouble() - 0.5D) * 1.5D, (this.random.nextDouble() - 0.5D) * 1.5D, 0.05D);
+                    }
+                }
+                pilot.displayClientMessage(Component.translatable("message.titancombat.warp_executed"), true);
+                return true;
+            }
+            case SONAR_SCANNER -> {
+                this.coreModuleCooldown = 200; // 10s cooldown
+                List<LivingEntity> targets = this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(48.0D),
+                        e -> e != this && e != pilot && (e.getVehicle() != this));
+                for (LivingEntity e : targets) {
+                    e.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.GLOWING, 240, 0, false, false));
+                }
+
+                this.level().playSound(null, this.blockPosition(), SoundEvents.NOTE_BLOCK_BELL.get(), SoundSource.PLAYERS, 2.0F, 0.6F);
+                this.level().playSound(null, this.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 2.0F, 1.4F);
+
+                if (this.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    for (int i = 0; i < 36; i++) {
+                        double angle = (i / 36.0D) * Math.PI * 2.0D;
+                        sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, this.getX(), this.getY() + 1.5D, this.getZ(), 1,
+                                Math.cos(angle) * 0.5D, 0.05D, Math.sin(angle) * 0.5D, 0.02D);
+                    }
+                }
+                pilot.displayClientMessage(Component.translatable("message.titancombat.sonar_ping", targets.size()), true);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void toggleDefenseMatrix(Player pilot) {
+        if (triggerCoreModule(pilot)) return;
+        super.toggleDefenseMatrix(pilot);
+    }
+
+    @Override
+    public boolean activateCoreOverdrive(Player pilot) {
+        if (triggerCoreModule(pilot)) return true;
+        return super.activateCoreOverdrive(pilot);
     }
 
     public boolean hasInstalledBattery() {
@@ -1829,11 +2189,22 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
 
         Vec3 aim = target.subtract(spawnPos).normalize();
 
+        float yawRad = this.yBodyRot * ((float) Math.PI / 180.0F);
+        Vec3 forward = new Vec3(-Math.sin(yawRad), 0, Math.cos(yawRad));
+        Vec3 right = new Vec3(-Math.cos(yawRad), 0, -Math.sin(yawRad));
+        Vec3 ejectPos = spawnPos.subtract(aim.scale(0.8D)).add(right.scale(0.4D)).add(0.0D, 0.1D, 0.0D);
+
         for (int i = 0; i < weapon.getPellets(); i++) {
-            TitanEnergyBlastEntity round = new TitanEnergyBlastEntity(ModEntities.ENERGY_BLAST.get(), pilot, this.level()).withWeapon(weapon);
+            TitanBulletEntity round = new TitanBulletEntity(this.level(), pilot, weapon.getDamage()).withWeapon(weapon);
             round.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
             round.shoot(aim.x, aim.y, aim.z, weapon.getProjectileSpeed(), weapon.getSpread());
             this.level().addFreshEntity(round);
+        }
+
+        // Fling spent casing for ballistic weapons
+        if (weapon != TitanWeapon.SPLITTER_RIFLE && weapon != TitanWeapon.PLASMA_RAILGUN && weapon != TitanWeapon.THERMITE_LAUNCHER && weapon != TitanWeapon.ROCKET_POD) {
+            TitanCasingEntity casing = new TitanCasingEntity(this.level(), ejectPos, forward, right);
+            this.level().addFreshEntity(casing);
         }
         this.level().playSound(null, this.blockPosition(), weapon.getFireSound(), SoundSource.PLAYERS, 2.2F, 1.0F);
 

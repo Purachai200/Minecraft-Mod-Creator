@@ -326,7 +326,7 @@ public final class CockpitHudState {
             if (activeWeapon != null || weaponName == null || !weaponName.equals(noWeaponText)) {
                 activeWeapon = null;
                 weaponChassis = titan.getTitanClass();
-                reticleIndex = weaponChassis.ordinal();
+                reticleIndex = weaponChassis.ordinal() % 16;
                 weaponName = noWeaponText;
                 lastAmmoShown = -3;
                 ammoText = "--";
@@ -345,7 +345,7 @@ public final class CockpitHudState {
         if (weapon != activeWeapon) {
             activeWeapon = weapon;
             weaponChassis = weapon.getFactoryChassis();
-            reticleIndex = weaponChassis.ordinal();
+            reticleIndex = weaponChassis.ordinal() % 16;
             weaponName = Component.translatable(weapon.getTranslationKey()).getString().toUpperCase(Locale.ROOT);
             lastAmmoTick = -100;
         }

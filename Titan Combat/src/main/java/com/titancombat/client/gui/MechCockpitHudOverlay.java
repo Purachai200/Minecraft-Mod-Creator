@@ -437,9 +437,15 @@ public class MechCockpitHudOverlay {
         rect(g, xr + 2, base - 50, xr + 6, base - 49, CYAN, 0.35F);
 
         textRight(g, font, weaponName, xr, base - 52, WHITE, 0.7F, false);
-        if (net.minecraft.client.Minecraft.getInstance().player.getVehicle() instanceof com.titancombat.entity.BaseTitanEntity titan
-                && titan.hasHowitzer()) {
-            drawHowitzer(g, font, titan, xr, base - 62);
+        if (net.minecraft.client.Minecraft.getInstance().player.getVehicle() instanceof com.titancombat.entity.BaseTitanEntity titan) {
+            int extraY = base - 62;
+            if (titan.hasHowitzer()) {
+                drawHowitzer(g, font, titan, xr, extraY);
+                extraY -= 36;
+            }
+            if (titan.hasRocketPod()) {
+                drawRocketPod(g, font, titan, xr, extraY);
+            }
         }
 
         boolean reloading = reloadTicksLeft > 0;
@@ -514,6 +520,23 @@ public class MechCockpitHudOverlay {
                 (int) range, bearing, elevation, String.format("%.1f", tof)), xr, y - 10, AMBER, 0.9F, false);
         textRight(g, font, net.minecraft.client.resources.language.I18n.get("hud.titancombat.artillery_target", t.getX(), t.getY(), t.getZ()),
                 xr, y - 20, AMBER, 0.9F, false);
+        String ammoTypeName = titan.isHowitzerSmoke() ? "§b[SMOKE SHELL]" : "§6[HE BLAST]";
+        textRight(g, font, "§7Shell: " + ammoTypeName + " §8(Shift+R Switch)", xr, y - 30, CYAN, 0.85F, false);
+    }
+
+    /** Shoulder-mounted rocket launcher module: salvo status, firing key, and ammo count. */
+    private static void drawRocketPod(GuiGraphics g, Font font, com.titancombat.entity.BaseTitanEntity titan, int xr, int y) {
+        String fireKey = com.titancombat.client.KeyInputHandler.KEY_FIRE_HOWITZER.getTranslatedKeyMessage().getString().toUpperCase();
+        int cd = titan.getRocketSalvoCooldown();
+        boolean ready = cd <= 0;
+        int ammo = titan.getRocketSalvoAmmo();
+        boolean creative = titan.getControllingPassenger() instanceof net.minecraft.world.entity.player.Player p && p.getAbilities().instabuild;
+
+        String status = ready ? "§aREADY" : String.format(java.util.Locale.ROOT, "§eCOOLDOWN (%.1fs)", cd / 20.0F);
+        textRight(g, font, "§b[MLRS MISSILE POD] " + status + " §7| [" + fireKey + "] LAUNCH", xr, y, ready ? CYAN : AMBER, 0.95F, false);
+
+        String ammoStr = creative ? "§6INFINITE" : (ammo > 0 ? "§f" + ammo + " §7Salvos" : "§cNO AMMO (Load Rocket Ammo)");
+        textRight(g, font, "§7Salvo Rockets: " + ammoStr, xr, y - 10, DIM, 0.85F, false);
     }
 
     // =================================================================== reticle

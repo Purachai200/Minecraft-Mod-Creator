@@ -2,6 +2,7 @@ package com.titancombat.client.cockpit;
 
 import com.titancombat.TitanCombatMod;
 import com.titancombat.entity.BaseTitanEntity;
+import com.titancombat.entity.TitanClass;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.GeoModel;
 
@@ -12,10 +13,23 @@ public class CockpitModel extends GeoModel<CockpitPart> {
         return new ResourceLocation(TitanCombatMod.MODID, path);
     }
 
+    /**
+     * Resolves the first-person cockpit rig for a titan class.
+     * Original titan chassis have their own dedicated 1st-person arm rigs.
+     * Modular Titan Frames fallback to the versatile Trooper industrial mechanical arm rig.
+     */
+    public static TitanClass getCockpitRig(TitanClass titanClass) {
+        if (titanClass == null) return TitanClass.TROOPER;
+        return switch (titanClass) {
+            case MONARCH, ION, LEGION, SCORCH, RONIN, NORTHSTAR, TONE, TROOPER, SCOUT, SHADE -> titanClass;
+            default -> TitanClass.TROOPER;
+        };
+    }
+
     @Override
     public ResourceLocation getModelResource(CockpitPart part) {
         return switch (part.getKind()) {
-            case ARMS -> rl("geo/cockpit/" + part.getTitanClass().getId() + "_titan_1st.geo.json");
+            case ARMS -> rl("geo/cockpit/" + getCockpitRig(part.getTitanClass()).getId() + "_titan_1st.geo.json");
             case CABIN_BASE -> rl("geo/cockpit/titan_cabin_base.geo.json");
             case CABIN_FRAME -> rl("geo/cockpit/titan_cabin_frame.geo.json");
         };
@@ -32,7 +46,8 @@ public class CockpitModel extends GeoModel<CockpitPart> {
 
     /** The arms wear the same paint job as the titan outside. */
     private static ResourceLocation armsTexture(CockpitPart part) {
-        String id = part.getTitanClass().getId();
+        TitanClass rig = getCockpitRig(part.getTitanClass());
+        String id = rig.getId();
         BaseTitanEntity titan = CockpitState.titan();
         int camo = titan != null ? titan.getCamoIndex() : 0;
         String file = camo <= 0 ? id + "_titan.png" : id + "_titan_" + camo + ".png";
@@ -49,14 +64,19 @@ public class CockpitModel extends GeoModel<CockpitPart> {
         var gun = getAnimationProcessor().getBone("weapon");
         if (gun != null) gun.setHidden(!hasWep);
 
-        // Trooper chassis has two tools (Mining Drill & Chainsaw) under the weapon bone
+        // Trooper chassis has tools and custom weapons under the weapon bone
         var drill = getAnimationProcessor().getBone("drill");
         var saw = getAnimationProcessor().getBone("chainsaw");
-        if (drill != null || saw != null) {
-            boolean isSaw = titan != null && titan.getActiveWeapon() == com.titancombat.entity.TitanWeapon.CHAINSAW;
-            boolean isDrill = titan != null && titan.getActiveWeapon() == com.titancombat.entity.TitanWeapon.MINING_DRILL;
-            if (drill != null) drill.setHidden(!hasWep || !isDrill);
-            if (saw != null) saw.setHidden(!hasWep || !isSaw);
+        var rifle = getAnimationProcessor().getBone("rifle");
+        var mg = getAnimationProcessor().getBone("machine_gun");
+        var rocket = getAnimationProcessor().getBone("rocket_launcher");
+        if (drill != null || saw != null || rifle != null || mg != null || rocket != null) {
+            com.titancombat.entity.TitanWeapon wep = titan != null ? titan.getActiveWeapon() : null;
+            if (drill != null) drill.setHidden(!hasWep || wep != com.titancombat.entity.TitanWeapon.MINING_DRILL);
+            if (saw != null) saw.setHidden(!hasWep || wep != com.titancombat.entity.TitanWeapon.CHAINSAW);
+            if (rifle != null) rifle.setHidden(!hasWep || wep != com.titancombat.entity.TitanWeapon.HEAVY_ASSAULT_RIFLE);
+            if (mg != null) mg.setHidden(!hasWep || wep != com.titancombat.entity.TitanWeapon.ROTARY_MACHINE_GUN);
+            if (rocket != null) rocket.setHidden(!hasWep || wep != com.titancombat.entity.TitanWeapon.ROCKET_POD);
         }
 
         // Hide shoulder laser bones on non-Ion rigs if present
@@ -69,7 +89,7 @@ public class CockpitModel extends GeoModel<CockpitPart> {
     @Override
     public ResourceLocation getAnimationResource(CockpitPart part) {
         if (part.getKind() == CockpitPart.Kind.ARMS) {
-            return rl("animations/cockpit/" + part.getTitanClass().getId() + "_titan_1st.animation.json");
+            return rl("animations/cockpit/" + getCockpitRig(part.getTitanClass()).getId() + "_titan_1st.animation.json");
         }
         return CABIN_ANIMS;
     }

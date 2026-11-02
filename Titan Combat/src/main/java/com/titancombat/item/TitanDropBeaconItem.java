@@ -58,8 +58,12 @@ public class TitanDropBeaconItem extends Item {
                 TitanClass[] values = TitanClass.values();
                 int nextIndex = (current.ordinal() + 1) % values.length;
                 TitanClass next = values[nextIndex];
-                // The Trooper has its own cheap beacon
-                while (next == TitanClass.TROOPER || next == TitanClass.SCOUT || next == TitanClass.SHADE) next = values[(next.ordinal() + 1) % values.length];
+                // The Trooper, Scout, Shade and Modular Frames have their own dedicated beacons
+                while (next == TitanClass.TROOPER || next == TitanClass.SCOUT || next == TitanClass.SHADE
+                        || next == TitanClass.STRIKER_FRAME || next == TitanClass.VANGUARD_FRAME || next == TitanClass.COLOSSUS_FRAME
+                        || next == TitanClass.TERRAIN_FRAME || next == TitanClass.CYCLOPS_FRAME || next == TitanClass.SPIDER_FRAME) {
+                    next = values[(next.ordinal() + 1) % values.length];
+                }
                 setSelectedTitan(stack, next);
 
                 player.sendSystemMessage(Component.translatable("message.titancombat.beacon_switched", next.getDisplayName(), next.getRole()));
@@ -89,6 +93,12 @@ public class TitanDropBeaconItem extends Item {
                 case TROOPER -> ModEntities.TROOPER_TITAN.get();
                 case SCOUT -> ModEntities.SCOUT_TITAN.get();
                 case SHADE -> ModEntities.SHADE_TITAN.get();
+                case STRIKER_FRAME -> ModEntities.STRIKER_FRAME_TITAN.get();
+                case VANGUARD_FRAME -> ModEntities.VANGUARD_FRAME_TITAN.get();
+                case COLOSSUS_FRAME -> ModEntities.COLOSSUS_FRAME_TITAN.get();
+                case TERRAIN_FRAME -> ModEntities.TERRAIN_FRAME_TITAN.get();
+                case CYCLOPS_FRAME -> ModEntities.CYCLOPS_FRAME_TITAN.get();
+                case SPIDER_FRAME -> ModEntities.SPIDER_FRAME_TITAN.get();
                 default -> ModEntities.ION_TITAN.get();
             };
 

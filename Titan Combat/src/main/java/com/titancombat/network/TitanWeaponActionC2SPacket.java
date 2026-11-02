@@ -39,7 +39,13 @@ public class TitanWeaponActionC2SPacket {
             ServerPlayer player = context.getSender();
             if (player != null && player.getVehicle() instanceof BaseTitanEntity titan) {
                 switch (this.action) {
-                    case RELOAD -> titan.startReload(player);
+                    case RELOAD -> {
+                        if (titan.hasHowitzer() && (player.isShiftKeyDown() || !titan.hasWeapon() || titan.isWeaponStowed())) {
+                            titan.cycleHowitzerShellType(player);
+                        } else {
+                            titan.startReload(player);
+                        }
+                    }
                     case TOGGLE_LOWERED -> titan.toggleWeaponLowered(player);
                     case SALUTE -> titan.triggerSalute(player);
                     case FLIGHT_START -> titan.setFlightThrust(true);

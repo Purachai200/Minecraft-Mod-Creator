@@ -156,7 +156,11 @@ public class TitanSkyCraneDroneEntity extends BaseTransportVehicleEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "rotors", 2, event -> {
-            return event.setAndContinue(RawAnimation.begin().thenLoop("animation.titan_skycrane_drone.fly"));
+            // Rotors only spin when piloted or airborne/flying; stopped when parked on ground
+            if (this.getControllingPassenger() != null || !this.onGround()) {
+                return event.setAndContinue(RawAnimation.begin().thenLoop("animation.titan_skycrane_drone.fly"));
+            }
+            return event.setAndContinue(RawAnimation.begin().thenLoop("animation.titan_skycrane_drone.idle"));
         }));
     }
 }

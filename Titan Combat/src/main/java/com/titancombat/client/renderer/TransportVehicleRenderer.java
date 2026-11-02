@@ -23,6 +23,16 @@ public class TransportVehicleRenderer<T extends BaseTransportVehicleEntity> exte
         return OverlayTexture.NO_OVERLAY;
     }
 
+    /** Faction livery: tint the hull halfway toward the faction colour so texture detail survives; Neutral keeps factory paint. */
+    @Override
+    public software.bernie.geckolib.core.object.Color getRenderColor(T animatable, float partialTick, int packedLight) {
+        com.titancombat.entity.MechFaction faction = animatable.getFaction();
+        if (faction == com.titancombat.entity.MechFaction.NEUTRAL) return super.getRenderColor(animatable, partialTick, packedLight);
+        int c = faction.getDefaultPrimaryColor();
+        return software.bernie.geckolib.core.object.Color.ofRGB(
+                (((c >> 16) & 0xFF) + 255) / 2, (((c >> 8) & 0xFF) + 255) / 2, ((c & 0xFF) + 255) / 2);
+    }
+
     @Override
     protected float getDeathMaxRotation(T animatable) {
         return 0.0F;

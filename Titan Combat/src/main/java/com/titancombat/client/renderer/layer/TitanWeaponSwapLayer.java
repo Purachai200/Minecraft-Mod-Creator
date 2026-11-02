@@ -42,12 +42,21 @@ public class TitanWeaponSwapLayer<T extends BaseTitanEntity> extends GeoRenderLa
         if (this.drawing || titan.isInvisible()) return;
         BakedGeoModel own = getDefaultBakedModel(titan);
 
-        // Howitzer back module: only the Trooper model has it, so other chassis borrow it, mounted where
-        // they stow their gun (it rests at its modelled elevation; only the Trooper's lays onto targets).
-        if (titan.hasHowitzer() && titan.getTitanClass() != TitanClass.TROOPER) {
+        // Howitzer & Rocket Pod back modules on other chassis
+        boolean isFrameOrTrooper = titan.getTitanClass() == TitanClass.TROOPER
+                || titan instanceof com.titancombat.entity.TitanFrameEntity;
+
+        if (titan.hasHowitzer() && !isFrameOrTrooper) {
             Optional<GeoBone> anchor = own.getBone("weaponBack");
             if (anchor.isPresent() && anchor.get().getParent() == bone) {
                 drawDonorPart(poseStack, titan, TitanClass.TROOPER, "artillery", anchor.get(), null, renderType, bufferSource,
+                        partialTick, packedLight, packedOverlay);
+            }
+        }
+        if (titan.hasRocketPod() && !isFrameOrTrooper) {
+            Optional<GeoBone> anchor = own.getBone("weaponBack");
+            if (anchor.isPresent() && anchor.get().getParent() == bone) {
+                drawDonorPart(poseStack, titan, TitanClass.TROOPER, "back_rocket_pod", anchor.get(), null, renderType, bufferSource,
                         partialTick, packedLight, packedOverlay);
             }
         }
@@ -76,12 +85,17 @@ public class TitanWeaponSwapLayer<T extends BaseTitanEntity> extends GeoRenderLa
         boolean wasHidingChildren = gun.isHidingChildren();
         float sx = gun.getScaleX(), sy = gun.getScaleY(), sz = gun.getScaleZ();
 
-        // The Trooper's weapon bone holds both tools; draw only the mounted one.
+        // The Trooper's weapon bone holds tools and custom weapons; draw only the mounted one.
         if (weapon != null) {
-            Optional<GeoBone> drill = donorModel.getBone("drill"), saw = donorModel.getBone("chainsaw");
-            boolean isSaw = weapon == TitanWeapon.CHAINSAW;
-            drill.ifPresent(b -> b.setHidden(isSaw));
-            saw.ifPresent(b -> b.setHidden(!isSaw));
+            donorModel.getBone("drill").ifPresent(b -> b.setHidden(weapon != TitanWeapon.MINING_DRILL));
+            donorModel.getBone("chainsaw").ifPresent(b -> b.setHidden(weapon != TitanWeapon.CHAINSAW));
+            donorModel.getBone("rifle").ifPresent(b -> b.setHidden(weapon != TitanWeapon.HEAVY_ASSAULT_RIFLE));
+            donorModel.getBone("machine_gun").ifPresent(b -> b.setHidden(weapon != TitanWeapon.ROTARY_MACHINE_GUN));
+            donorModel.getBone("rocket_launcher").ifPresent(b -> b.setHidden(weapon != TitanWeapon.ROCKET_POD));
+
+            donorModel.getBone("stowed_rifle").ifPresent(b -> b.setHidden(weapon != TitanWeapon.HEAVY_ASSAULT_RIFLE));
+            donorModel.getBone("stowed_machine_gun").ifPresent(b -> b.setHidden(weapon != TitanWeapon.ROTARY_MACHINE_GUN));
+            donorModel.getBone("stowed_rocket_launcher").ifPresent(b -> b.setHidden(weapon != TitanWeapon.ROCKET_POD));
         }
 
         this.drawing = true;

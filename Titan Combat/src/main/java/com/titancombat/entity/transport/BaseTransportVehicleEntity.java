@@ -50,6 +50,8 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
             SynchedEntityData.defineId(BaseTransportVehicleEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Integer> DATA_ENERGY =
             SynchedEntityData.defineId(BaseTransportVehicleEntity.class, EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Integer> DATA_FACTION =
+            SynchedEntityData.defineId(BaseTransportVehicleEntity.class, EntityDataSerializers.INT);
 
     /** Signed speed along the heading in blocks/tick. */
     protected float currentSpeed = 0.0F;
@@ -80,6 +82,15 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         this.entityData.define(DATA_RAMP_OPEN, false);
         this.entityData.define(DATA_HEADLIGHTS, true);
         this.entityData.define(DATA_ENERGY, MAX_ENERGY);
+        this.entityData.define(DATA_FACTION, 0);
+    }
+
+    public com.titancombat.entity.MechFaction getFaction() {
+        return com.titancombat.entity.MechFaction.byId(this.entityData.get(DATA_FACTION));
+    }
+
+    public void setFaction(com.titancombat.entity.MechFaction faction) {
+        this.entityData.set(DATA_FACTION, faction.getId());
     }
 
     public int getEnergy() {
@@ -152,35 +163,43 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         return 1;
     }
 
-    public boolean canMountTitan(BaseTitanEntity titan) {
+    public boolean canMountCargo(Entity entity) {
         int count = 0;
         for (Entity p : this.getPassengers()) {
-            if (p instanceof BaseTitanEntity) count++;
+            if (com.titancombat.util.CrossModCargoHelper.isCargoEligible(p)) count++;
         }
         return count < getCargoCapacity();
     }
 
-    /** Whether mounted Titans should be locked into a kneeling parking stance (truck/barge) or suspended upright (sky-crane drone). */
+    public boolean canMountTitan(BaseTitanEntity titan) {
+        return canMountCargo(titan);
+    }
+
+    /** Whether mounted Titans / Exoframes should be locked into a kneeling parking stance (truck/barge) or suspended upright (sky-crane drone/chinook). */
     protected boolean shouldTitanKneel() {
         return true;
     }
 
-    /** Mounts a Titan onto this transport vehicle, automatically locking it into a kneeling transport state. */
-    public boolean lockTitanToDeck(BaseTitanEntity titan, @Nullable Player pilot) {
-        if (!canMountTitan(titan)) {
+    /** Mounts a Titan or Obsolete Exoframe onto this transport vehicle, automatically locking it into a transport state. */
+    public boolean lockCargoToDeck(Entity cargo, @Nullable Player pilot) {
+        if (!canMountCargo(cargo)) {
             if (pilot != null) pilot.sendSystemMessage(Component.literal("§c[LOGISTICS] Transport bay is at maximum capacity!"));
             return false;
         }
 
-        // Lock into kneeling stance for surface decks, or upright standing for aerial hoist
-        if (shouldTitanKneel()) {
-            titan.setSitting(true);
-            titan.setStandbyMode(true);
-        } else {
-            titan.setSitting(false);
-            titan.setStandbyMode(false);
+        if (cargo instanceof BaseTitanEntity titan) {
+            if (shouldTitanKneel()) {
+                titan.setSitting(true);
+                titan.setStandbyMode(true);
+            } else {
+                titan.setSitting(false);
+                titan.setStandbyMode(false);
+            }
+        } else if (com.titancombat.util.CrossModCargoHelper.isExoframe(cargo)) {
+            com.titancombat.util.CrossModCargoHelper.setExoframeTransportLock(cargo, true);
         }
-        titan.startRiding(this, true);
+
+        cargo.startRiding(this, true);
         setHasCargo(true);
 
         this.level().playSound(null, this.blockPosition(), SoundEvents.ANVIL_PLACE, SoundSource.PLAYERS, 1.4F, 1.2F);
@@ -188,32 +207,42 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         this.level().playSound(null, this.blockPosition(), SoundEvents.PISTON_EXTEND, SoundSource.PLAYERS, 1.5F, 0.9F);
 
         if (pilot != null) {
-            pilot.sendSystemMessage(Component.literal("§a[LOGISTICS LOCK] " + titan.getTitanClass().getDisplayName() +
+            String name = (cargo instanceof BaseTitanEntity t) ? t.getTitanClass().getDisplayName() : cargo.getType().getDescription().getString();
+            pilot.sendSystemMessage(Component.literal("§a[LOGISTICS LOCK] " + name +
                     " anchored to transport deck with pneumatic magnetic clamps & ratchet straps!"));
         }
         return true;
     }
 
-    /** Releases and unclamps all mounted Titans, allowing them to rise and enter combat. */
+    public boolean lockTitanToDeck(BaseTitanEntity titan, @Nullable Player pilot) {
+        return lockCargoToDeck(titan, pilot);
+    }
+
+    /** Releases and unclamps all mounted Titans and Exoframes, allowing them to enter combat. */
     public void releaseMountedTitans(@Nullable Player pilot) {
         boolean released = false;
         for (Entity p : List.copyOf(this.getPassengers())) {
-            if (p instanceof BaseTitanEntity titan) {
-                titan.stopRiding();
-                titan.setSitting(false);
-                titan.setStandbyMode(false);
-                titan.setDeltaMovement(0, 0.1D, 0);
+            if (com.titancombat.util.CrossModCargoHelper.isCargoEligible(p)) {
+                p.stopRiding();
+                if (p instanceof BaseTitanEntity titan) {
+                    titan.setSitting(false);
+                    titan.setStandbyMode(false);
+                } else if (com.titancombat.util.CrossModCargoHelper.isExoframe(p)) {
+                    com.titancombat.util.CrossModCargoHelper.setExoframeTransportLock(p, false);
+                }
+                p.setDeltaMovement(0, 0.1D, 0);
 
                 // Small boost away from vehicle deck so it doesn't clip
                 Vec3 exitDir = Vec3.directionFromRotation(0, this.getYRot() + 180.0F);
-                titan.moveTo(titan.getX() + exitDir.x * 2.0D, this.getY(), titan.getZ() + exitDir.z * 2.0D);
+                p.moveTo(p.getX() + exitDir.x * 2.0D, this.getY(), p.getZ() + exitDir.z * 2.0D);
 
                 this.level().playSound(null, this.blockPosition(), SoundEvents.PISTON_CONTRACT, SoundSource.PLAYERS, 1.5F, 1.1F);
                 this.level().playSound(null, this.blockPosition(), SoundEvents.IRON_TRAPDOOR_CLOSE, SoundSource.PLAYERS, 1.2F, 0.7F);
 
                 if (pilot != null) {
+                    String name = (p instanceof BaseTitanEntity t) ? t.getTitanClass().getDisplayName() : p.getType().getDescription().getString();
                     pilot.sendSystemMessage(Component.literal("§e[LOGISTICS RELEASE] Clamps unlocked! " +
-                            titan.getTitanClass().getDisplayName() + " disembarked and combat-ready."));
+                            name + " disembarked and combat-ready."));
                 }
                 released = true;
             }
@@ -335,6 +364,12 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
                 mech.setDeltaMovement(Vec3.ZERO);
                 mech.setTarget(null);
                 mech.fallDistance = 0.0F;
+            }
+
+            // Mobile Repair & Inductive Charging System:
+            // Every 20 ticks (1 second), repair HP and recharge docked Titan / Exoframe batteries using vehicle power
+            if (!this.level().isClientSide && this.tickCount % 20 == 0 && getEnergy() > 500) {
+                com.titancombat.util.CrossModCargoHelper.repairAndChargeCargo(p, getEnergy(), this::consumeEnergy);
             }
         }
         // Drain energy when vehicle is manned
@@ -484,12 +519,12 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         if (passenger instanceof Player) {
             return getDriver() == null;
         }
-        if (passenger instanceof BaseMechEntity) {
-            int mechCount = 0;
+        if (com.titancombat.util.CrossModCargoHelper.isCargoEligible(passenger)) {
+            int cargoCount = 0;
             for (Entity p : this.getPassengers()) {
-                if (p instanceof BaseMechEntity) mechCount++;
+                if (com.titancombat.util.CrossModCargoHelper.isCargoEligible(p)) cargoCount++;
             }
-            return mechCount < getCargoCapacity();
+            return cargoCount < getCargoCapacity();
         }
         return this.getPassengers().size() < (1 + getCargoCapacity());
     }
@@ -499,15 +534,32 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         if (!this.hasPassenger(passenger)) return;
 
         Vec3 localOffset;
-        if (passenger instanceof Player) {
-            // Front Driver's Seat: inside the 3D cabin
-            localOffset = getDriverSeatOffset();
-        } else if (passenger instanceof BaseMechEntity) {
+        if (passenger instanceof Player player) {
+            if (this.getPassengers().indexOf(player) == 0) {
+                // Primary Driver Seat
+                localOffset = getDriverSeatOffset();
+            } else {
+                // Secondary / Troop Passenger Seats (Osprey, APC, etc.)
+                int troopIdx = 0;
+                for (Entity p : this.getPassengers()) {
+                    if (p == player) break;
+                    if (p instanceof Player) troopIdx++;
+                }
+                troopIdx = Math.max(0, troopIdx - 1);
+                if (this instanceof TitanV22OspreyEntity osprey) {
+                    localOffset = osprey.getPassengerTroopOffset(troopIdx);
+                } else if (this instanceof TitanArmoredApcEntity apc) {
+                    localOffset = apc.getTroopSeatOffset(troopIdx);
+                } else {
+                    localOffset = getDriverSeatOffset();
+                }
+            }
+        } else if (com.titancombat.util.CrossModCargoHelper.isCargoEligible(passenger)) {
             // Rear Cargo Bed: anchor positions for heavy mechs
             int cargoIndex = 0;
             for (Entity p : this.getPassengers()) {
                 if (p == passenger) break;
-                if (p instanceof BaseMechEntity) cargoIndex++;
+                if (com.titancombat.util.CrossModCargoHelper.isCargoEligible(p)) cargoIndex++;
             }
             localOffset = getTitanCargoOffset(cargoIndex);
         } else {
@@ -530,10 +582,12 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         moveFunction.accept(passenger, worldX, worldY, worldZ);
 
         if (passenger instanceof Player player) {
-            // Turn the driver's view with the hull but leave mouse-look free, like a boat or minecart
+            // Turn the driver/passenger's view with the hull but leave mouse-look free (full 360 freedom for TACZ guns!)
             player.setYRot(player.getYRot() + this.yawDelta);
             player.setYHeadRot(player.getYHeadRot() + this.yawDelta);
-            player.yBodyRot = this.getYRot();
+            if (this.getPassengers().indexOf(player) == 0) {
+                player.yBodyRot = this.getYRot();
+            }
         } else if (passenger instanceof LivingEntity living) {
             living.setYRot(this.getYRot());
             living.yRotO = this.getYRot();
@@ -543,6 +597,9 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
                 // Completely zero out momentum so docked mechs are purely static cargo weight
                 mech.setDeltaMovement(Vec3.ZERO);
                 mech.fallDistance = 0.0F;
+            } else if (com.titancombat.util.CrossModCargoHelper.isExoframe(living)) {
+                living.setDeltaMovement(Vec3.ZERO);
+                living.fallDistance = 0.0F;
             }
         }
     }
@@ -560,6 +617,7 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         tag.putBoolean("RampOpen", isRampOpen());
         tag.putBoolean("Headlights", hasHeadlights());
         tag.putInt("Energy", getEnergy());
+        tag.putInt("Faction", getFaction().getId());
     }
 
     @Override
@@ -569,6 +627,7 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         if (tag.contains("RampOpen")) setRampOpen(tag.getBoolean("RampOpen"));
         if (tag.contains("Headlights")) setHeadlights(tag.getBoolean("Headlights"));
         if (tag.contains("Energy")) setEnergy(tag.getInt("Energy"));
+        if (tag.contains("Faction")) setFaction(com.titancombat.entity.MechFaction.byId(tag.getInt("Faction")));
     }
 
     @Override

@@ -141,6 +141,24 @@ public class TransportVehicleHudOverlay {
         } else if (vehicle instanceof TitanCargoBargeEntity) {
             title = "AMPHIBIOUS CARGO BARGE";
             role = "SHORE ASSAULT";
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanOceanCarrierEntity) {
+            title = "SUPER-CARRIER BARGE";
+            role = "OCEANIC LOGISTICS";
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanTacticalTruckEntity) {
+            title = "TACTICAL TECHNICAL 4x4";
+            role = "RAPID RESPONSE";
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanChinookTransporterEntity) {
+            title = "CH-47 CHINOOK";
+            role = "HEAVY TANDEM AIRLIFT";
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanV22OspreyEntity) {
+            title = "V-22 OSPREY TILTROTOR";
+            role = "VTOL TROOP & AIRLIFT";
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanArmoredApcEntity) {
+            title = "ARMORED 8x8 COMBAT APC";
+            role = "AMPHIBIOUS IFV";
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanMobileSuitTrailerEntity) {
+            title = "MOBILE SUIT HEAVY TRANSPORTER";
+            role = "STRATEGIC LAUNCH CRADLE";
         } else {
             title = "8x8 HEAVY HAULER TRUCK";
             role = "OVERLAND LOGISTICS";

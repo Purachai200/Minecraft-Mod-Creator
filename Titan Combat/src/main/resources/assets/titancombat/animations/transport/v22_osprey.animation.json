@@ -1,0 +1,134 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.v22_osprey.idle": {
+      "loop": true,
+      "bones": {
+        "left_nacelle": {
+          "rotation": [
+            -90,
+            0,
+            0
+          ]
+        },
+        "right_nacelle": {
+          "rotation": [
+            -90,
+            0,
+            0
+          ]
+        },
+        "left_rotor": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "right_rotor": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "animation.v22_osprey.fly": {
+      "loop": true,
+      "animation_length": 0.2,
+      "bones": {
+        "left_nacelle": {
+          "rotation": [
+            -90,
+            0,
+            0
+          ]
+        },
+        "right_nacelle": {
+          "rotation": [
+            -90,
+            0,
+            0
+          ]
+        },
+        "left_rotor": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0,
+              360
+            ]
+          }
+        },
+        "right_rotor": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0,
+              -360
+            ]
+          }
+        }
+      }
+    },
+    "animation.v22_osprey.cruise": {
+      "loop": true,
+      "animation_length": 0.2,
+      "bones": {
+        "left_nacelle": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "right_nacelle": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "left_rotor": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0,
+              360
+            ]
+          }
+        },
+        "right_rotor": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0,
+              -360
+            ]
+          }
+        }
+      }
+    }
+  }
+}

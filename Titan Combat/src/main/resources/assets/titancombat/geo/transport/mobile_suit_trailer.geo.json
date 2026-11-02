@@ -1,0 +1,766 @@
+{
+  "format_version": "1.12.0",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.mobile_suit_trailer",
+        "texture_width": 512,
+        "texture_height": 512,
+        "visible_bounds_width": 16,
+        "visible_bounds_height": 10,
+        "visible_bounds_offset": [
+          0,
+          2,
+          0
+        ]
+      },
+      "bones": [
+        {
+          "name": "root",
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "cubes": []
+        },
+        {
+          "name": "cab",
+          "parent": "root",
+          "pivot": [
+            0,
+            20,
+            -70
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -26,
+                16,
+                -94
+              ],
+              "size": [
+                52,
+                2,
+                48
+              ],
+              "uv": [
+                0,
+                0
+              ]
+            },
+            {
+              "origin": [
+                -26,
+                18,
+                -48
+              ],
+              "size": [
+                52,
+                26,
+                2
+              ],
+              "uv": [
+                0,
+                0
+              ]
+            },
+            {
+              "origin": [
+                -26,
+                18,
+                -70
+              ],
+              "size": [
+                2,
+                26,
+                22
+              ],
+              "uv": [
+                0,
+                0
+              ]
+            },
+            {
+              "origin": [
+                24,
+                18,
+                -70
+              ],
+              "size": [
+                2,
+                26,
+                22
+              ],
+              "uv": [
+                0,
+                0
+              ]
+            },
+            {
+              "origin": [
+                -26,
+                44,
+                -94
+              ],
+              "size": [
+                52,
+                2,
+                48
+              ],
+              "uv": [
+                0,
+                0
+              ]
+            },
+            {
+              "origin": [
+                -24,
+                14,
+                -96
+              ],
+              "size": [
+                48,
+                10,
+                2
+              ],
+              "uv": [
+                0,
+                80
+              ]
+            },
+            {
+              "origin": [
+                -24,
+                22,
+                -94
+              ],
+              "size": [
+                48,
+                3,
+                6
+              ],
+              "uv": [
+                120,
+                80
+              ]
+            },
+            {
+              "origin": [
+                -26,
+                38,
+                -96
+              ],
+              "size": [
+                52,
+                6,
+                2
+              ],
+              "uv": [
+                120,
+                80
+              ]
+            },
+            {
+              "origin": [
+                -26,
+                24,
+                -96
+              ],
+              "size": [
+                3,
+                14,
+                2
+              ],
+              "uv": [
+                120,
+                80
+              ]
+            },
+            {
+              "origin": [
+                23,
+                24,
+                -96
+              ],
+              "size": [
+                3,
+                14,
+                2
+              ],
+              "uv": [
+                120,
+                80
+              ]
+            },
+            {
+              "origin": [
+                6,
+                18,
+                -76
+              ],
+              "size": [
+                8,
+                3,
+                8
+              ],
+              "uv": [
+                200,
+                80
+              ]
+            },
+            {
+              "origin": [
+                6,
+                21,
+                -69
+              ],
+              "size": [
+                8,
+                12,
+                2
+              ],
+              "uv": [
+                200,
+                80
+              ]
+            },
+            {
+              "origin": [
+                -14,
+                18,
+                -76
+              ],
+              "size": [
+                8,
+                3,
+                8
+              ],
+              "uv": [
+                200,
+                80
+              ]
+            },
+            {
+              "origin": [
+                -14,
+                21,
+                -69
+              ],
+              "size": [
+                8,
+                12,
+                2
+              ],
+              "uv": [
+                200,
+                80
+              ]
+            },
+            {
+              "origin": [
+                -25,
+                24,
+                -46
+              ],
+              "size": [
+                4,
+                34,
+                4
+              ],
+              "uv": [
+                220,
+                80
+              ]
+            },
+            {
+              "origin": [
+                21,
+                24,
+                -46
+              ],
+              "size": [
+                4,
+                34,
+                4
+              ],
+              "uv": [
+                220,
+                80
+              ]
+            }
+          ]
+        },
+        {
+          "name": "cab_wheel_l1",
+          "parent": "cab",
+          "pivot": [
+            28,
+            12,
+            -85
+          ],
+          "cubes": [
+            {
+              "origin": [
+                26,
+                2,
+                -93
+              ],
+              "size": [
+                8,
+                18,
+                16
+              ],
+              "uv": [
+                0,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "name": "cab_wheel_r1",
+          "parent": "cab",
+          "pivot": [
+            -28,
+            12,
+            -85
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -34,
+                2,
+                -93
+              ],
+              "size": [
+                8,
+                18,
+                16
+              ],
+              "uv": [
+                0,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "name": "cab_wheel_l2",
+          "parent": "cab",
+          "pivot": [
+            28,
+            12,
+            -55
+          ],
+          "cubes": [
+            {
+              "origin": [
+                26,
+                2,
+                -63
+              ],
+              "size": [
+                8,
+                18,
+                16
+              ],
+              "uv": [
+                0,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "name": "cab_wheel_r2",
+          "parent": "cab",
+          "pivot": [
+            -28,
+            12,
+            -55
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -34,
+                2,
+                -63
+              ],
+              "size": [
+                8,
+                18,
+                16
+              ],
+              "uv": [
+                0,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "name": "trailer_chassis",
+          "parent": "root",
+          "pivot": [
+            0,
+            16,
+            -42
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -28,
+                14,
+                -46
+              ],
+              "size": [
+                56,
+                6,
+                140
+              ],
+              "uv": [
+                0,
+                120
+              ]
+            },
+            {
+              "origin": [
+                -28,
+                12,
+                92
+              ],
+              "size": [
+                56,
+                8,
+                4
+              ],
+              "uv": [
+                260,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "name": "tilt_bed",
+          "parent": "trailer_chassis",
+          "pivot": [
+            0,
+            18,
+            80
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -26,
+                18,
+                -44
+              ],
+              "size": [
+                52,
+                4,
+                130
+              ],
+              "uv": [
+                0,
+                270
+              ]
+            },
+            {
+              "origin": [
+                -28,
+                22,
+                -42
+              ],
+              "size": [
+                56,
+                12,
+                10
+              ],
+              "uv": [
+                260,
+                30
+              ]
+            },
+            {
+              "origin": [
+                -28,
+                22,
+                80
+              ],
+              "size": [
+                56,
+                14,
+                8
+              ],
+              "uv": [
+                260,
+                60
+              ]
+            }
+          ]
+        },
+        {
+          "name": "trailer_wheel_l1",
+          "parent": "trailer_chassis",
+          "pivot": [
+            30,
+            12,
+            20
+          ],
+          "cubes": [
+            {
+              "origin": [
+                28,
+                2,
+                12
+              ],
+              "size": [
+                8,
+                18,
+                16
+              ],
+              "uv": [
+                0,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "name": "trailer_wheel_r1",
+          "parent": "trailer_chassis",
+          "pivot": [
+            -30,
+            12,
+            20
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -36,
+                2,
+                12
+              ],
+              "size": [
+                8,
+                18,
+                16
+              ],
+              "uv": [
+                0,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "name": "trailer_wheel_l2",
+          "parent": "trailer_chassis",
+          "pivot": [
+            30,
+            12,
+            42
+          ],
+          "cubes": [
+            {
+              "origin": [
+                28,
+                2,
+                34
+              ],
+              "size": [
+                8,
+                18,
+                16
+              ],
+              "uv": [
+                0,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "name": "trailer_wheel_r2",
+          "parent": "trailer_chassis",
+          "pivot": [
+            -30,
+            12,
+            42
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -36,
+                2,
+                34
+              ],
+              "size": [
+                8,
+                18,
+                16
+              ],
+              "uv": [
+                0,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "name": "trailer_wheel_l3",
+          "parent": "trailer_chassis",
+          "pivot": [
+            30,
+            12,
+            64
+          ],
+          "cubes": [
+            {
+              "origin": [
+                28,
+                2,
+                56
+              ],
+              "size": [
+                8,
+                18,
+                16
+              ],
+              "uv": [
+                0,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "name": "trailer_wheel_r3",
+          "parent": "trailer_chassis",
+          "pivot": [
+            -30,
+            12,
+            64
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -36,
+                2,
+                56
+              ],
+              "size": [
+                8,
+                18,
+                16
+              ],
+              "uv": [
+                0,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "name": "trailer_wheel_l4",
+          "parent": "trailer_chassis",
+          "pivot": [
+            30,
+            12,
+            84
+          ],
+          "cubes": [
+            {
+              "origin": [
+                28,
+                2,
+                76
+              ],
+              "size": [
+                8,
+                18,
+                16
+              ],
+              "uv": [
+                0,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "name": "trailer_wheel_r4",
+          "parent": "trailer_chassis",
+          "pivot": [
+            -30,
+            12,
+            84
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -36,
+                2,
+                76
+              ],
+              "size": [
+                8,
+                18,
+                16
+              ],
+              "uv": [
+                0,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "name": "cargo_straps",
+          "parent": "tilt_bed",
+          "pivot": [
+            0,
+            20,
+            20
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -27,
+                24,
+                -10
+              ],
+              "size": [
+                54,
+                4,
+                6
+              ],
+              "uv": [
+                260,
+                90
+              ]
+            },
+            {
+              "origin": [
+                -27,
+                24,
+                35
+              ],
+              "size": [
+                54,
+                4,
+                6
+              ],
+              "uv": [
+                260,
+                90
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

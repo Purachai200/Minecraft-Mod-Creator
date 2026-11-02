@@ -42,6 +42,12 @@ public class TransportVehicleDeployItem extends Item {
             if (vehicle != null) {
                 float yaw = player != null ? player.getYRot() : 0.0F;
                 vehicle.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, yaw, 0.0F);
+                if (stack.hasTag() && stack.getTag().contains("SavedEnergy")) {
+                    vehicle.setEnergy(stack.getTag().getInt("SavedEnergy"));
+                }
+                if (stack.hasTag()) {
+                    vehicle.setFaction(com.titancombat.entity.MechFaction.byId(stack.getTag().getInt("SavedFaction")));
+                }
                 level.addFreshEntity(vehicle);
 
                 level.playSound(null, pos, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.5F, 0.8F);

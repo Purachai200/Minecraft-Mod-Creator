@@ -31,15 +31,16 @@ public class HeavyTransportWinchItem extends Item {
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
         Level level = player.level();
 
-        // 1. Target is a Titan: Select it for winch loading
-        if (target instanceof BaseTitanEntity titan) {
+        // 1. Target is a Titan or Obsolete Exoframe: Select it for winch loading
+        if (com.titancombat.util.CrossModCargoHelper.isCargoEligible(target)) {
             if (!level.isClientSide) {
                 CompoundTag tag = stack.getOrCreateTag();
-                tag.putUUID("WinchTitanUUID", titan.getUUID());
-                tag.putString("WinchTitanName", titan.getTitanClass().getDisplayName());
+                tag.putUUID("WinchTitanUUID", target.getUUID());
+                String cargoName = (target instanceof BaseTitanEntity titan) ? titan.getTitanClass().getDisplayName() : target.getType().getDescription().getString();
+                tag.putString("WinchTitanName", cargoName);
 
-                player.sendSystemMessage(Component.literal("§a[WINCH LINKED] " + titan.getTitanClass().getDisplayName() +
-                        " attached to magnetic cable! Now right-click any Transport Hauler, Barge, or Drone to lock it onto the deck."));
+                player.sendSystemMessage(Component.literal("§a[WINCH LINKED] " + cargoName +
+                        " attached to magnetic cable! Now right-click any Transport Hauler, Barge, Carrier, Truck, or Helo to lock it onto the deck."));
                 level.playSound(null, player.blockPosition(), SoundEvents.CHAIN_PLACE, SoundSource.PLAYERS, 1.2F, 1.4F);
                 level.playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_CHAIN, SoundSource.PLAYERS, 1.0F, 1.1F);
             }
@@ -63,36 +64,36 @@ public class HeavyTransportWinchItem extends Item {
                     return InteractionResult.SUCCESS;
                 }
 
-                // Load designated Titan
+                // Load designated Titan or Exoframe
                 if (tag != null && tag.contains("WinchTitanUUID")) {
-                    UUID titanUUID = tag.getUUID("WinchTitanUUID");
-                    List<BaseTitanEntity> nearbyTitans = level.getEntitiesOfClass(BaseTitanEntity.class, vehicle.getBoundingBox().inflate(32.0D),
-                            t -> t.getUUID().equals(titanUUID));
+                    UUID cargoUUID = tag.getUUID("WinchTitanUUID");
+                    List<LivingEntity> nearbyCargo = level.getEntitiesOfClass(LivingEntity.class, vehicle.getBoundingBox().inflate(32.0D),
+                            t -> t.getUUID().equals(cargoUUID) && com.titancombat.util.CrossModCargoHelper.isCargoEligible(t));
 
-                    if (!nearbyTitans.isEmpty()) {
-                        BaseTitanEntity titan = nearbyTitans.get(0);
-                        if (vehicle.lockTitanToDeck(titan, player)) {
+                    if (!nearbyCargo.isEmpty()) {
+                        LivingEntity cargo = nearbyCargo.get(0);
+                        if (vehicle.lockCargoToDeck(cargo, player)) {
                             tag.remove("WinchTitanUUID");
                             tag.remove("WinchTitanName");
                             return InteractionResult.SUCCESS;
                         }
                     } else {
-                        player.sendSystemMessage(Component.literal("§c[WINCH ERROR] Selected Titan is too far from the vehicle (>32m) or not found."));
+                        player.sendSystemMessage(Component.literal("§c[WINCH ERROR] Selected Titan / Exoframe is too far (>32m) or not found."));
                     }
                 } else {
-                    // Auto-detect closest Titan within 10 blocks if none specifically tagged
-                    List<BaseTitanEntity> nearby = level.getEntitiesOfClass(BaseTitanEntity.class, vehicle.getBoundingBox().inflate(10.0D),
-                            t -> !t.isPassenger());
+                    // Auto-detect closest Titan / Exoframe within 10 blocks if none specifically tagged
+                    List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class, vehicle.getBoundingBox().inflate(10.0D),
+                            t -> !t.isPassenger() && com.titancombat.util.CrossModCargoHelper.isCargoEligible(t));
                     if (!nearby.isEmpty()) {
-                        BaseTitanEntity titan = nearby.get(0);
-                        if (vehicle.lockTitanToDeck(titan, player)) {
+                        LivingEntity cargo = nearby.get(0);
+                        if (vehicle.lockCargoToDeck(cargo, player)) {
                             return InteractionResult.SUCCESS;
                         }
                     } else if (vehicle.hasCargo()) {
                         vehicle.releaseMountedTitans(player);
                         return InteractionResult.SUCCESS;
                     } else {
-                        player.sendSystemMessage(Component.literal("§7[WINCH INFO] First right-click your Titan to attach cable, then right-click the vehicle to load."));
+                        player.sendSystemMessage(Component.literal("§7[WINCH INFO] First right-click your Titan or Exoframe to attach cable, then right-click the vehicle to load."));
                     }
                 }
             }

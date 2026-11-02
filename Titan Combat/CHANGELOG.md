@@ -4,6 +4,130 @@ All notable changes to the **Titan Combat** mod will be documented in this file.
 
 ---
 
+## [2.7.3] - 2026-11-02 (Ocean Carrier Overhaul)
+- Rebuilt Oceanic Super-Carrier as an LHD-style amphibious assault ship (island, rotating radars, CIWS, numbered flight deck, red antifouling waterline).
+- Fixed mirrored "MARINES" stencil on one side of the V-22.
+
+## [2.7.2] - 2026-11-02 (Transport Vehicle Model Overhaul)
+- Rebuilt V-22 Osprey (tilting nacelles, counter-rotating proprotors), 8x8 Armored APC (slat armour, RWS turret, live wheel spin/steer) and Mobile Suit Trailer (armored tractor, 24-tyre lowboy, mech cradle) models, textures and icons.
+
+## [2.7.1] - 2026-11-02 (Transport Vehicle Fixes)
+- Chinook now turns with A/D.
+- V-22 Osprey descends with the Descend key (Alt) instead of Shift.
+- Vehicle Wrench returns the correct item for the Osprey, APC and Mobile Suit Trailer (previously gave a Hauler Truck).
+- Added missing item models for the Osprey, APC and Mobile Suit Trailer.
+- Paint Spray Can now applies faction livery to transport vehicles; colour is kept through wrench/redeploy.
+- Rebuilt CH-47 Chinook model, texture and icon; rotors stay still when parked.
+
+## [2.4.0] - 2026-11-01 (Expansion Titan Frames & Epic Modular Armor Overhaul)
+
+### Epic Modular Armor Archetype Overhaul (8 Distinct 3D Silhouettes)
+- **8 Distinct 3D Armor Visual Archetypes**:
+  - **Infantry**: Standard tactical military composite armor, brow searchlights, grab bars, boxy pauldrons.
+  - **Siege**: Super-heavy reactive armor slabs (ERA bricks), massive bunker blast shields, bulldozer shin armor, face cage.
+  - **Samurai**: Crescent moon kabuto horned crest, 3-tiered flared ō-sode shoulder armor wings, articulated thigh haidate tassets, bladed knee guards.
+  - **Aero**: Swept aerodynamic delta winglets on shoulders, chevron chest intake cowl, calf stabilizer fins with jump-jet cowlings.
+  - **Scrap**: Welded rebar cage, barbed wire wrap, asymmetrical bolted scrap sheets, welded rebar spikes.
+  - **Stealth**: Faceted radar-absorbent diamond carbon cowls, low-profile heat sink gills, angular chamfers.
+  - **Sovereign**: Regal gilded imperial eagle/lion breastplate, sovereign crown crest, winged royal commander pauldrons with gold trim.
+  - **Expedition**: Twin cyclone air pre-cleaner canisters flanking the head, storage cargo canisters strapped to chest/shoulders, sealed all-terrain gaiters.
+- **Dynamic 3D Armor Transformation**: Equipping armor pieces now dramatically transforms the 3D shape and silhouette of all 6 Titan Frames.
+- **Armor Swapping & Dismantling**:
+  - Right-click with a new theme piece to instantly swap and salvage the old armor item back into inventory.
+  - Sneak + Right-Click with an empty hand to safely dismantle installed armor pieces and return them to the player.
+- **Survival Crafting Recipes**: Added craftable recipes for all 4 armor items (`HEAD`, `CHEST`, `ARMS`, `LEGS`).
+
+### Model "BULLANT" Autonomous Anti-Tank Hexapod Overhaul
+- **Complete Visual & Mechanical Rebuild**:
+  - Replaced legacy quadruped with an authentic **6-legged hexapod walking battle tank** based on the Canopus Model "Bullant" reference.
+  - **6 Arched Articulated Legs**: Arched upper thigh beams, under-mounted hydraulic cylinders with chrome rods, rotary knee disk hubs, forward knee shields with white military triangle decals (`▼`), and segmented caterpillar crawler cleat feet.
+  - **Tripod Hexapod Walking Kinematics**: $180^\circ$ anti-phase tripod walking gait with smooth knee flexion and subtle hull heave.
+  - **Dual Dorsal Anti-Tank Missile Pods**: Twin 4-tube missile pods ($2 \times 2$) mounted on articulated gantry arms with hazard warning striping and exposed rocket warheads.
+  - **Armored Snout & Chin Autocannons**: Slanted faceted forward snout with periscope sight slit, side cowlings, and dual chin autocannons.
+  - **Canopus 360 Camera Dome**: 2-axis gimbal base with spherical camera pod and glowing cyan optical aperture lens.
+  - **Coyote Desert Khaki Coating**: High-resolution tactical matte finish with panel lines, rivets, and full spray camo/dye support.
+
+### 3 New Modular Titan Frames (Mass-Production & Multi-Legged Archetypes)
+- **Terrain Ground Titan Frame (T-04 / Mass-Production Tactical Ground Mech)**:
+  - Designed based on tactical mass-production military specifications.
+  - **Calf Tank Treads**: Armored caterpillar tank tracks integrated on the back of each lower leg calf (`caterpillar_left`, `caterpillar_right`) with drive sprockets, track road wheels, and heavy mudguards.
+  - Forward-slanted cockpit canopy, optical sensor turret on the roof, dual rear heat radiator grills, reinforced knee guards, and stomper feet with ground traction cleats.
+- **Cyclops Industrial Heavy Frame (C-05 / Gorilla Industrial Heavy Walker)**:
+  - Inspired by heavy industrial and engineering walkers with a distinctive silhouette.
+  - **Glowing Cyan Cyclops Eye Dome**: Prominent central panoramic dome visor lens with vivid cyan sensor glow.
+  - **Hunched Gorilla Posture**: Low center of gravity, heavy boxy shoulders with hazard caution striping, and dual vertical industrial exhaust smokestacks emitting engine heat.
+  - **4-Toed Outrigger Stabilizing Feet**: Wide 4-claw stabilizing claw feet for unmatched recoil mitigation and maximum stability when firing heavy howitzers or rotary cannons.
+- **Spider Anti-Tank Hexapod Frame (S-06 / Autonomous Walking Tank)**:
+  - Multi-legged walking anti-tank platform featuring 6 articulated legs, dual missile pods, and low-slung armor.
+
+### Modular Customization & Compatibility Across All 6 Frames
+- **Modular Armor Integration**:
+  - All 6 frames start in their bare chassis form and accept all 4 modular armor pieces (`HEAD`, `CHEST`, `ARMS`, `LEGS`) across all **17 Armor Themes** (`TitanArmorTheme`) and **8 Visual Archetypes**.
+- **Paint Spray & Dye System**:
+  - Full support for `PaintSprayCanItem` with 9 camo finishes (Steel, Desert, Woodland, Urban, Snow, Crimson, Cobalt, Hazard, Black Ops) generated at high resolution for all 3 frames (27 total texture maps).
+  - Full dynamic recoloring with all 16 Minecraft Dyes (`DyeItem`).
+- **Universal Weapon & Core Module Hardpoints**:
+  - Seamlessly equips all handheld primary weapons (Heavy Assault Rifle, Rotary Gatling, MLRS Rocket Pod, SMG, Leadwall, Splitter, Howitzer, Mining Drill, Chainsaw).
+  - Fully supports Back Equipment Modules (M-120 Howitzer, MLRS-6 Rocket Pod, Cloaking Core, Phase Warp Core, Sonar Scanner).
+  - Custom glider wing and jump-jet flight module mounting offsets.
+
+### Deployment Beacons & Crafting
+- **Dedicated Frame Beacons**:
+  - `Terrain Frame Drop Beacon` (`terrain_frame_beacon`)
+  - `Cyclops Frame Drop Beacon` (`cyclops_frame_beacon`)
+  - `Spider Frame Drop Beacon` (`spider_frame_beacon`)
+- **Universal Multi-Switch Cycling**: Right-click the universal `Titan Frame Drop Beacon` or cycle between all 6 frame models (`Striker -> Vanguard -> Colossus -> Terrain -> Cyclops -> Spider`).
+- **Crafting Recipes**: Unique survival recipes for all new frame beacons using redstone components, iron, netherite, copper, and amethyst/glowstone.
+
+---
+
+## [2.3.0] - 2026-11-01 (Custom Weapon Arsenal Expansion: Heavy Assault Rifle, Rotary Gatling & MLRS-6 Back Rocket Pod)
+
+### Custom-Modeled Primary & Back Weapon Arsenal
+- **Titan Heavy Assault Rifle (AR / Battle Rifle)**:
+  - Custom procedural 3D model: Bullpup receiver, Picatinny tactical rail, holographic reflex sight with glowing lens, vented handguard with cooling slots, 4-port muzzle compensator, ergonomic foregrip, and curved 32-round combat magazine.
+  - Balanced rapid-fire kinetic assault weapon with crisp velocity, high accuracy, and spent brass casing ejection.
+- **Titan Rotary Heavy Machine Gun (Gatling)**:
+  - Custom procedural 3D model: 6-barrel rotary cluster, cylindrical stator motor housing, massive side drum magazine with hazard caution striping, flexible armored ammo feed chute, and dual rear spade grips.
+  - Devastating sustained suppression fire (120-round drum, 10 rounds/sec fire rate, roaring sound and continuous casing cascade).
+- **MLRS-6 Titan Back-Mounted Rocket Launcher Pod**:
+  - Custom procedural 3D model: Armored rectangular 6-tube box missile launcher pod with hydraulic elevation arm, exposed rocket warhead cones with glowing tip sensors, rear exhaust deflection ports, and caution hazard markings.
+  - Dual deployment:
+    - **Back Equipment Module (Slot 13)**: Mounts above the right shoulder/back, fired via **Key [L]** to unleash a rapid 4-missile salvo barrage with smoke contrails and high-explosive area impact.
+    - **Handheld / Weapon Bay (Slot 12)**: Equipped directly as a primary heavy rocket pod with 12 missiles.
+- **1st-Person Cockpit View Integration**:
+  - Full first-person visual rigs for all new weapons inside the cockpit (`trooper_titan_1st.geo.json`), dynamically toggled based on the active weapon.
+- **Universal Chassis Compatibility**:
+  - Fully compatible with all 13 chassis (Trooper, Scout, Shade, Ion, Scorch, Ronin, Tone, Legion, Monarch, Northstar, Striker Frame, Vanguard Frame, Colossus Frame) with seamless 3rd-person held and stowed back-clamp rendering.
+
+---
+
+## [2.2.0] - 2026-11-01 (Modular Titan Frames, 3D Kinetic Ballistics & Tactical Smoke Mortar)
+
+### Modular Titan Frames (New Chassis Archetypes)
+- **Titan Frame System**: Bare mechanical frames displaying exposed skeletal hydraulics, linkages, and rollcage cockpit.
+- **3 Frame Variants**:
+  - **Striker Frame (S-01)**: Lightweight, swept agile chassis with twin-dash mobility and high speed.
+  - **Vanguard Frame (V-02)**: Balanced main battle chassis with standard box-section I-beams and all-round combat efficiency.
+  - **Colossus Frame (C-03)**: Super-heavy siege juggernaut with massive dual hydraulic columns, 100% knockback resistance, and maximum mortar stability.
+- **Modular Armor Attachments**:
+  - Right-click with `TitanArmorItem` to equip modular armor pieces on `HEAD`, `CHEST`, `ARMS`, and `LEGS`.
+  - Seamless 3D bone visibility toggling directly integrates armor plates onto the frame.
+- **Full Color & Camo Customization**:
+  - Complete support for `PaintSprayCanItem` (9 Camo indexes: Steel, Desert, Woodland, Urban, Snow, Crimson, Cobalt, Hazard, Black Ops).
+  - Full compatibility with all 16 Minecraft dyes (`DyeItem`).
+  - Dynamic synchronized coloring ensures all equipped armor plates match the chassis camo/tint.
+
+### 3D Kinetic Ballistics & Spent Shell Casings (Ported & Titan-Scaled from Obsolete)
+- **3D Kinetic Bullet Tracer**: Replaced simple item throwable with high-velocity 3D incandescent tracer rounds (`TitanBulletEntity` & `TitanBulletRenderer`) featuring supersonic flyby snap sounds, smoke contrails, and heavy impact sparks.
+- **Spent Shell Casings**: Firing ballistic titan weaponry automatically flings heavy caliber brass casings (`TitanCasingEntity` & `TitanCasingRenderer`) out the right ejection port, complete with 3-axis tumbling spin, ground bounce physics, copper clink collision audio, and lingering hot smoke wisps.
+
+### M-120 Howitzer Smoke System & Concussive Blast
+- **Heavy Concussive Muzzle Blast**: Howitzer shots now produce expanding smoke shockwave rings, breech venting, ground dust displacement around titan footings, and intense camera feedback.
+- **M-120 Tactical Smoke Shells**: New shell rack item (`HOWITZER_SMOKE_SHELLS`). Lobbed shells burst into a dense 12m volumetric smoke screen lasting 25s that pacifies enemy mob targeting and conceals allied mechs.
+
+---
+
 ## [2.1.0] - 2026-10-28 (Mass-Production Redesign & M-120 Howitzer)
 
 ### Mass-production titans

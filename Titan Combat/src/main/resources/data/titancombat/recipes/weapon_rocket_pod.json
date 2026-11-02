@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "FRF",
+    "RMR",
+    "FRF"
+  ],
+  "key": {
+    "F": {
+      "item": "minecraft:firework_rocket"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "M": {
+      "item": "titancombat:weapon_mount"
+    }
+  },
+  "result": {
+    "item": "titancombat:weapon_rocket_pod",
+    "count": 1
+  }
+}

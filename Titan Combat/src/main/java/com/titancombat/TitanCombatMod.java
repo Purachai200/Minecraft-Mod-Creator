@@ -59,9 +59,21 @@ public class TitanCombatMod {
         event.put(ModEntities.TROOPER_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.TROOPER).build());
         event.put(ModEntities.SCOUT_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.SCOUT).build());
         event.put(ModEntities.SHADE_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.SHADE).build());
+        event.put(ModEntities.STRIKER_FRAME_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.STRIKER_FRAME).build());
+        event.put(ModEntities.VANGUARD_FRAME_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.VANGUARD_FRAME).build());
+        event.put(ModEntities.COLOSSUS_FRAME_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.COLOSSUS_FRAME).build());
+        event.put(ModEntities.TERRAIN_FRAME_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.TERRAIN_FRAME).build());
+        event.put(ModEntities.CYCLOPS_FRAME_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.CYCLOPS_FRAME).build());
+        event.put(ModEntities.SPIDER_FRAME_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.SPIDER_FRAME).build());
         event.put(ModEntities.HAULER_TRUCK.get(), com.titancombat.entity.transport.TitanHaulerTruckEntity.createHaulerAttributes().build());
         event.put(ModEntities.CARGO_BARGE.get(), com.titancombat.entity.transport.TitanCargoBargeEntity.createBargeAttributes().build());
         event.put(ModEntities.SKYCRANE_DRONE.get(), com.titancombat.entity.transport.TitanSkyCraneDroneEntity.createDroneAttributes().build());
+        event.put(ModEntities.OCEAN_CARRIER.get(), com.titancombat.entity.transport.TitanOceanCarrierEntity.createOceanCarrierAttributes().build());
+        event.put(ModEntities.TACTICAL_TRUCK.get(), com.titancombat.entity.transport.TitanTacticalTruckEntity.createTacticalTruckAttributes().build());
+        event.put(ModEntities.CHINOOK_TRANSPORTER.get(), com.titancombat.entity.transport.TitanChinookTransporterEntity.createChinookAttributes().build());
+        event.put(ModEntities.V22_OSPREY.get(), com.titancombat.entity.transport.TitanV22OspreyEntity.createV22OspreyAttributes().build());
+        event.put(ModEntities.ARMORED_APC.get(), com.titancombat.entity.transport.TitanArmoredApcEntity.createArmoredApcAttributes().build());
+        event.put(ModEntities.MOBILE_SUIT_TRAILER.get(), com.titancombat.entity.transport.TitanMobileSuitTrailerEntity.createMobileSuitTrailerAttributes().build());
     }
 
     @SubscribeEvent

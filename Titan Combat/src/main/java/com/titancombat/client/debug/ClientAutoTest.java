@@ -4,6 +4,7 @@ import com.titancombat.TitanCombatMod;
 import com.titancombat.entity.BaseTitanEntity;
 import com.titancombat.entity.MechState;
 import com.titancombat.entity.ModEntities;
+import com.titancombat.entity.TitanArmorTheme;
 import com.titancombat.entity.TitanClass;
 import com.titancombat.entity.TitanWeapon;
 import com.titancombat.gui.TitanMenu;
@@ -39,6 +40,7 @@ public final class ClientAutoTest {
     private static final String TITAN = System.getProperty("titancombat.autotest.titan", "monarch");
     private static int tick = -1;
     private static int titanId = -1;
+    private static double displayX, displayY, displayZ;
 
     private record Step(int at, Consumer<Minecraft> action) {}
 
@@ -115,6 +117,272 @@ public final class ClientAutoTest {
 
     // Howitzer back module with a hand weapon: tactical map shot, a typed target fired with the fire key,
     // a rejected 300 m target, a "designate + fire on lock" (map right-click) mission, aim views and a salute.
+    private static final Step[] FRAME_TEST = {
+            new Step(30, mc -> server2(mc, (p, level) -> {
+                if (p.getVehicle() instanceof BaseTitanEntity old) { old.setSitting(true); p.stopRiding(); }
+                var spawn = level.getSharedSpawnPos();
+                int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spawn.getX(), spawn.getZ());
+                p.teleportTo(level, spawn.getX() + 0.5D, y, spawn.getZ() + 0.5D, 90.0F, 0.0F);
+            })),
+            new Step(60, mc -> spawnAndBoard(mc)),
+            new Step(120, mc -> {
+                mc.options.hideGui = false;
+                mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+                server(mc, (p, t) -> {
+                    t.setEnergy(50000);
+                    // Equip factory weapon and armor pieces
+                    if (t instanceof com.titancombat.entity.TitanFrameEntity frame) {
+                        frame.setHeadArmor(true);
+                        frame.setChestArmor(true);
+                        frame.setArmsArmor(true);
+                        frame.setLegsArmor(true);
+                    }
+                    t.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT, new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.XO16_CHAINGUN).get()));
+                    t.getTitanInventory().setItem(TitanMenu.AMMO_SLOT_1, new ItemStack(ModItems.WEAPON_MAGAZINES.get(TitanWeapon.XO16_CHAINGUN).get(), 4));
+                    t.getTitanInventory().setItem(TitanMenu.FLIGHT_SLOT, new ItemStack(ModItems.HOWITZER_MODULE.get()));
+                    t.getTitanInventory().setItem(TitanMenu.AMMO_SLOT_2, new ItemStack(ModItems.HOWITZER_SMOKE_SHELLS.get(), 4));
+                });
+            }),
+            new Step(160, mc -> shot(mc, "frame_01_armored_front")),
+            new Step(180, mc -> server(mc, (p, t) -> t.setCamoIndex(5))), // Crimson Camo
+            new Step(210, mc -> shot(mc, "frame_02_crimson_camo")),
+            new Step(230, mc -> server(mc, (p, t) -> t.setCamoIndex(6))), // Cobalt Camo
+            new Step(260, mc -> shot(mc, "frame_03_cobalt_camo")),
+            new Step(280, mc -> {
+                mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+                ModNetworking.sendToServer(new TitanWeaponActionC2SPacket(TitanWeaponActionC2SPacket.RELOAD));
+            }),
+            new Step(340, mc -> {
+                // Fire weapon: bullet tracer + shell casing
+                mc.options.keyAttack.setDown(true);
+            }),
+            new Step(350, mc -> {
+                shot(mc, "frame_04_firing_tracer_casing");
+                mc.options.keyAttack.setDown(false);
+            }),
+            new Step(380, mc -> {
+                TitanCombatMod.LOGGER.info("[autotest] Frame test completed successfully!");
+                mc.stop();
+            })
+    };
+
+    private static int terrainId = -1;
+    private static int cyclopsId = -1;
+    private static int spiderId = -1;
+    private static int strikerId = -1;
+    private static int vanguardId = -1;
+
+    private static final Step[] NEW_FRAMES = {
+            new Step(20, mc -> server2(mc, (p, level) -> {
+                p.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+                if (p.getVehicle() instanceof BaseTitanEntity old) { old.setSitting(true); p.stopRiding(); }
+                level.setDayTime(6000L);
+                level.setWeatherParameters(6000, 0, false, false);
+                displayX = 100.0D;
+                displayY = 120.0D;
+                displayZ = 100.0D;
+                // Build a spacious stone stage (50x50)
+                for (int dx = -25; dx <= 25; dx++) {
+                    for (int dz = -25; dz <= 25; dz++) {
+                        level.setBlockAndUpdate(net.minecraft.core.BlockPos.containing(displayX + dx, displayY - 1, displayZ + dz),
+                                net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+                    }
+                }
+                // Clear any leftover entities
+                level.getEntitiesOfClass(BaseTitanEntity.class, new AABB(displayX - 35, displayY - 5, displayZ - 35, displayX + 35, displayY + 15, displayZ + 35))
+                        .forEach(BaseTitanEntity::discard);
+                p.teleportTo(level, displayX, displayY, displayZ - 20.0D, 0.0F, 0.0F);
+            })),
+            new Step(60, mc -> server2(mc, (p, level) -> {
+                // 1. Striker Frame (with SMG & Salvage Scrap Armor) at X = displayX - 14
+                var striker = ModEntities.STRIKER_FRAME_TITAN.get().create(level);
+                if (striker != null) {
+                    striker.moveTo(displayX - 14.0D, displayY, displayZ, 180.0F, 0.0F);
+                    striker.setYBodyRot(180.0F);
+                    striker.setYHeadRot(180.0F);
+                    striker.setOwner(p);
+                    striker.setHeadArmor(true);
+                    striker.setChestArmor(true);
+                    striker.setArmsArmor(true);
+                    striker.setLegsArmor(true);
+                    striker.setHeadTheme(TitanArmorTheme.SALVAGE_SCRAP);
+                    striker.setChestTheme(TitanArmorTheme.SALVAGE_SCRAP);
+                    striker.setArmsTheme(TitanArmorTheme.SALVAGE_SCRAP);
+                    striker.setLegsTheme(TitanArmorTheme.SALVAGE_SCRAP);
+                    striker.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT, new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.LIGHT_SMG).get()));
+                    level.addFreshEntity(striker);
+                    strikerId = striker.getId();
+                }
+
+                // 2. Terrain Ground Frame (with Heavy Assault Rifle & Colossus Siege Bunker Armor) at X = displayX - 7
+                var terrain = ModEntities.TERRAIN_FRAME_TITAN.get().create(level);
+                if (terrain != null) {
+                    terrain.moveTo(displayX - 7.0D, displayY, displayZ, 180.0F, 0.0F);
+                    terrain.setYBodyRot(180.0F);
+                    terrain.setYHeadRot(180.0F);
+                    terrain.setOwner(p);
+                    terrain.setHeadArmor(true);
+                    terrain.setChestArmor(true);
+                    terrain.setArmsArmor(true);
+                    terrain.setLegsArmor(true);
+                    terrain.setHeadTheme(TitanArmorTheme.COLOSSUS);
+                    terrain.setChestTheme(TitanArmorTheme.COLOSSUS);
+                    terrain.setArmsTheme(TitanArmorTheme.COLOSSUS);
+                    terrain.setLegsTheme(TitanArmorTheme.COLOSSUS);
+                    terrain.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT, new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.HEAVY_ASSAULT_RIFLE).get()));
+                    level.addFreshEntity(terrain);
+                    terrainId = terrain.getId();
+                }
+
+                // 3. Cyclops Industrial Frame (with Rotary Machine Gun & Shiden Samurai Armor) at X = displayX
+                var cyclops = ModEntities.CYCLOPS_FRAME_TITAN.get().create(level);
+                if (cyclops != null) {
+                    cyclops.moveTo(displayX, displayY, displayZ, 180.0F, 0.0F);
+                    cyclops.setYBodyRot(180.0F);
+                    cyclops.setYHeadRot(180.0F);
+                    cyclops.setOwner(p);
+                    cyclops.setHeadArmor(true);
+                    cyclops.setChestArmor(true);
+                    cyclops.setArmsArmor(true);
+                    cyclops.setLegsArmor(true);
+                    cyclops.setHeadTheme(TitanArmorTheme.SHIDEN_SAMURAI);
+                    cyclops.setChestTheme(TitanArmorTheme.SHIDEN_SAMURAI);
+                    cyclops.setArmsTheme(TitanArmorTheme.SHIDEN_SAMURAI);
+                    cyclops.setLegsTheme(TitanArmorTheme.SHIDEN_SAMURAI);
+                    cyclops.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT, new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.ROTARY_MACHINE_GUN).get()));
+                    level.addFreshEntity(cyclops);
+                    cyclopsId = cyclops.getId();
+                }
+
+                // 4. Spider Hexapod Frame (with Rocket Pod & Apex Sovereign Armor) at X = displayX + 7
+                var spider = ModEntities.SPIDER_FRAME_TITAN.get().create(level);
+                if (spider != null) {
+                    spider.moveTo(displayX + 7.0D, displayY, displayZ, 180.0F, 0.0F);
+                    spider.setYBodyRot(180.0F);
+                    spider.setYHeadRot(180.0F);
+                    spider.setOwner(p);
+                    spider.setHeadArmor(true);
+                    spider.setChestArmor(true);
+                    spider.setArmsArmor(true);
+                    spider.setLegsArmor(true);
+                    spider.setHeadTheme(TitanArmorTheme.APEX_PREDATOR);
+                    spider.setChestTheme(TitanArmorTheme.APEX_PREDATOR);
+                    spider.setArmsTheme(TitanArmorTheme.APEX_PREDATOR);
+                    spider.setLegsTheme(TitanArmorTheme.APEX_PREDATOR);
+                    spider.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT, new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.ROCKET_POD).get()));
+                    level.addFreshEntity(spider);
+                    spiderId = spider.getId();
+                }
+
+                // 5. Vanguard Frame (with Splitter Rifle & Valkyrie Aero Armor) at X = displayX + 14
+                var vanguard = ModEntities.VANGUARD_FRAME_TITAN.get().create(level);
+                if (vanguard != null) {
+                    vanguard.moveTo(displayX + 14.0D, displayY, displayZ, 180.0F, 0.0F);
+                    vanguard.setYBodyRot(180.0F);
+                    vanguard.setYHeadRot(180.0F);
+                    vanguard.setOwner(p);
+                    vanguard.setHeadArmor(true);
+                    vanguard.setChestArmor(true);
+                    vanguard.setArmsArmor(true);
+                    vanguard.setLegsArmor(true);
+                    vanguard.setHeadTheme(TitanArmorTheme.VALKYRIE_AERO);
+                    vanguard.setChestTheme(TitanArmorTheme.VALKYRIE_AERO);
+                    vanguard.setArmsTheme(TitanArmorTheme.VALKYRIE_AERO);
+                    vanguard.setLegsTheme(TitanArmorTheme.VALKYRIE_AERO);
+                    vanguard.getTitanInventory().setItem(TitanMenu.WEAPON_SLOT, new ItemStack(ModItems.WEAPON_MODULES.get(TitanWeapon.SPLITTER_RIFLE).get()));
+                    level.addFreshEntity(vanguard);
+                    vanguardId = vanguard.getId();
+                }
+            })),
+            // Shot 1: Epic 5-Mech Lineup (Full body, cinematic distance)
+            new Step(120, mc -> {
+                mc.options.hideGui = true;
+                mc.options.setCameraType(CameraType.FIRST_PERSON);
+                server2(mc, (p, level) -> p.teleportTo(level, displayX, displayY + 2.5D, displayZ - 20.0D, 0.0F, 2.0F));
+            }),
+            new Step(140, mc -> shot(mc, "01_epic_5mech_lineup")),
+            // Shot 2: Close-up Cyclops Shiden Samurai Armor (Kabuto crescent horns & tiered wings)
+            new Step(160, mc -> server2(mc, (p, level) -> p.teleportTo(level, displayX, displayY + 2.2D, displayZ - 7.5D, 0.0F, 2.0F))),
+            new Step(180, mc -> shot(mc, "02_cyclops_shiden_samurai_armor")),
+            // Shot 3: Close-up Terrain Colossus Siege Armor (Fortress mantlet & reactive plates)
+            new Step(200, mc -> server2(mc, (p, level) -> p.teleportTo(level, displayX - 7.0D, displayY + 2.2D, displayZ - 7.5D, 0.0F, 2.0F))),
+            new Step(220, mc -> shot(mc, "03_terrain_colossus_siege_armor")),
+            // Shot 4: Close-up Spider Heavy Hexapod Anti-Tank (Model Bullant with 6 legs & dual missile pods)
+            new Step(240, mc -> server2(mc, (p, level) -> p.teleportTo(level, displayX + 7.0D, displayY + 2.5D, displayZ - 9.5D, 0.0F, 0.0F))),
+            new Step(260, mc -> shot(mc, "04_spider_bullant_sovereign_hexapod")),
+            // Shot 5: Close-up Striker Salvage Scrap Armor (Welded rebar cage & spikes)
+            new Step(280, mc -> server2(mc, (p, level) -> p.teleportTo(level, displayX - 14.0D, displayY + 2.0D, displayZ - 7.0D, 0.0F, 2.0F))),
+            new Step(300, mc -> shot(mc, "05_striker_salvage_scrap_armor")),
+            // Shot 6: Close-up Vanguard Valkyrie Aero Armor (Swept delta winglets & thrusters)
+            new Step(320, mc -> server2(mc, (p, level) -> p.teleportTo(level, displayX + 14.0D, displayY + 2.2D, displayZ - 7.5D, 0.0F, 2.0F))),
+            new Step(340, mc -> shot(mc, "06_vanguard_valkyrie_aero_armor")),
+            // Shot 7: 3/4 Dramatic Angle of Spider Mech
+            new Step(360, mc -> server2(mc, (p, level) -> p.teleportTo(level, displayX + 14.0D, displayY + 2.5D, displayZ - 7.0D, 45.0F, -2.0F))),
+            new Step(380, mc -> shot(mc, "07_spider_bullant_3quarter_angle")),
+            // Shot 8: Elevated Close-up on the Manned Pilot Cockpit & Armored Entry Hatch
+            new Step(400, mc -> server2(mc, (p, level) -> p.teleportTo(level, displayX + 7.0D, displayY + 4.6D, displayZ - 4.5D, 0.0F, 35.0F))),
+            new Step(420, mc -> shot(mc, "08_spider_cockpit_hatch_detail")),
+            // Verification of Boarding an Unarmed Titan Frame in First-Person Mode (Crash Fix Verification)
+            new Step(430, mc -> server2(mc, (p, level) -> {
+                var bareFrame = ModEntities.STRIKER_FRAME_TITAN.get().create(level);
+                if (bareFrame != null) {
+                    bareFrame.moveTo(displayX, displayY, displayZ - 10.0D, 0.0F, 0.0F);
+                    bareFrame.setOwner(p);
+                    level.addFreshEntity(bareFrame);
+                    p.startRiding(bareFrame, true);
+                }
+            })),
+            new Step(450, mc -> {
+                mc.options.setCameraType(CameraType.FIRST_PERSON);
+                mc.options.hideGui = false;
+                shot(mc, "09_unarmed_frame_first_person_cockpit");
+            }),
+            // Step 460: Test Opening Frame Customization Menu via E / openCustomInventoryScreen
+            new Step(460, mc -> server2(mc, (p, level) -> {
+                if (p.getVehicle() instanceof BaseTitanEntity titan) {
+                    titan.openCustomInventoryScreen(p);
+                }
+            })),
+            new Step(475, mc -> shot(mc, "10_frame_customization_armor_slots")),
+            new Step(480, mc -> {
+                if (mc.screen != null) mc.screen.onClose();
+            }),
+            // Step 490: Test Howitzer with Tactical Smoke Shells
+            new Step(490, mc -> server2(mc, (p, level) -> {
+                if (p.getVehicle() instanceof BaseTitanEntity titan) {
+                    titan.setEnergy(50000);
+                    titan.getTitanInventory().setItem(TitanMenu.FLIGHT_SLOT, new ItemStack(ModItems.HOWITZER_MODULE.get()));
+                    titan.getTitanInventory().setItem(TitanMenu.AMMO_SLOT_1, new ItemStack(ModItems.HOWITZER_SMOKE_SHELLS.get(), 4));
+                    titan.setHowitzerSmoke(true);
+                    titan.setArtilleryTarget(p, titan.getBlockX() - 60, null, titan.getBlockZ());
+                }
+            })),
+            new Step(520, mc -> {
+                shot(mc, "11_howitzer_smoke_shell_hud");
+                server2(mc, (p, level) -> {
+                    if (p.getVehicle() instanceof BaseTitanEntity titan) {
+                        titan.requestHowitzerFire(p, false);
+                    }
+                });
+            }),
+            // Step 535: Test Shoulder Rocket Launcher Pod & HUD
+            new Step(535, mc -> server2(mc, (p, level) -> {
+                if (p.getVehicle() instanceof BaseTitanEntity titan) {
+                    titan.getTitanInventory().setItem(TitanMenu.FLIGHT_SLOT, new ItemStack(ModItems.ROCKET_LAUNCHER_MODULE.get()));
+                    titan.getTitanInventory().setItem(TitanMenu.AMMO_SLOT_1, new ItemStack(ModItems.AMMO_ROCKET_SALVO.get(), 16));
+                }
+            })),
+            new Step(550, mc -> shot(mc, "12_cockpit_missile_hud_ready")),
+            // End
+            new Step(560, mc -> {
+                TitanCombatMod.LOGGER.info("[autotest] Unarmed Titan Frame boarded successfully in First-Person without crash!");
+                TitanCombatMod.LOGGER.info("[autotest] Smoke shell fired successfully without premature detonation!");
+                TitanCombatMod.LOGGER.info("[autotest] Missile launcher HUD verified successfully!");
+                TitanCombatMod.LOGGER.info("[autotest] Epic armor showcase completed successfully!");
+                mc.stop();
+            })
+    };
+
     private static final Step[] ARTILLERY = {
             // Back on the ground at world spawn (the saved test world may have left the player on a sky stage).
             new Step(30, mc -> server2(mc, (p, level) -> {
@@ -561,7 +829,6 @@ public final class ClientAutoTest {
         });
     }
 
-    private static double displayX, displayY, displayZ;
 
     /** Move the player to a fresh spot first; the titan is spawned once that chunk has loaded. */
     private static void spawnDisplay(Minecraft mc) {
@@ -611,6 +878,12 @@ public final class ClientAutoTest {
             case "trooper" -> ModEntities.TROOPER_TITAN.get();
             case "scout" -> ModEntities.SCOUT_TITAN.get();
             case "shade" -> ModEntities.SHADE_TITAN.get();
+            case "striker_frame" -> ModEntities.STRIKER_FRAME_TITAN.get();
+            case "vanguard_frame" -> ModEntities.VANGUARD_FRAME_TITAN.get();
+            case "colossus_frame" -> ModEntities.COLOSSUS_FRAME_TITAN.get();
+            case "terrain_frame" -> ModEntities.TERRAIN_FRAME_TITAN.get();
+            case "cyclops_frame" -> ModEntities.CYCLOPS_FRAME_TITAN.get();
+            case "spider_frame" -> ModEntities.SPIDER_FRAME_TITAN.get();
             default -> ModEntities.MONARCH_TITAN.get();
         };
     }
@@ -913,6 +1186,316 @@ public final class ClientAutoTest {
         float pitch = (float) (-(Math.atan2(dy, horizDist) * (180.0D / Math.PI)));
 
         setCamPos(mc, camX, camY, camZ, yaw, pitch);
+    }
+
+
+    private static int carrierId = -1;
+    private static int tacticalTruckId = -1;
+    private static int chinookId = -1;
+    private static int ospreyId = -1;
+    private static int apcId = -1;
+    private static int trailerId = -1;
+
+    private static float yawBefore;
+    private static double yBefore;
+    private static final Step[] TRANSPORT_NEW = buildTransportNew();
+
+    private static Step[] buildTransportNew() {
+        java.util.List<Step> steps = new java.util.ArrayList<>();
+        steps.add(new Step(40, mc -> {
+            if (mc.player != null && mc.player.getVehicle() != null) {
+                mc.player.stopRiding();
+            }
+            server2(mc, (player, level) -> {
+                if (player.getVehicle() != null) {
+                    player.stopRiding();
+                }
+                level.setWeatherParameters(60000, 0, false, false);
+                level.setDayTime(5000L); // Bright morning sunlight
+
+                tBaseX = player.getX();
+                tBaseY = player.getY();
+                tBaseZ = player.getZ();
+
+                int bx = (int) tBaseX;
+                int by = (int) tBaseY;
+                int bz = (int) tBaseZ;
+
+                for (var entity : level.getAllEntities()) {
+                    if (entity instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity ||
+                        entity instanceof com.titancombat.entity.BaseTitanEntity) {
+                        entity.discard();
+                    }
+                }
+
+                // 1. Clear air
+                for (int dx = -45; dx <= 45; dx++) {
+                    for (int dz = -45; dz <= 45; dz++) {
+                        for (int dy = 1; dy <= 32; dy++) {
+                            level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by + dy, bz + dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                        }
+                    }
+                }
+
+                // 2. Proving ground: Wide Highway on Left, Sea on Right
+                for (int dx = -45; dx <= 45; dx++) {
+                    for (int dz = -45; dz <= 45; dz++) {
+                        if (dx >= 14 && dx <= 44) {
+                            level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by - 3, bz + dz), net.minecraft.world.level.block.Blocks.SAND.defaultBlockState());
+                            level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by - 2, bz + dz), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState());
+                            level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by - 1, bz + dz), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState());
+                            level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by, bz + dz), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState());
+                        } else if (dx >= -28 && dx <= -6) {
+                            var road = (dx == -28 || dx == -6 || (dz % 3 == 0)) ? net.minecraft.world.level.block.Blocks.COARSE_DIRT.defaultBlockState()
+                                    : net.minecraft.world.level.block.Blocks.DIRT_PATH.defaultBlockState();
+                            level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by, bz + dz), road);
+                        } else {
+                            level.setBlockAndUpdate(new net.minecraft.core.BlockPos(bx + dx, by, bz + dz), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState());
+                        }
+                    }
+                }
+
+                double groundY = by + 1.0D;
+
+                // 1. V-22 Osprey Tiltrotor (airborne hover)
+                double ospreyX = bx - 14.0D;
+                var osprey = new com.titancombat.entity.transport.TitanV22OspreyEntity(ModEntities.V22_OSPREY.get(), level);
+                osprey.moveTo(ospreyX, groundY + 10.0D, bz - 4.0D, 180.0F, 0.0F);
+                osprey.setNoGravity(true);
+                level.addFreshEntity(osprey);
+                ospreyId = osprey.getId();
+
+                // 2. Armored Combat 8x8 APC
+                double apcX = bx - 22.0D;
+                var apc = new com.titancombat.entity.transport.TitanArmoredApcEntity(ModEntities.ARMORED_APC.get(), level);
+                apc.moveTo(apcX, groundY, bz - 4.0D, 180.0F, 0.0F);
+                apc.setNoGravity(true);
+                level.addFreshEntity(apc);
+                apcId = apc.getId();
+
+                // 3. Mobile Suit Flatbed Trailer with Northstar Titan docked
+                double trailerX = bx - 10.0D;
+                var trailer = new com.titancombat.entity.transport.TitanMobileSuitTrailerEntity(ModEntities.MOBILE_SUIT_TRAILER.get(), level);
+                trailer.moveTo(trailerX, groundY, bz + 4.0D, 180.0F, 0.0F);
+                trailer.setNoGravity(true);
+                level.addFreshEntity(trailer);
+                trailerId = trailer.getId();
+
+                var titanOnTrailer = ModEntities.NORTHSTAR_TITAN.get().create(level);
+                if (titanOnTrailer != null) {
+                    titanOnTrailer.moveTo(trailerX, groundY, bz + 4.0D, 180.0F, 0.0F);
+                    titanOnTrailer.setOwner(player);
+                    titanOnTrailer.setNoGravity(true);
+                    level.addFreshEntity(titanOnTrailer);
+                    trailer.lockCargoToDeck(titanOnTrailer, null);
+                }
+
+                // 4. Chinook Helicopter
+                double heloX = bx - 2.0D;
+                var chinook = new com.titancombat.entity.transport.TitanChinookTransporterEntity(ModEntities.CHINOOK_TRANSPORTER.get(), level);
+                chinook.moveTo(heloX, groundY, bz - 4.0D, 180.0F, 0.0F);
+                chinook.setNoGravity(true);
+                level.addFreshEntity(chinook);
+                chinookId = chinook.getId();
+
+                // 5. Oceanic Super-Carrier Barge in water
+                double carrierX = bx + 24.0D;
+                var carrier = new com.titancombat.entity.transport.TitanOceanCarrierEntity(ModEntities.OCEAN_CARRIER.get(), level);
+                carrier.moveTo(carrierX, groundY - 0.4D, bz - 4.0D, 175.0F, 0.0F);
+                carrier.setNoGravity(true);
+                level.addFreshEntity(carrier);
+                carrierId = carrier.getId();
+
+                var ronin = ModEntities.RONIN_TITAN.get().create(level);
+                if (ronin != null) {
+                    ronin.moveTo(carrierX, groundY, bz - 4.0D, 175.0F, 0.0F);
+                    ronin.setOwner(player);
+                    ronin.setNoGravity(true);
+                    level.addFreshEntity(ronin);
+                    carrier.lockCargoToDeck(ronin, null);
+                }
+            });
+        }));
+
+        steps.add(new Step(80, mc -> {
+            mc.options.hideGui = true;
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            server2(mc, (player, level) -> {
+                player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+            });
+        }));
+
+        // Shot 1: Fleet Hero Lineup Overview (All New Vehicles + Carrier in water)
+        steps.add(new Step(120, mc -> {
+            double groundY = ((int) tBaseY) + 1.0D;
+            aimCameraAt(mc, tBaseX - 4.0D, groundY + 7.5D, tBaseZ - 2.0D, 32.0D, 15.0D, 168.0D);
+        }));
+        steps.add(new Step(130, mc -> shot(mc, "01_fleet_overview_all_new_vehicles")));
+
+        // Shot 2: Mobile Suit Heavy Trailer with Docked Titan
+        steps.add(new Step(140, mc -> {
+            double groundY = ((int) tBaseY) + 1.0D;
+            aimCameraAt(mc, tBaseX - 10.0D, groundY + 2.5D, tBaseZ + 4.0D, 15.0D, 14.0D, 150.0D);
+        }));
+        steps.add(new Step(150, mc -> shot(mc, "02_mobile_suit_trailer_launch_cradle")));
+
+        // Shot 3: Armored Combat 8x8 APC
+        steps.add(new Step(160, mc -> {
+            double groundY = ((int) tBaseY) + 1.0D;
+            aimCameraAt(mc, tBaseX - 22.0D, groundY + 2.0D, tBaseZ - 4.0D, 10.0D, 14.0D, 160.0D);
+        }));
+        steps.add(new Step(170, mc -> shot(mc, "03_armored_apc_8x8_turret")));
+
+        // Shot 4: V-22 Osprey Tiltrotor Hovering in Flight
+        steps.add(new Step(180, mc -> {
+            double groundY = ((int) tBaseY) + 1.0D;
+            aimCameraAt(mc, tBaseX - 14.0D, groundY + 11.5D, tBaseZ - 4.0D, 16.0D, 10.0D, 165.0D);
+        }));
+        steps.add(new Step(190, mc -> shot(mc, "04_v22_osprey_tiltrotor_flight")));
+
+        // Shot 5: Board V-22 Osprey Cockpit Interior First Person
+        steps.add(new Step(200, mc -> server2(mc, (p, l) -> {
+            p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            var osprey = l.getEntity(ospreyId);
+            if (osprey instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity transport) {
+                p.startRiding(transport, true);
+            }
+        })));
+        steps.add(new Step(210, mc -> {
+            mc.options.hideGui = false;
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            if (mc.player != null) {
+                mc.player.setXRot(5.0F);
+                mc.player.setYRot(180.0F);
+            }
+        }));
+        steps.add(new Step(225, mc -> shot(mc, "05_v22_osprey_cockpit_interior_view")));
+
+        // Shot 6: Board Armored APC Cockpit First Person
+        steps.add(new Step(235, mc -> server2(mc, (p, l) -> {
+            p.stopRiding();
+            var apc = l.getEntity(apcId);
+            if (apc instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity transport) {
+                p.startRiding(transport, true);
+            }
+        })));
+        steps.add(new Step(245, mc -> {
+            mc.options.hideGui = false;
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            if (mc.player != null) {
+                mc.player.setXRot(5.0F);
+                mc.player.setYRot(180.0F);
+            }
+        }));
+        steps.add(new Step(260, mc -> shot(mc, "06_armored_apc_cockpit_view")));
+
+        // Shot 7: Board Mobile Suit Trailer Cockpit
+        steps.add(new Step(270, mc -> server2(mc, (p, l) -> {
+            p.stopRiding();
+            var tr = l.getEntity(trailerId);
+            if (tr instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity transport) {
+                p.startRiding(transport, true);
+            }
+        })));
+        steps.add(new Step(280, mc -> {
+            mc.options.hideGui = false;
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            if (mc.player != null) {
+                mc.player.setXRot(5.0F);
+                mc.player.setYRot(180.0F);
+            }
+        }));
+        steps.add(new Step(295, mc -> shot(mc, "07_mobile_suit_trailer_cockpit_view")));
+
+        // Shot 8: Board Ocean Carrier Bridge Helm
+        steps.add(new Step(305, mc -> server2(mc, (p, l) -> {
+            p.stopRiding();
+            var car = l.getEntity(carrierId);
+            if (car instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity transport) {
+                p.startRiding(transport, true);
+            }
+        })));
+        steps.add(new Step(315, mc -> {
+            mc.options.hideGui = false;
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            if (mc.player != null) {
+                mc.player.setXRot(5.0F);
+                mc.player.setYRot(175.0F);
+            }
+        }));
+        steps.add(new Step(330, mc -> shot(mc, "08_ocean_carrier_bridge_view")));
+
+        // Shot 9: Chinook close-up, then faction paint on the APC
+        steps.add(new Step(340, mc -> server2(mc, (p, l) -> p.stopRiding())));
+        steps.add(new Step(350, mc -> aimCameraAt(mc, tBaseX - 2.0D, ((int) tBaseY) + 3.0D, tBaseZ - 4.0D, 16.0D, 14.0D, 120.0D)));
+        steps.add(new Step(360, mc -> shot(mc, "09_chinook_closeup")));
+        steps.add(new Step(365, mc -> server2(mc, (p, l) -> {
+            if (l.getEntity(apcId) instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity v) v.setFaction(com.titancombat.entity.MechFaction.CRIMSON_LEGION);
+            if (l.getEntity(chinookId) instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity v) v.setFaction(com.titancombat.entity.MechFaction.APEX_VANGUARD);
+        })));
+        steps.add(new Step(375, mc -> aimCameraAt(mc, tBaseX - 22.0D, ((int) tBaseY) + 3.0D, tBaseZ - 4.0D, 10.0D, 14.0D, 160.0D)));
+        steps.add(new Step(385, mc -> shot(mc, "10_apc_crimson_faction")));
+        steps.add(new Step(388, mc -> aimCameraAt(mc, tBaseX + 24.0D, ((int) tBaseY) + 3.0D, tBaseZ - 4.0D, 22.0D, 18.0D, 230.0D)));
+        steps.add(new Step(393, mc -> shot(mc, "10b_carrier_closeup")));
+        steps.add(new Step(394, mc -> aimCameraAt(mc, tBaseX - 14.0D, ((int) tBaseY) + 11.0D, tBaseZ - 4.0D, 14.0D, 5.0D, 90.0D)));
+        steps.add(new Step(395, mc -> shot(mc, "10c_osprey_side_a")));
+        steps.add(new Step(396, mc -> aimCameraAt(mc, tBaseX - 14.0D, ((int) tBaseY) + 11.0D, tBaseZ - 4.0D, 14.0D, 5.0D, 270.0D)));
+        steps.add(new Step(398, mc -> shot(mc, "10d_osprey_side_b")));
+
+        // Behaviour: Chinook turns with A, Osprey descends with the Descend key
+        steps.add(new Step(400, mc -> server2(mc, (p, l) -> {
+            p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            if (l.getEntity(chinookId) instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity v) { v.setNoGravity(false); p.startRiding(v, true); }
+        })));
+        steps.add(new Step(412, mc -> {
+            mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            yawBefore = mc.player.getVehicle() != null ? mc.player.getVehicle().getYRot() : Float.NaN;
+            mc.options.keyLeft.setDown(true);
+        }));
+        steps.add(new Step(450, mc -> {
+            mc.options.keyLeft.setDown(false);
+            float after = mc.player.getVehicle() != null ? mc.player.getVehicle().getYRot() : Float.NaN;
+            TitanCombatMod.LOGGER.info("[autotest] CHECK chinook_turn yaw {} -> {} : {}", yawBefore, after, Math.abs(after - yawBefore) > 20 ? "PASS" : "FAIL");
+            shot(mc, "11_chinook_turned");
+        }));
+        steps.add(new Step(460, mc -> server2(mc, (p, l) -> {
+            p.stopRiding();
+            if (l.getEntity(ospreyId) instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity v) { v.setNoGravity(false); p.startRiding(v, true); }
+        })));
+        steps.add(new Step(475, mc -> {
+            yBefore = mc.player.getVehicle() != null ? mc.player.getVehicle().getY() : Double.NaN;
+            com.titancombat.client.KeyInputHandler.KEY_DESCEND.setDown(true);
+        }));
+        steps.add(new Step(505, mc -> {
+            com.titancombat.client.KeyInputHandler.KEY_DESCEND.setDown(false);
+            double after = mc.player.getVehicle() != null ? mc.player.getVehicle().getY() : Double.NaN;
+            TitanCombatMod.LOGGER.info("[autotest] CHECK osprey_descend y {} -> {} : {}", yBefore, after, yBefore - after > 3 ? "PASS" : "FAIL");
+            shot(mc, "12_osprey_descended");
+        }));
+
+        // Behaviour: wrench returns each vehicle's own item
+        steps.add(new Step(515, mc -> server2(mc, (p, l) -> {
+            p.stopRiding();
+            p.setShiftKeyDown(true);
+            var wrench = new net.minecraft.world.item.ItemStack(com.titancombat.item.ModItems.VEHICLE_WRENCH.get());
+            for (int id : new int[]{chinookId, ospreyId, apcId, trailerId, carrierId}) {
+                if (!(l.getEntity(id) instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity v)) continue;
+                String want = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(v.getType()).getPath();
+                p.getInventory().clearContent();
+                wrench.getItem().interactLivingEntity(wrench, p, v, net.minecraft.world.InteractionHand.MAIN_HAND);
+                String got = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(p.getInventory().getItem(0).getItem()).getPath();
+                TitanCombatMod.LOGGER.info("[autotest] CHECK wrench {} -> {} : {}", want, got, want.equals(got) ? "PASS" : "FAIL");
+            }
+            p.setShiftKeyDown(false);
+        })));
+
+        // Test finish
+        steps.add(new Step(530, mc -> {
+            TitanCombatMod.LOGGER.info("[autotest] Completed expanded transport test suite successfully!");
+            mc.stop();
+        }));
+
+        return steps.toArray(new Step[0]);
     }
 
     private static final Step[] TRANSPORT = buildTransport();
@@ -1307,7 +1890,7 @@ public final class ClientAutoTest {
             mc.options.gamma().set(1.0D);
             if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen) mc.setScreen(null);
         }
-        Step[] script = NAME.startsWith("artillery") ? ARTILLERY : NAME.startsWith("walkside") ? WALK_SIDE : NAME.startsWith("weapons_1st") ? COCKPIT_TOOLS : NAME.startsWith("energy") ? ENERGY : NAME.startsWith("transport") ? TRANSPORT : NAME.startsWith("bind") ? BIND : NAME.startsWith("cloak") ? CLOAK : NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
+        Step[] script = NAME.startsWith("new_frames") ? NEW_FRAMES : NAME.startsWith("frame") ? FRAME_TEST : NAME.startsWith("artillery") ? ARTILLERY : NAME.startsWith("walkside") ? WALK_SIDE : NAME.startsWith("weapons_1st") ? COCKPIT_TOOLS : NAME.startsWith("energy") ? ENERGY : NAME.startsWith("transport_new") ? TRANSPORT_NEW : NAME.startsWith("transport") ? TRANSPORT : NAME.startsWith("bind") ? BIND : NAME.startsWith("cloak") ? CLOAK : NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
         for (Step step : script) {
             if (step.at() == tick) step.action().accept(mc);
         }
@@ -1346,7 +1929,13 @@ public final class ClientAutoTest {
                 case "tone" -> ModEntities.TONE_TITAN.get();
                 case "trooper" -> ModEntities.TROOPER_TITAN.get();
                 case "scout" -> ModEntities.SCOUT_TITAN.get();
-            case "shade" -> ModEntities.SHADE_TITAN.get();
+                case "shade" -> ModEntities.SHADE_TITAN.get();
+                case "striker_frame" -> ModEntities.STRIKER_FRAME_TITAN.get();
+                case "vanguard_frame" -> ModEntities.VANGUARD_FRAME_TITAN.get();
+                case "colossus_frame" -> ModEntities.COLOSSUS_FRAME_TITAN.get();
+                case "terrain_frame" -> ModEntities.TERRAIN_FRAME_TITAN.get();
+                case "cyclops_frame" -> ModEntities.CYCLOPS_FRAME_TITAN.get();
+                case "spider_frame" -> ModEntities.SPIDER_FRAME_TITAN.get();
                 default -> ModEntities.MONARCH_TITAN.get();
             };
             if (!(type.create(level) instanceof BaseTitanEntity titan)) return;

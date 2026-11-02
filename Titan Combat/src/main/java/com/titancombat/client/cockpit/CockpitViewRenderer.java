@@ -71,19 +71,25 @@ public final class CockpitViewRenderer {
         pose.translate(-0.5F, -0.51F, -0.5F);
 
         MultiBufferSource buffers = event.getMultiBufferSource();
-        RENDERER.render(pose, CABIN_BASE, buffers, null, null, light);
-        RENDERER.render(pose, CABIN_FRAME, buffers, null, null, light);
-        // The first-person rig comes from the chassis the mounted weapon was built for, so swapped guns show
-        // correctly; unarmed titans show their own arms with the gun hidden (CockpitModel).
-        TitanClass rig = titan.hasWeapon() ? titan.getActiveWeapon().getFactoryChassis() : titan.getTitanClass();
-        CockpitPart arms = ARMS.computeIfAbsent(rig, c -> new CockpitPart(CockpitPart.Kind.ARMS, c));
-        float lower = titan.getLowerBlend(event.getPartialTick());
-        if (lower > 0.001F) {
-            // Lowered weapon: the arm and gun dip out of the sight line, muzzle down.
-            pose.translate(0.0F, -0.9F * lower, 0.25F * lower);
-            pose.mulPose(Axis.XP.rotationDegrees(-28.0F * lower));
+        try {
+            RENDERER.render(pose, CABIN_BASE, buffers, null, null, light);
+            RENDERER.render(pose, CABIN_FRAME, buffers, null, null, light);
+
+            // The first-person rig comes from the chassis the mounted weapon was built for, so swapped guns show
+            // correctly; unarmed titans show their own arms with the gun hidden (CockpitModel).
+            TitanClass targetRig = titan.hasWeapon() ? titan.getActiveWeapon().getFactoryChassis() : titan.getTitanClass();
+            TitanClass rig = CockpitModel.getCockpitRig(targetRig);
+            CockpitPart arms = ARMS.computeIfAbsent(rig, c -> new CockpitPart(CockpitPart.Kind.ARMS, c));
+            float lower = titan.getLowerBlend(event.getPartialTick());
+            if (lower > 0.001F) {
+                // Lowered weapon: the arm and gun dip out of the sight line, muzzle down.
+                pose.translate(0.0F, -0.9F * lower, 0.25F * lower);
+                pose.mulPose(Axis.XP.rotationDegrees(-28.0F * lower));
+            }
+            RENDERER.render(pose, arms, buffers, null, null, light);
+        } catch (Throwable t) {
+            TitanCombatMod.LOGGER.error("Failed to render first-person cockpit for {}", titan.getTitanClass(), t);
         }
-        RENDERER.render(pose, arms, buffers, null, null, light);
 
         pose.popPose();
     }

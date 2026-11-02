@@ -19,6 +19,12 @@ public class TransportVehicleModel<T extends BaseTransportVehicleEntity> extends
         if (animatable instanceof TitanHaulerTruckEntity) return "hauler_truck";
         if (animatable instanceof TitanCargoBargeEntity) return "cargo_barge";
         if (animatable instanceof TitanSkyCraneDroneEntity) return "skycrane_drone";
+        if (animatable instanceof com.titancombat.entity.transport.TitanOceanCarrierEntity) return "ocean_carrier";
+        if (animatable instanceof com.titancombat.entity.transport.TitanTacticalTruckEntity) return "tactical_truck";
+        if (animatable instanceof com.titancombat.entity.transport.TitanChinookTransporterEntity) return "chinook_transporter";
+        if (animatable instanceof com.titancombat.entity.transport.TitanV22OspreyEntity) return "v22_osprey";
+        if (animatable instanceof com.titancombat.entity.transport.TitanArmoredApcEntity) return "armored_apc";
+        if (animatable instanceof com.titancombat.entity.transport.TitanMobileSuitTrailerEntity) return "mobile_suit_trailer";
         return "hauler_truck";
     }
 
@@ -45,7 +51,12 @@ public class TransportVehicleModel<T extends BaseTransportVehicleEntity> extends
         // Positive bone Z roll lifts the right side, so a left turn (negative yaw rate) rolls the hull outward to the right
         float roll = Mth.clamp(yawRateRad * speed * 6.0F, -0.08F, 0.08F);
 
-        if (vehicle instanceof TitanHaulerTruckEntity) {
+        // Dynamic Cargo Straps & Clamping Rig Visibility:
+        // If the vehicle currently has no mounted Titans or Exoframes, hide the cargo straps/rig!
+        boolean hasCargo = vehicle.hasCargo();
+        getBone("cargo_straps").ifPresent(b -> b.setHidden(!hasCargo));
+
+        if (vehicle instanceof TitanHaulerTruckEntity || vehicle instanceof com.titancombat.entity.transport.TitanArmoredApcEntity) { // APC shares the 8x8 wheel/steer bone names
             float spin = -Mth.lerp(state.getPartialTick(), vehicle.wheelRotO, vehicle.wheelRot);
             for (String w : new String[]{"wheel_fl1", "wheel_fr1", "wheel_fl2", "wheel_fr2", "wheel_rl1", "wheel_rr1", "wheel_rl2", "wheel_rr2"}) {
                 getBone(w).ifPresent(b -> b.setRotX(spin));
@@ -67,6 +78,26 @@ public class TransportVehicleModel<T extends BaseTransportVehicleEntity> extends
             getBone("fuselage").ifPresent(b -> {
                 b.setRotX(-Mth.clamp(speed * 0.18F, -0.12F, 0.2F)); // nose dips to fly forward
                 b.setRotZ(-roll * 2.0F);
+            });
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanTacticalTruckEntity) {
+            float spin = -Mth.lerp(state.getPartialTick(), vehicle.wheelRotO, vehicle.wheelRot);
+            for (String w : new String[]{"wheel_fl", "wheel_fr", "wheel_rl", "wheel_rr"}) {
+                getBone(w).ifPresent(b -> b.setRotX(spin));
+            }
+            float steer = Math.abs(speed) < 0.02F ? 0.0F
+                    : Mth.clamp((float) Math.atan(yawRateRad * 4.0F / speed), -MAX_STEER, MAX_STEER);
+            getBone("wheel_fl").ifPresent(b -> b.setRotY(-steer));
+            getBone("wheel_fr").ifPresent(b -> b.setRotY(-steer));
+            getBone("cab").ifPresent(b -> b.setRotZ(roll * 1.2F));
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanChinookTransporterEntity) {
+            getBone("fuselage").ifPresent(b -> {
+                b.setRotX(-Mth.clamp(speed * 0.16F, -0.10F, 0.18F)); // nose dips forward in flight
+                b.setRotZ(-roll * 1.8F);
+            });
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanOceanCarrierEntity) {
+            getBone("hull").ifPresent(b -> {
+                b.setRotZ(b.getRotZ() - roll * 1.8F);
+                b.setRotX(b.getRotX() + Mth.clamp(speed * 0.04F, -0.03F, 0.05F));
             });
         }
     }
