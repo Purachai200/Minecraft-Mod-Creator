@@ -171,7 +171,7 @@
   "tooltip.titancombat.rocket_launcher.desc": "Back-mounted 6-tube rocket pod firing explosive missile salvos.",
   "tooltip.titancombat.rocket_launcher.keys": "Press [L] while mounted to unleash a 4-missile barrage.",
   "message.titancombat.rocket_launcher_installed": "§6[TITAN OS] MLRS-6 Rocket Launcher Pod installed on %s.",
-  "message.titancombat.rocket_no_ammo": "§c[TITAN WARNING] Rocket Pod out of ammo! Load Rocket Salvo Rack or Ammo Pod in bay.",
+  "message.titancombat.rocket_no_ammo": "§c[MLRS ROCKET] Out of rocket salvo ammunition! Load Rocket Ammo in bay.",
   "entity.titancombat.scout_titan": "Scout Titan",
   "weapon.titancombat.chainsaw": "HYDRAULIC CHAINSAW",
   "item.titancombat.weapon_chainsaw": "Titan Hydraulic Chainsaw",
@@ -273,8 +273,15 @@
   "message.titancombat.howitzer_loaded_smoke": "§b[MORTAR] Loaded 4x Tactical Smoke Shells.",
   "message.titancombat.howitzer_loaded_he": "§6[MORTAR] Loaded 4x High-Explosive Shells.",
   "message.titancombat.howitzer_no_alternate_ammo": "§c[MORTAR] No alternate %s available in bay or inventory.",
-  "message.titancombat.rocket_no_ammo": "§c[MLRS ROCKET] Out of rocket salvo ammunition! Load Rocket Ammo in bay.",
   "item.titancombat.module_cloaking": "Core Module: Active Optical Cloak",
   "item.titancombat.module_phase_warp": "Core Module: Phase Warp Blink",
-  "item.titancombat.module_sonar_scanner": "Core Module: Tactical Pulse Sonar"
+  "item.titancombat.module_sonar_scanner": "Core Module: Tactical Pulse Sonar",
+  "item.titancombat.lcac_hovercraft": "LCAC Air-Cushion Landing Craft Deployment Key",
+  "entity.titancombat.lcac_hovercraft": "LCAC Air-Cushion Landing Craft",
+  "item.titancombat.c130_hercules": "C-130 Hercules Tactical Airlifter Deployment Key",
+  "entity.titancombat.c130_hercules": "C-130 Hercules Tactical Airlifter",
+  "item.titancombat.repair_truck": "Mobile Field Repair Truck Deployment Key",
+  "entity.titancombat.repair_truck": "Mobile Field Repair Truck",
+  "block.titancombat.vehicle_assembly_bay": "Vehicle Assembly Bay",
+  "entity.titancombat.deck_collider": "Ship Deck"
 }

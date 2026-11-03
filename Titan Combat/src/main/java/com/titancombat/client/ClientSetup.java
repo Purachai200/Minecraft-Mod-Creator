@@ -54,6 +54,7 @@ public class ClientSetup {
         event.registerEntityRenderer(ModEntities.TITAN_CASING.get(), com.titancombat.client.renderer.TitanCasingRenderer::new);
         event.registerEntityRenderer(ModEntities.TITAN_SMOKE_SHELL.get(), com.titancombat.client.renderer.TitanSmokeShellRenderer::new);
         event.registerEntityRenderer(ModEntities.HAULER_TRUCK.get(), TransportVehicleRenderer::new);
+        event.registerEntityRenderer(ModEntities.DECK_COLLIDER.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
         event.registerEntityRenderer(ModEntities.CARGO_BARGE.get(), TransportVehicleRenderer::new);
         event.registerEntityRenderer(ModEntities.SKYCRANE_DRONE.get(), TransportVehicleRenderer::new);
         event.registerEntityRenderer(ModEntities.OCEAN_CARRIER.get(), TransportVehicleRenderer::new);
@@ -61,6 +62,9 @@ public class ClientSetup {
         event.registerEntityRenderer(ModEntities.CHINOOK_TRANSPORTER.get(), TransportVehicleRenderer::new);
         event.registerEntityRenderer(ModEntities.V22_OSPREY.get(), TransportVehicleRenderer::new);
         event.registerEntityRenderer(ModEntities.ARMORED_APC.get(), TransportVehicleRenderer::new);
+        event.registerEntityRenderer(ModEntities.LCAC_HOVERCRAFT.get(), TransportVehicleRenderer::new);
+        event.registerEntityRenderer(ModEntities.C130_HERCULES.get(), TransportVehicleRenderer::new);
+        event.registerEntityRenderer(ModEntities.REPAIR_TRUCK.get(), TransportVehicleRenderer::new);
         event.registerEntityRenderer(ModEntities.MOBILE_SUIT_TRAILER.get(), TransportVehicleRenderer::new);
     }
 

@@ -73,6 +73,9 @@ public class TitanCombatMod {
         event.put(ModEntities.CHINOOK_TRANSPORTER.get(), com.titancombat.entity.transport.TitanChinookTransporterEntity.createChinookAttributes().build());
         event.put(ModEntities.V22_OSPREY.get(), com.titancombat.entity.transport.TitanV22OspreyEntity.createV22OspreyAttributes().build());
         event.put(ModEntities.ARMORED_APC.get(), com.titancombat.entity.transport.TitanArmoredApcEntity.createArmoredApcAttributes().build());
+        event.put(ModEntities.LCAC_HOVERCRAFT.get(), com.titancombat.entity.transport.TitanLcacHovercraftEntity.createLcacAttributes().build());
+        event.put(ModEntities.C130_HERCULES.get(), com.titancombat.entity.transport.TitanC130HerculesEntity.createC130Attributes().build());
+        event.put(ModEntities.REPAIR_TRUCK.get(), com.titancombat.entity.transport.TitanRepairTruckEntity.createRepairTruckAttributes().build());
         event.put(ModEntities.MOBILE_SUIT_TRAILER.get(), com.titancombat.entity.transport.TitanMobileSuitTrailerEntity.createMobileSuitTrailerAttributes().build());
     }
 

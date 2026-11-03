@@ -25,6 +25,9 @@ public class TransportVehicleModel<T extends BaseTransportVehicleEntity> extends
         if (animatable instanceof com.titancombat.entity.transport.TitanV22OspreyEntity) return "v22_osprey";
         if (animatable instanceof com.titancombat.entity.transport.TitanArmoredApcEntity) return "armored_apc";
         if (animatable instanceof com.titancombat.entity.transport.TitanMobileSuitTrailerEntity) return "mobile_suit_trailer";
+        if (animatable instanceof com.titancombat.entity.transport.TitanLcacHovercraftEntity) return "lcac_hovercraft";
+        if (animatable instanceof com.titancombat.entity.transport.TitanC130HerculesEntity) return "c130_hercules";
+        if (animatable instanceof com.titancombat.entity.transport.TitanRepairTruckEntity) return "repair_truck";
         return "hauler_truck";
     }
 
@@ -35,7 +38,8 @@ public class TransportVehicleModel<T extends BaseTransportVehicleEntity> extends
 
     @Override
     public ResourceLocation getTextureResource(T animatable) {
-        return new ResourceLocation(TitanCombatMod.MODID, "textures/entity/transport/" + getVehicleType(animatable) + ".png");
+        return com.titancombat.client.CamoTextures.get(
+                new ResourceLocation(TitanCombatMod.MODID, "textures/entity/transport/" + getVehicleType(animatable) + ".png"), animatable.getCamo());
     }
 
     @Override
@@ -55,8 +59,17 @@ public class TransportVehicleModel<T extends BaseTransportVehicleEntity> extends
         // If the vehicle currently has no mounted Titans or Exoframes, hide the cargo straps/rig!
         boolean hasCargo = vehicle.hasCargo();
         getBone("cargo_straps").ifPresent(b -> b.setHidden(!hasCargo));
+        // Shot-off rotors and props disappear
+        boolean wrecked = vehicle.isAircraft() && vehicle.isPropulsionDestroyed();
+        for (String r : new String[]{"rotor_front", "rotor_aft", "left_rotor", "right_rotor", "prop_1", "prop_2", "prop_3", "prop_4", "rotor_fl", "rotor_fr", "rotor_rl", "rotor_rr"}) {
+            getBone(r).ifPresent(b -> {
+                b.setHidden(wrecked);
+                b.setChildrenHidden(wrecked); // blades are child bones of the hub
+            });
+        }
 
-        if (vehicle instanceof TitanHaulerTruckEntity || vehicle instanceof com.titancombat.entity.transport.TitanArmoredApcEntity) { // APC shares the 8x8 wheel/steer bone names
+        if (vehicle instanceof TitanHaulerTruckEntity || vehicle instanceof com.titancombat.entity.transport.TitanArmoredApcEntity
+                || vehicle instanceof com.titancombat.entity.transport.TitanRepairTruckEntity) { // APC shares the 8x8 wheel/steer bone names
             float spin = -Mth.lerp(state.getPartialTick(), vehicle.wheelRotO, vehicle.wheelRot);
             for (String w : new String[]{"wheel_fl1", "wheel_fr1", "wheel_fl2", "wheel_fr2", "wheel_rl1", "wheel_rr1", "wheel_rl2", "wheel_rr2"}) {
                 getBone(w).ifPresent(b -> b.setRotX(spin));
@@ -89,12 +102,14 @@ public class TransportVehicleModel<T extends BaseTransportVehicleEntity> extends
             getBone("wheel_fl").ifPresent(b -> b.setRotY(-steer));
             getBone("wheel_fr").ifPresent(b -> b.setRotY(-steer));
             getBone("cab").ifPresent(b -> b.setRotZ(roll * 1.2F));
-        } else if (vehicle instanceof com.titancombat.entity.transport.TitanChinookTransporterEntity) {
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanChinookTransporterEntity
+                || vehicle instanceof com.titancombat.entity.transport.TitanC130HerculesEntity) {
             getBone("fuselage").ifPresent(b -> {
                 b.setRotX(-Mth.clamp(speed * 0.16F, -0.10F, 0.18F)); // nose dips forward in flight
                 b.setRotZ(-roll * 1.8F);
             });
-        } else if (vehicle instanceof com.titancombat.entity.transport.TitanOceanCarrierEntity) {
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanOceanCarrierEntity
+                || vehicle instanceof com.titancombat.entity.transport.TitanLcacHovercraftEntity) {
             getBone("hull").ifPresent(b -> {
                 b.setRotZ(b.getRotZ() - roll * 1.8F);
                 b.setRotX(b.getRotX() + Mth.clamp(speed * 0.04F, -0.03F, 0.05F));

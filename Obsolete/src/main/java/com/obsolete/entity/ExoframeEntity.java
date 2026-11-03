@@ -511,6 +511,10 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     @Override
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
+        // Shift-dismount beside a Titan Combat transport: clamp the Exoframe onto it as cargo
+        if (!this.level().isClientSide && passenger instanceof Player pilot && pilot.isShiftKeyDown() && this.getPassengers().isEmpty()) {
+            com.obsolete.compat.TitanCombatDock.tryDock(this, pilot);
+        }
         if (passenger != null) {
             passenger.resetFallDistance();
             passenger.fallDistance = 0.0F;

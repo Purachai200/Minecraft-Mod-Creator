@@ -553,7 +553,7 @@ public final class ClientAutoTest {
             new Step(850, mc -> { TitanCombatMod.LOGGER.info("[autotest] done"); mc.stop(); }),
     };
 
-    private static void server2(Minecraft mc, java.util.function.BiConsumer<ServerPlayer, ServerLevel> action) {
+    static void server2(Minecraft mc, java.util.function.BiConsumer<ServerPlayer, ServerLevel> action) {
         var server = mc.getSingleplayerServer();
         var uuid = mc.player.getUUID();
         server.execute(() -> {
@@ -1152,11 +1152,11 @@ public final class ClientAutoTest {
     private static int truckId = -1;
     private static int droneId = -1;
     private static int bargeId = -1;
-    private static double tBaseX = 9600.0D;
-    private static double tBaseY = -60.0D;
-    private static double tBaseZ = -1500.0D;
+    static double tBaseX = 9600.0D;
+    static double tBaseY = -60.0D;
+    static double tBaseZ = -1500.0D;
 
-    private static void setCamPos(Minecraft mc, double camX, double camY, double camZ, float yaw, float pitch) {
+    static void setCamPos(Minecraft mc, double camX, double camY, double camZ, float yaw, float pitch) {
         server2(mc, (player, level) -> {
             player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
             player.teleportTo(level, camX, camY, camZ, yaw, pitch);
@@ -1170,7 +1170,7 @@ public final class ClientAutoTest {
         }
     }
 
-    private static void aimCameraAt(Minecraft mc, double targetX, double targetY, double targetZ, double dist, double elevAngleDeg, double azimuthDeg) {
+    static void aimCameraAt(Minecraft mc, double targetX, double targetY, double targetZ, double dist, double elevAngleDeg, double azimuthDeg) {
         double radAz = Math.toRadians(azimuthDeg);
         double radEl = Math.toRadians(elevAngleDeg);
         double camX = targetX - dist * Math.cos(radEl) * Math.sin(radAz);
@@ -1927,6 +1927,14 @@ public final class ClientAutoTest {
             mc.options.gamma().set(1.0D);
             if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen) mc.setScreen(null);
         }
+        if (NAME.startsWith("drive")) {
+            DriveAutoTest.run(mc);
+            return;
+        }
+        if (NAME.startsWith("fleet")) {
+            FleetAutoTest.run(mc, tick);
+            return;
+        }
         Step[] script = NAME.startsWith("new_frames") ? NEW_FRAMES : NAME.startsWith("frame") ? FRAME_TEST : NAME.startsWith("artillery") ? ARTILLERY : NAME.startsWith("walkside") ? WALK_SIDE : NAME.startsWith("weapons_1st") ? COCKPIT_TOOLS : NAME.startsWith("energy") ? ENERGY : NAME.startsWith("transport_new") ? TRANSPORT_NEW : NAME.startsWith("transport") ? TRANSPORT : NAME.startsWith("bind") ? BIND : NAME.startsWith("cloak") ? CLOAK : NAME.startsWith("fly_") ? FLY : NAME.startsWith("flight") ? FLIGHT : NAME.startsWith("poses") ? POSES : NAME.startsWith("showcase") ? SHOWCASE : NAME.startsWith("jump") ? JUMP : NAME.startsWith("eject") ? EJECT : NAME.startsWith("sprint") ? SPRINT : NAME.startsWith("weapons") ? WEAPONS : SCRIPT;
         for (Step step : script) {
             if (step.at() == tick) step.action().accept(mc);
@@ -1999,7 +2007,7 @@ public final class ClientAutoTest {
                 t.getActiveWeapon(), t.getMagazine(), t.getReloadTicks(), t.isWeaponLowered(), t.isWeaponStowed());
     }
 
-    private static void shot(Minecraft mc, String name) {
+    static void shot(Minecraft mc, String name) {
         Screenshot.grab(mc.gameDirectory, "autotest_" + NAME + "_" + name + ".png", mc.getMainRenderTarget(), msg -> {});
         dump(mc);
         TitanCombatMod.LOGGER.info("[autotest] screenshot {} playerY={}", name, String.format("%.1f", mc.player.getY()));

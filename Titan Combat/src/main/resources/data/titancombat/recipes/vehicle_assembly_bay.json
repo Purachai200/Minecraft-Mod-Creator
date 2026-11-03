@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "RCR",
+    "HTH",
+    "III"
+  ],
+  "key": {
+    "R": { "item": "minecraft:redstone" },
+    "C": { "item": "titancombat:cockpit_module" },
+    "H": { "item": "titancombat:hydraulic_actuator" },
+    "T": { "item": "minecraft:crafting_table" },
+    "I": { "item": "minecraft:iron_block" }
+  },
+  "result": { "item": "titancombat:vehicle_assembly_bay", "count": 1 }
+}

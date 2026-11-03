@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "titancombat:block/vehicle_assembly_bay_top",
+    "side": "titancombat:block/vehicle_assembly_bay_side",
+    "bottom": "titancombat:block/vehicle_assembly_bay_bottom"
+  }
+}

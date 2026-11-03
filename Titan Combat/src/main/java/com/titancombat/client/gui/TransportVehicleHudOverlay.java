@@ -245,6 +245,11 @@ public class TransportVehicleHudOverlay {
             if (fill > 0) slant(g, sx, base - 42, segW * fill, 5, 0.5F, hpColor, 0.90F);
         }
         text(g, font, hpPct + "%", x0 + 104, base - 43, hpColor, 0.95F, true);
+        float prop = vehicle.getPropulsionDamage();
+        if (prop > 0.0F) {
+            String part = vehicle.isAircraft() ? "ROTORS" : "RUNNING GEAR";
+            text(g, font, prop >= 1.0F ? part + ": DESTROYED" : part + ": " + Math.round(prop * 100) + "% DMG", x0, base - 61, prop > 0.5F ? RED : AMBER, 0.70F, true);
+        }
 
         // Payload Bay Status
         if (vehicle instanceof TitanCargoBargeEntity) {

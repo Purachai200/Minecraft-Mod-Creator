@@ -43,8 +43,12 @@ public class VehicleEngineSound extends AbstractTickableSoundInstance {
         Minecraft.getInstance().getSoundManager().play(s);
     }
 
+    public static boolean anyPlaying() {
+        return PLAYING.values().stream().anyMatch(s -> !s.isStopped() && Minecraft.getInstance().getSoundManager().isActive(s));
+    }
+
     private static boolean isAircraft(BaseTransportVehicleEntity v) {
-        return v instanceof TitanChinookTransporterEntity || v instanceof TitanV22OspreyEntity || v instanceof TitanSkyCraneDroneEntity;
+        return v.isAircraft();
     }
 
     private static boolean isRunning(BaseTransportVehicleEntity v) {
@@ -55,6 +59,8 @@ public class VehicleEngineSound extends AbstractTickableSoundInstance {
         if (v instanceof TitanChinookTransporterEntity) return ModSounds.VEHICLE_ROTOR_TANDEM.get();
         if (v instanceof TitanV22OspreyEntity) return ModSounds.VEHICLE_ROTOR_TILTROTOR.get();
         if (v instanceof TitanSkyCraneDroneEntity) return ModSounds.VEHICLE_ROTOR_DRONE.get();
+        if (v instanceof TitanC130HerculesEntity) return ModSounds.VEHICLE_ENGINE_TURBOPROP.get();
+        if (v instanceof TitanLcacHovercraftEntity) return ModSounds.VEHICLE_LIFT_FAN.get();
         if (v instanceof TitanCargoBargeEntity || v instanceof TitanOceanCarrierEntity) return ModSounds.VEHICLE_ENGINE_SHIP.get();
         if (v instanceof TitanTacticalTruckEntity) return ModSounds.VEHICLE_ENGINE_DIESEL_LIGHT.get();
         return ModSounds.VEHICLE_ENGINE_DIESEL_HEAVY.get();

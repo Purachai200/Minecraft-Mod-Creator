@@ -130,6 +130,22 @@ public class ModEntities {
             ENTITY_TYPES.register("mobile_suit_trailer", () -> EntityType.Builder.of(com.titancombat.entity.transport.TitanMobileSuitTrailerEntity::new, MobCategory.MISC)
                     .sized(6.8F, 3.4F).clientTrackingRange(16).updateInterval(2).build("mobile_suit_trailer"));
 
+    public static final RegistryObject<EntityType<com.titancombat.entity.transport.TitanLcacHovercraftEntity>> LCAC_HOVERCRAFT =
+            ENTITY_TYPES.register("lcac_hovercraft", () -> EntityType.Builder.of(com.titancombat.entity.transport.TitanLcacHovercraftEntity::new, MobCategory.MISC)
+                    .sized(7.25F, 3.0F).clientTrackingRange(16).updateInterval(2).build("lcac_hovercraft"));
+
+    public static final RegistryObject<EntityType<com.titancombat.entity.transport.TitanC130HerculesEntity>> C130_HERCULES =
+            ENTITY_TYPES.register("c130_hercules", () -> EntityType.Builder.of(com.titancombat.entity.transport.TitanC130HerculesEntity::new, MobCategory.MISC)
+                    .sized(6.0F, 6.0F).clientTrackingRange(16).updateInterval(2).build("c130_hercules"));
+
+    public static final RegistryObject<EntityType<com.titancombat.entity.transport.TitanRepairTruckEntity>> REPAIR_TRUCK =
+            ENTITY_TYPES.register("repair_truck", () -> EntityType.Builder.of(com.titancombat.entity.transport.TitanRepairTruckEntity::new, MobCategory.MISC)
+                    .sized(3.0F, 3.1F).clientTrackingRange(16).updateInterval(2).build("repair_truck"));
+
+    public static final RegistryObject<EntityType<com.titancombat.entity.transport.DeckColliderEntity>> DECK_COLLIDER =
+            ENTITY_TYPES.register("deck_collider", () -> EntityType.Builder.<com.titancombat.entity.transport.DeckColliderEntity>of(com.titancombat.entity.transport.DeckColliderEntity::new, MobCategory.MISC)
+                    .sized(1.0F, 1.0F).noSave().noSummon().clientTrackingRange(16).updateInterval(1).build("deck_collider"));
+
     public static void register(IEventBus eventBus) {
         ENTITY_TYPES.register(eventBus);
     }

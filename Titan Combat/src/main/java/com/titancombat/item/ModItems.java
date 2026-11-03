@@ -79,6 +79,15 @@ public class ModItems {
     public static final RegistryObject<Item> MOBILE_SUIT_TRAILER = ITEMS.register("mobile_suit_trailer",
             () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.MOBILE_SUIT_TRAILER::get, "Mobile Suit Flatbed Trailer", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
+    public static final RegistryObject<Item> LCAC_HOVERCRAFT = ITEMS.register("lcac_hovercraft",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.LCAC_HOVERCRAFT::get, "LCAC Air-Cushion Landing Craft", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> C130_HERCULES = ITEMS.register("c130_hercules",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.C130_HERCULES::get, "C-130 Hercules Tactical Airlifter", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> REPAIR_TRUCK = ITEMS.register("repair_truck",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.REPAIR_TRUCK::get, "Mobile Field Repair Truck", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
     public static final RegistryObject<Item> VEHICLE_WRENCH = ITEMS.register("vehicle_wrench",
             () -> new VehicleWrenchItem(new Item.Properties().stacksTo(1).durability(250).rarity(Rarity.RARE)));
 

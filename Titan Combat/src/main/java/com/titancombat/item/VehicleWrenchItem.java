@@ -112,6 +112,12 @@ public class VehicleWrenchItem extends Item {
             stack = new ItemStack(ModItems.ARMORED_APC.get());
         } else if (vehicle instanceof TitanMobileSuitTrailerEntity) {
             stack = new ItemStack(ModItems.MOBILE_SUIT_TRAILER.get());
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanLcacHovercraftEntity) {
+            stack = new ItemStack(ModItems.LCAC_HOVERCRAFT.get());
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanC130HerculesEntity) {
+            stack = new ItemStack(ModItems.C130_HERCULES.get());
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanRepairTruckEntity) {
+            stack = new ItemStack(ModItems.REPAIR_TRUCK.get());
         } else {
             stack = new ItemStack(ModItems.HAULER_TRUCK.get());
         }
@@ -120,6 +126,7 @@ public class VehicleWrenchItem extends Item {
         CompoundTag tag = stack.getOrCreateTag();
         tag.putInt("SavedEnergy", vehicle.getEnergy());
         tag.putInt("SavedFaction", vehicle.getFaction().getId());
+        tag.putInt("SavedCamo", vehicle.getCamo());
         return stack;
     }
 

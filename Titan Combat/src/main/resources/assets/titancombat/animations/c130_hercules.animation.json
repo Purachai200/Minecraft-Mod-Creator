@@ -1,0 +1,204 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.c130_hercules.idle": {
+      "loop": true,
+      "bones": {
+        "prop_1": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "prop_2": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "prop_3": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "prop_4": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "ramp": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "cargo_door": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "animation.c130_hercules.fly": {
+      "loop": true,
+      "animation_length": 0.2,
+      "bones": {
+        "prop_1": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0,
+              360
+            ]
+          }
+        },
+        "prop_2": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0,
+              360
+            ]
+          }
+        },
+        "prop_3": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0,
+              360
+            ]
+          }
+        },
+        "prop_4": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0,
+              360
+            ]
+          }
+        },
+        "ramp": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "cargo_door": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "animation.c130_hercules.ramp_open": {
+      "loop": true,
+      "animation_length": 0.2,
+      "bones": {
+        "prop_1": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0,
+              360
+            ]
+          }
+        },
+        "prop_2": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0,
+              360
+            ]
+          }
+        },
+        "prop_3": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0,
+              360
+            ]
+          }
+        },
+        "prop_4": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.2": [
+              0,
+              0,
+              360
+            ]
+          }
+        },
+        "ramp": {
+          "rotation": [
+            -43,
+            0,
+            0
+          ]
+        },
+        "cargo_door": {
+          "rotation": [
+            -42,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  }
+}

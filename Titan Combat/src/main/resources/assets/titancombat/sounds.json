@@ -141,5 +141,23 @@
     "sounds": [
       "titancombat:vehicle/engine_ship"
     ]
+  },
+  "vehicle_engine_turboprop": {
+    "category": "neutral",
+    "sounds": [
+      "titancombat:vehicle/engine_turboprop"
+    ]
+  },
+  "vehicle_lift_fan": {
+    "category": "neutral",
+    "sounds": [
+      "titancombat:vehicle/lift_fan"
+    ]
+  },
+  "vehicle_repair_weld": {
+    "category": "neutral",
+    "sounds": [
+      "titancombat:vehicle/repair_weld"
+    ]
   }
 }

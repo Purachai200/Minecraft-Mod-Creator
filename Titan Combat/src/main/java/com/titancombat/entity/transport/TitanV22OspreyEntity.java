@@ -97,6 +97,23 @@ public class TitanV22OspreyEntity extends BaseTransportVehicleEntity {
     }
 
     @Override
+    public boolean isAircraft() {
+        return true;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        // Unmanned in the air: settle down onto whatever is below (ground or a carrier deck)
+        if (!this.isNoGravity() && this.getControllingPassenger() == null && !this.onGround() && !this.isInWater()) {
+            Vec3 motion = this.getDeltaMovement();
+            this.setDeltaMovement(motion.x * 0.9D, Math.max(-0.3D, motion.y - 0.04D), motion.z * 0.9D);
+            this.move(net.minecraft.world.entity.MoverType.SELF, this.getDeltaMovement());
+            this.resetFallDistance();
+        }
+    }
+
+    @Override
     protected void travelTransport(LivingEntity driver, Vec3 travelVector) {
         float forward = driver.zza;
         float strafe = driver.xxa;

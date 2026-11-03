@@ -26,12 +26,21 @@ import software.bernie.geckolib.core.animation.RawAnimation;
 public class TitanOceanCarrierEntity extends BaseTransportVehicleEntity {
     // Elevated Starboard Bridge Observation Deck: helm at model (x: 26, y: 64, z: -38);
     // In local space: +X = left (x = 26/16), Y = up, +Z = forward (z = +38/16)
-    private static final Vec3 BRIDGE_HELM_OFFSET = new Vec3(26 / 16.0D, 64 / 16.0D - 0.7D, 38 / 16.0D);
+    private static final Vec3 BRIDGE_HELM_OFFSET = new Vec3(5.0D, 7.72D - 0.6D, 6.625D);
 
     // Well Deck Bay 1 (Mid-ship cargo deck, behind command bridge): model z = 5 -> local z = -5/16
-    private static final Vec3 BAY_BOW_OFFSET = new Vec3(0.0D, 30 / 16.0D, -5 / 16.0D);
+    private static final Vec3 BAY_BOW_OFFSET = new Vec3(2.375D, 5.0D, -4.375D);
     // Well Deck Bay 2 (Aft cargo deck): model z = 52 -> local z = -52/16
-    private static final Vec3 BAY_AFT_OFFSET = new Vec3(0.0D, 30 / 16.0D, -52 / 16.0D);
+    private static final Vec3 BAY_AFT_OFFSET = new Vec3(2.375D, 5.0D, -11.875D);
+
+    // Flight deck geometry in blocks, local frame (+X left, +Z forward); from scripts/gen_ocean_carrier.py's report
+    public static final double DECK_TOP_Y = 5.0D;
+    private static final double DECK_BEAM = 12.0D;
+    private static final double DECK_Z_MIN = -18.75D, DECK_Z_MAX = 19.0D;
+    /** Island superstructure footprint (starboard side): x +3.75..+6, z 0.5..8.25, roof 4.4 above the deck. */
+    private static final double ISLAND_X = 4.875D, ISLAND_Z_MIN = 0.5D, ISLAND_Z_MAX = 8.25D, ISLAND_SIZE = 2.25D, ISLAND_HEIGHT = 4.4D;
+
+    private boolean collidersSpawned = false;
 
     public TitanOceanCarrierEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -66,14 +75,53 @@ public class TitanOceanCarrierEntity extends BaseTransportVehicleEntity {
         return slotIndex == 0 ? BAY_BOW_OFFSET : BAY_AFT_OFFSET;
     }
 
+    /** Tiles the flight deck with square colliders (one beam wide) plus one for the island. */
+    private void spawnDeckColliders() {
+        var type = com.titancombat.entity.ModEntities.DECK_COLLIDER.get();
+        float beam = (float) DECK_BEAM;
+        int tiles = (int) Math.ceil((DECK_Z_MAX - DECK_Z_MIN) / DECK_BEAM);
+        double step = (DECK_Z_MAX - DECK_Z_MIN - DECK_BEAM) / Math.max(1, tiles - 1);
+        for (int i = 0; i < tiles; i++) {
+            float z = (float) (DECK_Z_MIN + DECK_BEAM / 2 + i * step);
+            // 1-block-thick slab whose top is the deck surface
+            this.level().addFreshEntity(DeckColliderEntity.create(type, this, beam, 1.0F, 0.0F, (float) DECK_TOP_Y - 1.0F, z));
+        }
+        int islandTiles = (int) Math.ceil((ISLAND_Z_MAX - ISLAND_Z_MIN) / ISLAND_SIZE);
+        double islandStep = (ISLAND_Z_MAX - ISLAND_Z_MIN - ISLAND_SIZE) / Math.max(1, islandTiles - 1);
+        for (int i = 0; i < islandTiles; i++) {
+            this.level().addFreshEntity(DeckColliderEntity.create(type, this, (float) ISLAND_SIZE, (float) ISLAND_HEIGHT,
+                    (float) ISLAND_X, (float) DECK_TOP_Y, (float) (ISLAND_Z_MIN + ISLAND_SIZE / 2 + i * islandStep)));
+        }
+    }
+
+    @Override
+    public void remove(RemovalReason reason) {
+        super.remove(reason); // tiles notice the missing parent and discard themselves
+    }
+
     @Override
     public void tick() {
         super.tick();
+        if (!this.level().isClientSide && !this.collidersSpawned) {
+            this.collidersSpawned = true;
+            spawnDeckColliders();
+        }
+
+        // Flight deck services: aircraft and vehicles parked on deck get charged and patched up
+        if (!this.level().isClientSide && this.tickCount % 20 == 0) {
+            var deck = this.getBoundingBox().inflate(DECK_BEAM, 6.0D, (DECK_Z_MAX - DECK_Z_MIN) / 2);
+            for (BaseTransportVehicleEntity v : this.level().getEntitiesOfClass(BaseTransportVehicleEntity.class, deck, v -> v != this)) {
+                if (Math.abs(v.getY() - (this.getY() + DECK_TOP_Y)) > 1.0D || !v.onGround()) continue;
+                if (v.getEnergy() < v.getMaxEnergy()) v.addEnergy(2500);
+                if (v.getHealth() < v.getMaxHealth()) v.heal(5.0F);
+                if (v.getPropulsionDamage() > 0.0F) v.setPropulsionDamage(v.getPropulsionDamage() - 0.05F);
+            }
+        }
 
         // Native ship water collision & proportional buoyancy logic
         if (this.isInWater()) {
             double fluidHeight = this.getFluidHeight(FluidTags.WATER);
-            double targetWaterline = 0.40D; // Clean realistic draft waterline: hull sits proudly atop water!
+            double targetWaterline = 1.5D; // Clean realistic draft waterline: hull sits proudly atop water!
             Vec3 motion = this.getDeltaMovement();
             if (fluidHeight > 0.0D) {
                 double depthError = fluidHeight - targetWaterline;

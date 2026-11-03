@@ -92,4 +92,39 @@ write("rotor_drone", rotor(3.0, 38.0, 2600, 31, 0.4))      # sky-crane multiroto
 write("engine_diesel_heavy", diesel(3.0, 26.0, 41))        # 8x8 hauler / APC / trailer
 write("engine_diesel_light", diesel(3.0, 38.0, 51, 0.3))   # tactical truck
 write("engine_ship", ship(5.0, 61))                        # barge / carrier
+
+
+def turboprop(seconds, seed):
+    """Four-engine drone: prop beat between engines plus turbine whine."""
+    n = int(SR * seconds)
+    wash = noise_filtered(n, 1200, seed)
+    out = []
+    for i in range(n):
+        t = i / SR
+        beat = 0.6 + 0.4 * math.sin(2 * math.pi * 1.5 * t)          # props slightly out of sync
+        tone = sum(math.sin(2 * math.pi * f * t) for f in (68.0, 69.5, 136.0)) / 3
+        out.append(tone * 0.6 * beat + wash[i] * 0.35 + 0.08 * math.sin(2 * math.pi * 2300 * t))
+    return loopable(out, int(SR * 0.15))
+
+
+def weld(seconds, seed):
+    """Arc-welder crackle: random sharp noise bursts over a 100 Hz mains hum."""
+    n = int(SR * seconds)
+    hiss = noise_filtered(n, 6000, seed)
+    rnd = random.Random(seed)
+    out, env = [], 0.0
+    for i in range(n):
+        if rnd.random() < 0.004: env = 1.0
+        env *= 0.995
+        t = i / SR
+        out.append(hiss[i] * (0.25 + env) + 0.15 * math.sin(2 * math.pi * 100 * t))
+    fade = int(SR * 0.05)
+    for i in range(fade):
+        out[i] *= i / fade; out[-1 - i] *= i / fade
+    return out
+
+
+write("engine_turboprop", turboprop(4.0, 71))             # C-130
+write("lift_fan", rotor(3.0, 30.0, 3100, 81, 0.3))         # LCAC lift fans + ducted props
+write("repair_weld", weld(1.2, 91))                       # repair truck pulse
 print(sorted(os.listdir(OUT)))

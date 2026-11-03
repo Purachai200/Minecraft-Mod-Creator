@@ -4,6 +4,28 @@ All notable changes to the **Titan Combat** mod will be documented in this file.
 
 ---
 
+## [2.8.1] - 2026-11-03 (Movement & Cargo Fixes)
+- LCAC now rides its air cushion above the water surface, so it drives straight up onto the beach instead of stalling against the shoreline.
+- Obsolete Exoframe support: with Obsolete 1.4.0+, Shift-dismounting your Exoframe within 8 blocks of any transport clamps it onto that vehicle (sling for helicopters, deck for trucks and ships).
+- Verified in-game: driving/turning for LCAC, repair truck and C-130 (take-off roll, climb, bank, landing); clamp, carry and release on all 12 transports.
+
+## [2.8.0] - 2026-11-03 (Fleet Expansion)
+### New vehicles
+- **LCAC Air-Cushion Landing Craft**: hovers over water and beach alike, drifts through turns, carries 2 Titans/Exoframes from ship to shore.
+- **C-130 Hercules**: fixed-wing airlifter with take-off run, stall, and a kneeling Titan in the bay. In flight the cargo release key lowers the ramp and airdrops the load under a drogue chute (no fall damage).
+- **Mobile Field Repair Truck**: park with the engine running and its crane deploys, welding and recharging every Titan, Exoframe and vehicle within 10 blocks from its own fuel cell.
+
+### Gameplay
+- **Component damage**: hits on rotors (aircraft, top of the hull) or wheels (ground vehicles, bottom) and any explosion damage the running gear. Damage caps throttle; shot-up rotors lose altitude; destroyed rotors vanish and the aircraft spins down and crashes with an impact blast. HUD shows ROTORS / RUNNING GEAR damage. Iron, the repair truck and the carrier deck fix it.
+- **Ocean Carrier rebuilt at full scale** (40 x 12 blocks): players walk on the flight deck, aircraft land on it, and anything parked on deck is charged, repaired and carried along as the ship sails and turns. Island superstructure is solid.
+- Shift + right-click with the Paint Spray Can cycles **camouflage**: Woodland, Desert, Arctic, Urban (applied only to painted hull panels; glass, tyres and markings stay). Faction tint still layers on top. Camo is kept through wrench/redeploy.
+
+### Crafting
+- **Vehicle Assembly Bay** block (crafted from a cockpit module, actuators, a crafting table and iron): pick a blueprint, see have/need for each component, assemble. All 12 vehicles are built here; the old crafting-table recipes for the hauler, barge and sky-crane are removed.
+
+### Audio
+- Engine loops for all vehicles including new turboprop (C-130), lift-fan (LCAC) and arc-welder (repair truck) sounds.
+
 ## [2.7.4] - 2026-11-02 (Sling Loads, Cargo Loading & Engine Audio)
 - V-22 Osprey and Chinook now carry Titans/Exoframes hanging under the belly on a sling instead of riding on top; the load hangs just below the hull whatever its size.
 - Quick release (cargo release key) from the Chinook/Osprey drops the sling load from where it hangs.

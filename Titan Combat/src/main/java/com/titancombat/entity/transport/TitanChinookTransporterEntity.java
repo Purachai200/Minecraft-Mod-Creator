@@ -98,6 +98,11 @@ public class TitanChinookTransporterEntity extends BaseTransportVehicleEntity {
     }
 
     @Override
+    public boolean isAircraft() {
+        return true;
+    }
+
+    @Override
     protected void travelTransport(LivingEntity driver, Vec3 travelVector) {
         // Tandem-Rotor Aerodynamic Flight Mechanics
         float forwardInput = driver.zza; // W / S

@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Oceanic Super-Carrier (LHD-style amphibious assault ship): geo, animation, entity texture, item icon, preview.
+"""Oceanic Super-Carrier (LHD-style amphibious assault ship), carrier scale: geo, animation, textures, preview.
 
-Model convention: bow at model -Z (renderer turns 180 deg; Java +Z offsets land at model -Z), Y = 0 is the keel.
-Java ties these numbers down:
-  * flight deck surface y = 30 (BAY offsets y = 30/16) with titan spots at model (0, 30, 5) and (0, 30, 52);
-  * bridge helm seat at model (26, 52.8, -38) (BRIDGE_HELM_OFFSET, y = 64/16 - 0.7);
-  * buoyancy holds the waterline at 0.40 block = y 6.4, so the red antifouling ends there.
+Model convention: bow at model -Z (renderer turns 180 deg; Java +Z offsets land at model -Z), Y = 0 is the keel,
+model +X is the ship's LEFT (port), the island stands on the starboard (-X) edge. 16 px = 1 block.
+Size: ~40 blocks long (stem z=-338 .. stern gate z=+304.4), 12 blocks beam at the flight deck (x=+-96).
+
+Numbers Java builds collision from (model px; Java offset = (x, y, -z) / 16):
+  * flight deck: ONE flat surface at y = DECK_Y over the rectangle DECK_RECT (asserted below);
+  * island footprint ISLAND_RECT on the starboard edge (everything above the deck inside DECK_RECT lives in it);
+  * bridge helm seat cushion HELM; titan spots TITAN_SPOTS; helicopter spots HELO_SPOTS;
+  * waterline WATER_Y: red antifouling below it.
 Big surfaces use planar UVs: a face samples its material region at its world position, so the deck markings,
 hull number and porthole rows line up across neighbouring cubes.
-Run from the project root:  python3 scripts/gen_ocean_carrier.py [--preview out.png]
+Run from the project root:  python3 scripts/gen_ocean_carrier.py [--preview out_prefix]
 """
 import json
 import math
@@ -18,37 +22,43 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from generate_transport_assets import TextureDrawer  # noqa: E402
-from gen_v22_osprey import render, save_png  # noqa: E402
+import gen_v22_osprey as osp  # noqa: E402
 
 ASSETS = "src/main/resources/assets/titancombat"
-TEX = 512
-DECK_Y = 30
-WATER_Y = 6.4
+TEX = 1024
+DECK_Y = 80                       # 5.0 blocks above the keel
+WATER_Y = 24                      # 1.5 blocks
+DECK_RECT = (-96, 96, -304, 300)  # x0, x1, z0, z1: full-beam rectangle of the flight deck (bow taper forward of it)
+ISLAND_RECT = (-96, -60, -132, -8)  # pre-mirror numbers; MIRRORED versions below are what ships
+HELM = (-80, 123.5, -106)         # seat cushion top centre
+TITAN_SPOTS = [(-38, 70), (-38, 190)]
+HELO_SPOTS = [(44, -262), (44, -172), (44, -82), (44, 8), (44, 98), (44, 188), (-40, -250)]
 
 # material -> (u, v, w, h, x_ref, y_top_ref, z_ref): planar projection anchors (world coords at region origin)
 MAT = {
-    "deck":   (0, 0, 112, 240, -56, 0, -120),     # flight deck, painted 1:1 with markings
-    "side":   (112, 0, 240, 32, -120, 30, -120),  # hull side (east face uses the copy at v+32): grey / portholes / boot-top / red, hull number
-    "grey":   (352, 0, 64, 64, 0, 0, 0),          # superstructure haze grey, panel seams, rust
-    "grey2":  (416, 0, 64, 64, 0, 0, 0),          # slightly darker grey (shadowed recesses, stacks)
-    "win":    (352, 64, 64, 16, 0, 0, 0),         # bridge glass: alpha-0 panes with mullions
-    "port":   (352, 80, 64, 16, 0, 0, 0),         # superstructure porthole/door band
-    "grate":  (416, 64, 64, 16, 0, 0, 0),         # catwalk grating
-    "gate":   (480, 0, 32, 32, 0, 0, 0),          # stern gate ribs
-    "array":  (480, 32, 32, 32, 0, 0, 0),         # radar face grid
-    "dome":   (416, 80, 32, 16, 0, 0, 0),         # white radome
-    "dark":   (448, 80, 16, 16, 0, 0, 0),
-    "metal":  (464, 80, 16, 16, 0, 0, 0),
-    "soot":   (480, 64, 32, 32, 0, 0, 0),         # funnel top
-    "red":    (496, 96, 8, 8, 0, 0, 0),
-    "white":  (504, 96, 8, 8, 0, 0, 0),
-    "yellow": (496, 104, 8, 8, 0, 0, 0),
-    "green":  (504, 104, 8, 8, 0, 0, 0),
-    "black":  (480, 96, 16, 16, 0, 0, 0),
-    "seat":   (352, 96, 16, 16, 0, 0, 0),
-    "screen": (368, 96, 16, 16, 0, 0, 0),
-    "raft":   (384, 96, 32, 16, 0, 0, 0),         # white life-raft canister rows
-    "bootred": (416, 96, 16, 16, 0, 0, 0),        # antifouling red for underwater fittings
+    "deck":   (0, 0, 192, 640, -96, 0, -338),       # flight deck, painted 1:1 with markings
+    "side":   (192, 0, 640, 84, -320, 82, -338),    # hull side (east face uses the copy at v+84)
+    "grey":   (192, 168, 128, 128, 0, 0, 0),        # superstructure haze grey, panel seams, rust
+    "grey2":  (320, 168, 128, 128, 0, 0, 0),        # darker grey (shadowed recesses, stacks)
+    "win":    (448, 168, 128, 32, 0, 0, 0),         # bridge glass: alpha-0 panes with mullions
+    "port":   (448, 200, 128, 32, 0, 0, 0),         # superstructure porthole / door band
+    "grate":  (448, 232, 128, 16, 0, 0, 0),         # catwalk grating
+    "gate":   (576, 168, 64, 64, 0, 0, 0),          # stern gate ribs
+    "array":  (640, 168, 64, 64, 0, 0, 0),          # radar face grid
+    "dome":   (704, 168, 64, 32, 0, 0, 0),          # white radome
+    "soot":   (768, 168, 64, 64, 0, 0, 0),          # funnel top
+    "raft":   (704, 200, 64, 16, 0, 0, 0),          # white life-raft canister rows
+    "dark":   (832, 168, 16, 16, 0, 0, 0),
+    "metal":  (848, 168, 16, 16, 0, 0, 0),
+    "seat":   (864, 168, 16, 16, 0, 0, 0),
+    "screen": (880, 168, 16, 16, 0, 0, 0),
+    "black":  (896, 168, 16, 16, 0, 0, 0),
+    "bootred": (912, 168, 32, 32, 0, 0, 0),         # antifouling red for underwater fittings
+    "boat":   (944, 168, 32, 16, 0, 0, 0),          # RHIB orange/grey
+    "red":    (976, 168, 8, 8, 0, 0, 0),
+    "white":  (984, 168, 8, 8, 0, 0, 0),
+    "yellow": (992, 168, 8, 8, 0, 0, 0),
+    "green":  (1000, 168, 8, 8, 0, 0, 0),
 }
 
 GREY = (196, 202, 208)   # light haze grey: survives the faction tint multiply
@@ -85,212 +95,254 @@ def cyl(cx, cz, y0, y1, r, mat, angles=(0, 45)):
 
 # ---------------------------------------------------------------------------- hull
 def half_width(z):
-    """Waterline-ish half beam along the ship: fine bow entry at -Z, full stern."""
-    if z < -70:
-        t = (-70 - z) / 46.0                       # 0 at z=-70 .. 1 at z=-116
-        return max(1.5, 38 * (1 - t ** 1.6))
-    return 38
+    """Waterline half beam: fine bow entry forward of z=-190, full midbody."""
+    if z < -190:
+        t = (-190 - z) / 150.0                     # 0 at z=-190 .. 1 at the stem z=-340
+        return max(2.0, 84 * (1 - t ** 1.7))
+    return 84
 
 
 def hull_cubes():
     C = []
+    x0, x1, z0, z1 = DECK_RECT
     # parallel midbody: stepped slabs give a rounded bilge and flared topsides
-    for y0, y1, hw in ((0, 2, 26), (2, 4, 33), (4, 8, 37), (8, 22, 38), (22, 26, 40), (26, 28, 42)):
-        C.append(box(-hw, y0, -70, hw, y1, 102, "side"))
-    # bow: 2-px slices that narrow and rake up the stem (cutwater climbs forward)
-    for i in range(23):
-        z1 = -70 - i * 2
-        z0 = z1 - 2
-        t = i / 22.0
-        keel = 22 * t ** 2.5                        # stem rake
-        for y0, y1, k in ((keel, 8, 1.0), (max(keel, 8), 22, 1.04), (max(keel, 22), 28, 1.12)):
-            if y1 - y0 < 0.3:
+    for y0, y1, hw in ((0, 4, 60), (4, 8, 72), (8, 14, 80), (14, 56, 84), (56, 66, 88), (66, 72, 91), (72, 76, 94)):
+        C.append(box(-hw, y0, -190, hw, y1, 296, "side"))
+    # bow: 4-px slices narrowing and raking the stem up; topsides flare out toward the deck overhang
+    n = 37
+    for i in range(n):
+        za = -190 - i * 4
+        zb = za - 4
+        t = i / (n - 1.0)
+        keel = 54 * t ** 2.4
+        for y0, y1, k, add in ((keel, 14, 1.0, 0), (max(keel, 14), 56, 1.02, 0), (max(keel, 56), 66, 1.0, 6),
+                               (max(keel, 66), 76, 1.0, 12)):
+            if y1 - y0 < 0.5:
                 continue
-            hw = half_width(z0 + 1) * k + (1.5 if y0 >= 22 else 0)
-            C.append(box(-hw, y0, z0, hw, y1, z1, "side"))
-    # flight deck: rectangular aft, tapering bow overhang, gallery deck edge below the lip
-    C.append(box(-46, 28, -96, 46, DECK_Y, 106, "deck"))
-    for i in range(9):
-        z1 = -96 - i * 2.5
-        hw = 46 - (i + 1) ** 1.55 * 1.4
-        C.append(box(-hw, 28, z1 - 2.5, hw, DECK_Y, z1, "deck"))
-    C += both(box(42, 25, -92, 46, 28, 100, "grey2"))                     # flare under deck edge
-    # stern: transom, well-deck gate recess, flaps
-    C += [box(-38, 6, 102, 38, 28, 104, "side"), box(-17, 6, 104, 17, 7, 106, "dark")]
-    C += both(box(17, 6, 104, 20, 27, 106, "grey2"))
-    # catwalk galleries along the deck edge with rails and life-raft canisters
-    for z0, z1 in ((-84, -40), (-30, 2), (40, 80), (86, 100)):
-        C += both(box(46, 27, z0, 49, 27.6, z1, "grate"), box(48.6, 27.6, z0, 49, 29.4, z1, "metal"),
-                  box(44, 25, z0 + 2, 47, 27, z1 - 2, "raft"))
-    # deck-edge aircraft elevator (port side, opposite the island) and aft starboard elevator
-    C += [box(-58, 28.2, 22, -46, DECK_Y - 0.2, 44, "deck"), box(-58, 24, 30, -46, 28.2, 32, "grey2"),
-          box(-58.4, 28, 22, -58, 29.6, 44, "metal")]
-    C += [box(46, 28.2, 60, 56, DECK_Y - 0.2, 80, "deck"), box(46, 24, 68, 56, 28.2, 70, "grey2"),
-          box(56, 28, 60, 56.4, 29.6, 80, "metal")]
-    # sponsons for close-in weapons (bow port, stern starboard, stern port)
-    for sx, sz in ((-44, -88), (40, 96), (-40, 96)):
-        C += [box(sx - 6, 22, sz - 6, sx + 6, 28, sz + 6, "grey"), box(sx - 5, 21, sz - 5, sx + 5, 22, sz + 5, "grey2")]
+            hw = min(94, half_width(zb + 2) * k + add * (0.4 + t))
+            C.append(box(-hw, y0, zb, hw, y1, za, "side"))
+    # FLIGHT DECK: one slab over the whole rectangle, then the tapering bow overhang (same top y)
+    C.append(box(x0, DECK_Y - 4, z0, x1, DECK_Y, z1, "deck"))
+    for i in range(8):
+        zb = z0 - i * 4
+        hw = 96 - (i + 1) ** 1.8 * 1.25
+        C.append(box(-hw, DECK_Y - 4, zb - 4, hw, DECK_Y, zb, "deck"))
+    C.append(box(-90, 56, -190, 90, 76, -170, "side"))     # bow flare fill under the deck overhang
+    # stern: transom, well-deck gate recess frame, stern flaps, ensign staff
+    C += [box(-94, 24, 296, 94, 76, 300, "side"), box(-90, 4, 290, 90, 24, 296, "side"),
+          box(-36, 24, 300, 36, 26, 304, "dark")]
+    C += both(box(36, 24, 300, 44, 74, 304, "grey2"), box(60, 30, 300, 92, 74, 302, "grey2"))
+    C += [box(-0.6, 40, 302, 0.6, 72, 303.2, "metal", pivot=[0, 40, 302], rotation=[-25, 0, 0]),
+          box(0.6, 62, 304, 10, 68, 304.4, "red", pivot=[0, 40, 302], rotation=[-25, 0, 0])]
+    # sea-stained boot-top girdle is in the texture; bilge keels, sonar bulb, shafts, struts, screws, rudders
+    C += [box(-8, 2, -300, 8, 16, -230, "bootred"), box(-5, 16, -296, 5, 32, -262, "bootred")]
+    C += both(box(66, 4, -80, 72, 6, 120, "bootred"),
+              box(26, -2, 230, 30, 14, 266, "bootred"),                  # rudder
+              box(27, 3, 150, 29, 5, 236, "metal"),                      # shaft
+              box(24, 0, 196, 32, 10, 200, "bootred"),                   # A-bracket
+              box(23, -1, 222, 33, 9, 228, "metal"))                     # hub
+    for s in (1, -1):
+        for a in range(0, 360, 72):
+            C.append(box(s * 28 - 2, 0, 223, s * 28 + 2, 13, 227, "metal", pivot=[s * 28, 4, 225], rotation=[0, 0, a]))
     # anchors + hawse pipes either side of the stem
-    C += both(box(28.6, 18, -88, 30.4, 21, -84, "dark"), box(29.4, 13, -87.5, 30.6, 18, -84.5, "metal"),
-              box(29.4, 12, -89, 30.6, 13, -83, "metal"))
-    # boot-top / waterline realism fittings below the waterline: sonar bulb, bilge keels, rudders, shafts, screws
-    C += [box(-4, 0.5, -98, 4, 7, -84, "bootred"), box(-3, 1.5, -102, 3, 6, -98, "bootred")]
-    C += both(box(33, 2, -40, 36, 3, 40, "bootred"),
-              box(12, -3, 88, 14, 4, 98, "bootred"),
-              box(12.4, -2, 60, 13.6, -0.6, 90, "metal"),
-              box(9.5, -4.5, 84, 15.5, 1.5, 85, "metal", pivot=[12.5, -1.5, 84.5], rotation=[0, 0, 0]),
-              box(9.5, -4.5, 84, 15.5, 1.5, 85, "metal", pivot=[12.5, -1.5, 84.5], rotation=[0, 0, 60]),
-              box(9.5, -4.5, 84, 15.5, 1.5, 85, "metal", pivot=[12.5, -1.5, 84.5], rotation=[0, 0, -60]),
-              box(11, 0, 60, 15, 2, 74, "bootred"))
-    # foredeck fittings below the overhang: bitts, jackstaff, deck lights strip
-    C += [box(-0.3, DECK_Y, -116, 0.3, 40, -115.4, "metal"),
-          box(-1, DECK_Y, 104.6, 1, DECK_Y + 0.6, 105.6, "white")]
-    C += both(box(30, DECK_Y, -108, 31.5, DECK_Y + 1.5, -106.5, "metal"))
-    # deck-edge folding whip antennas + deck edge lights
-    for z in (-60, -20, 50, 90):
-        C += both(box(49, 28, z, 49.6, 44, z + 0.6, "dark", pivot=[49.3, 28, z], rotation=[0, 0, -20]))
-    for z in range(-90, 104, 12):
-        C += both(box(45, DECK_Y, z, 45.8, DECK_Y + 0.4, z + 0.8, "green" if z < 0 else "white"))
-    # navigation lights at the stern + bow
-    C += [box(41, 28, -96, 42, 29, -95, "green"), box(-42, 28, -96, -41, 29, -95, "red")]
-    # CIWS turrets on the sponsons (white radome, grey mount, barrel cluster) + RAM launcher stern port
-    C += ciws(-44, 28, -88, -1) + ciws(40, 28, 96, 1)
-    C += [box(-45, 28, 91, -35, 30, 101, "grey"), box(-44, 30, 93, -36, 37, 99, "grey2"),
-          box(-43.5, 31, 92.6, -36.5, 36, 93, "array")]
+    C += both(box(36, 50, -290, 40, 58, -282, "dark"), box(38, 40, -289, 41, 50, -283, "metal"),
+              box(37, 38, -292, 42, 40, -280, "metal"))
+    # hangar side doors (dark recess) + lowered deck-edge elevators: port amidships, starboard aft of island
+    C += [box(84, 40, 30, 88.4, 66, 80, "dark"), box(-88.4, 40, 206, -84, 66, 256, "dark")]
+    for sx, za, zb in ((1, 30, 80), (-1, 206, 256)):
+        xa, xb = sorted((sx * 96, sx * 134))
+        C += [box(xa, 52, za, xb, 56, zb, "dark"),
+              box(xa, 48, za + 6, xb, 52, za + 9, "grey2"), box(xa, 48, zb - 9, xb, 52, zb - 6, "grey2"),
+              box(sx * 134 - (0.6 if sx > 0 else 0), 56, za, sx * 134 + (0 if sx > 0 else 0.6), 59, zb, "metal")]
+        xc = sorted((sx * 88, sx * 96))
+        C += [box(xc[0], 46, za - 2, xc[1], 80 - 4, za, "grey2"), box(xc[0], 46, zb, xc[1], 76, zb + 2, "grey2")]
+    # catwalk galleries along the deck edge (below the lip), rails, life-raft canisters
+    for za, zb in ((-280, -200), (-180, -100), (-90, 20), (90, 190), (200, 240)):
+        C += both(box(96, 71, za, 104, 72, zb, "grate"), box(103.4, 72, za, 104, 76.5, zb, "metal"),
+                  box(103.4, 74.2, za, 104.2, 74.8, zb, "metal"),
+                  box(94, 62, za + 4, 100, 70, zb - 4, "raft"))
+        for z in range(za, zb + 1, 10):
+            C += both(box(96, 67, z, 97, 71, z + 1, "grey2", pivot=[96, 71, z], rotation=[0, 0, 0]))
+    C = [c for c in C if not (c["origin"][0] < -94 and 180 < c["origin"][2] < 260 and c["mat"] in ("raft",))]
+    # sponsons: CIWS bow port + stern starboard, RAM launchers bow starboard + stern port
+    for sx, sz in ((1, -250), (-1, -276), (1, 270), (-1, 262)):
+        xa, xb = sorted((sx * 92, sx * 124))
+        C += [box(xa, 64, sz - 14, xb, 76, sz + 14, "grey"), box(xa, 60, sz - 10, xb, 64, sz + 10, "grey2")]
+    C += ciws(108, 76, -250, -1) + ciws(-108, 76, 262, 1) + ram(-108, 76, -276) + ram(108, 76, 270)
+    # whip antennas leaning outboard from the catwalks
+    for z in (-240, -140, -40, 120, 220):
+        C += both(box(104.5, 72, z, 105.5, 108, z + 1, "dark", pivot=[105, 72, z], rotation=[0, 0, -18]))
+    # RHIB boats in davits on the starboard quarter
+    for bz in (110, 150):
+        C += [box(-104, 58, bz, -94, 63, bz + 26, "boat"), box(-102, 63, bz + 4, -96, 66, bz + 12, "white"),
+              box(-104, 63, bz + 2, -88, 65, bz + 4, "metal"), box(-104, 63, bz + 22, -88, 65, bz + 24, "metal")]
+    # bow navigation lights + jackstaff on the overhang tip, stern lights
+    C += [box(-0.6, DECK_Y, -334, 0.6, DECK_Y + 22, -332.8, "metal"),
+          box(20, 76, -322, 22, 78, -320, "green"), box(-22, 76, -322, -20, 78, -320, "red"),
+          box(-2, 74, 300, 2, 76, 301, "white")]
     return C
 
 
-def ciws(x, y, z, face):
-    """Phalanx: pedestal, gun body, tall white radome, barrel pointing outboard-forward."""
-    out = cyl(x, z, y, y + 3, 3.5, "grey")
-    out += [box(x - 3, y + 3, z - 3.5, x + 3, y + 8, z + 3.5, "grey"),
-            box(x - 2.5, y + 8, z - 3, x + 2.5, y + 13, z + 3, "dome"),
-            box(x - 2, y + 13, z - 2.5, x + 2, y + 15, z + 2.5, "dome"),
-            box(x - 1.2, y + 15, z - 1.5, x + 1.2, y + 16, z + 1.5, "dome"),
-            box(x - 1, y + 4.5, z - 13, x + 1, y + 6.5, z - 3.5, "dark"),
-            box(x - 1.6, y + 4, z - 6, x + 1.6, y + 7, z - 3.5, "metal")]
+def ciws(x, y, z, face, s=1.7):
+    """Phalanx: pedestal, gun body, tall white radome, barrel cluster pointing fore (face -1) or aft (+1)."""
+    out = cyl(x, z, y, y + 3 * s, 3.5 * s, "grey")
+    out += [box(x - 3 * s, y + 3 * s, z - 3.5 * s, x + 3 * s, y + 8 * s, z + 3.5 * s, "grey"),
+            box(x - 2.5 * s, y + 8 * s, z - 3 * s, x + 2.5 * s, y + 13 * s, z + 3 * s, "dome"),
+            box(x - 2 * s, y + 13 * s, z - 2.5 * s, x + 2 * s, y + 15 * s, z + 2.5 * s, "dome"),
+            box(x - 1.2 * s, y + 15 * s, z - 1.5 * s, x + 1.2 * s, y + 16 * s, z + 1.5 * s, "dome"),
+            box(x - 1 * s, y + 4.5 * s, z + face * 3.5 * s, x + 1 * s, y + 6.5 * s, z + face * 13 * s, "dark"),
+            box(x - 1.6 * s, y + 4 * s, z + face * 3.5 * s, x + 1.6 * s, y + 7 * s, z + face * 6 * s, "metal")]
     return out
+
+
+def ram(x, y, z):
+    """RAM launcher: pedestal, trainable box with a 21-cell face."""
+    return cyl(x, z, y, y + 5, 6, "grey") + [
+        box(x - 8, y + 5, z - 7, x + 8, y + 17, z + 7, "grey2"),
+        box(x - 7.5, y + 6, z - 7.6, x + 7.5, y + 16, z - 7, "array"),
+        box(x - 9, y + 8, z - 4, x - 8, y + 14, z + 4, "metal"), box(x + 8, y + 8, z - 4, x + 9, y + 14, z + 4, "metal")]
 
 
 # ---------------------------------------------------------------------------- island
 def island_cubes():
     C = []
-    # main block on the flight deck: two tiers of offices and hangar-top spaces
-    C += [box(22, DECK_Y, -70, 44, 44, -14, "grey"), box(22, 44, -66, 44, 52, -20, "grey"),
-          box(21.6, 33, -70, 22, 42, -14, "port"), box(21.6, 45, -66, 22, 51, -20, "port")]
-    C += [box(23, DECK_Y, -14, 43, 40, -8, "grey2")]                     # aft step (fuel / stores)
-    # bridge level (hollow, glazed): floor at y=52, helm seat at (26, 52.8, -38)
-    floor_y, roof_y = 52, 76
-    x0, x1, z0, z1 = 20, 46, -64, -30
-    C += [box(x0, floor_y - 0.8, z0, x1, floor_y, z1, "grey2"),
-          box(x0, roof_y, z0 - 1.5, x1, roof_y + 2, z1, "grey"),          # roof with brow over the glass
-          box(x0, floor_y, z0, x1, 59, z0 + 0.8, "grey"),                 # forward bulkhead below glass
-          box(x0, floor_y, z0, x0 + 0.8, 59, z1, "grey"),                 # inboard bulkhead below glass
-          box(x1 - 0.8, floor_y, z0, x1, roof_y, z1, "grey"),             # outboard wall solid
-          box(x0, floor_y, z1 - 0.8, x1, roof_y, z1, "grey"),             # aft wall
-          box(x0, 59, z0, x1, 60, z0 + 1, "grey2"), box(x0, 59, z0, x0 + 1, 60, z1, "grey2"),
-          box(x0, 74, z0, x1, roof_y, z0 + 1, "grey2"), box(x0, 74, z0, x0 + 1, roof_y, z1, "grey2"),
-          box(x0 + 0.2, 60, z0 + 0.2, x1 - 1, 74, z0 + 0.6, "win"),       # forward glass (alpha 0 panes)
-          box(x0 + 0.2, 60, z0 + 1, x0 + 0.6, 74, z1 - 1, "win")]          # inboard glass facing the deck
-    for x in (27, 33, 39):
-        C.append(box(x - 0.5, 60, z0, x + 0.5, 74, z0 + 1, "grey2"))      # mullions
-    for z in (-56, -48, -40):
-        C.append(box(x0, 60, z - 0.5, x0 + 1, 74, z + 0.5, "grey2"))
-    # helm: chair, binnacle console, overhead screens
-    C += [box(23, 52, -41, 29, 55, -35, "seat"), box(23, 55, -35, 29, 64, -34, "seat"),
-          box(23, 55, -41, 23.8, 57, -36, "seat"), box(28.2, 55, -41, 29, 57, -36, "seat"),
-          box(23, 52, -50, 29, 57, -46, "dark"), box(23.5, 57, -50, 28.5, 57.4, -47, "screen"),
-          box(30, 52, -62, 44, 57, -58, "dark"), box(30.5, 57, -62, 43.5, 57.3, -59, "screen")]
-    # bridge wings (both ends, open) with pelorus stands
-    C += [box(12, 51, -62, 20, 52, -54, "grey"), box(12, 52, -62, 12.4, 55, -54, "metal"),
-          box(12, 52, -62, 20, 55, -61.6, "metal"),
-          box(46, 51, -62, 52, 52, -54, "grey"), box(51.6, 52, -62, 52, 55, -54, "metal")]
-    # primary flight control: glazed box overhanging the deck, aft of the bridge
-    C += [box(18, 62, -28, 30, 74, -16, "grey"), box(17.6, 64, -27, 18, 72, -17, "win"),
-          box(18, 64, -16.4, 30, 72, -16, "win"), box(18, 74, -28, 30, 75, -16, "grey2"),
-          box(30, 44, -28, 44, 74, -14, "grey")]
+    D = DECK_Y
+    # base: two hangar-top office levels, porthole + door bands on both faces
+    C += [box(-96, D, -130, -62, D + 28, -10, "grey"), box(-96, D + 28, -126, -64, D + 40, -12, "grey"),
+          box(-62, D + 6, -128, -61.6, D + 14, -12, "port"), box(-62, D + 18, -128, -61.6, D + 26, -12, "port"),
+          box(-64, D + 30, -124, -63.6, D + 38, -14, "port"),
+          box(-96.4, D + 6, -128, -96, D + 14, -12, "port"), box(-96.4, D + 18, -128, -96, D + 26, -12, "port")]
+    # deck-level watertight doors and access ladders on the inboard face
+    for z in (-118, -84, -48, -22):
+        C += [box(-61.6, D, z, -61.2, D + 7, z + 5, "dark")]
+    for z in (-100, -60):
+        C += [box(-61.6, D, z, -61, D + 28, z + 0.6, "metal"), box(-61.6, D, z + 5, -61, D + 28, z + 5.6, "metal")]
+        C += [box(-61.6, y, z, -61, y + 0.5, z + 5.6, "metal") for y in range(D + 2, D + 28, 3)]
+    # bridge level (hollow, glazed): floor y = D+40, roof y = D+70
+    fy, ry = D + 40, D + 70
+    x0, x1, z0, z1 = -94, -64, -126, -90
+    C += [box(x0, ry, z0 - 3, x1 + 1, ry + 3, z1, "grey"),                      # roof + brow over the glass
+          box(x0, fy, z0, x1, fy + 12, z0 + 1, "grey"),                           # forward bulkhead below glass
+          box(x1 - 1, fy, z0, x1, fy + 12, z1, "grey"),                           # inboard bulkhead below glass
+          box(x0, fy, z0, x0 + 1, ry, z1, "grey"),                                # outboard wall solid
+          box(x0, fy, z1 - 1, x1, ry, z1, "grey"),                                # aft wall
+          box(x0, fy + 12, z0, x1, fy + 13, z0 + 1.2, "grey2"), box(x1 - 1.2, fy + 12, z0, x1, fy + 13, z1, "grey2"),
+          box(x0, ry - 2, z0, x1, ry, z0 + 1.2, "grey2"), box(x1 - 1.2, ry - 2, z0, x1, ry, z1, "grey2"),
+          box(x0 + 1, fy + 13, z0 + 0.3, x1 - 1, ry - 2, z0 + 0.7, "win"),        # forward glass (alpha-0 panes)
+          box(x1 - 0.7, fy + 13, z0 + 1.2, x1 - 0.3, ry - 2, z1 - 1, "win")]      # inboard glass over the deck
+    for x in range(-88, -64, 6):
+        C.append(box(x - 0.5, fy + 13, z0, x + 0.5, ry - 2, z0 + 1.2, "grey2"))  # mullions
+    for z in range(-118, -92, 7):
+        C.append(box(x1 - 1.2, fy + 13, z - 0.5, x1, ry - 2, z + 0.5, "grey2"))
+    # helm: chair (cushion top = HELM y), binnacle console, chart table, overhead screens
+    hx, hy, hz = HELM
+    C += [box(hx - 3, fy, hz - 3, hx + 3, hy, hz + 3, "seat"), box(hx - 3, hy, hz + 3, hx + 3, hy + 9, hz + 4, "seat"),
+          box(hx - 3.6, hy, hz - 3, hx - 3, hy + 2.5, hz + 3, "seat"), box(hx + 3, hy, hz - 3, hx + 3.6, hy + 2.5, hz + 3, "seat"),
+          box(hx - 4, fy, hz - 14, hx + 4, fy + 9, hz - 10, "dark"), box(hx - 3.5, fy + 9, hz - 14, hx + 3.5, fy + 9.4, hz - 11, "screen"),
+          box(-92, fy, -124, -66, fy + 8, -120, "dark"), box(-91.5, fy + 8, -124, -66.5, fy + 8.4, -121, "screen"),
+          box(-92, fy, -100, -86, fy + 8, -93, "dark"), box(-89, ry - 4, -124, -71, ry - 1, -123, "screen")]
+    # bridge wings: outboard (beyond the deck edge) and stub inboard over the island roof line
+    C += [box(-108, fy - 1, -126, -94, fy, -112, "grey"), box(-108, fy, -126, -107.4, fy + 6, -112, "metal"),
+          box(-108, fy, -126, -94, fy + 6, -125.4, "metal"), box(-106, fy, -122, -102, fy + 7, -118, "dark")]
+    # mid block (stacks sit on it) and Pri-Fly: glazed box looking inboard over the deck
+    C += [box(-94, fy, -90, -66, ry, -60, "grey"), box(-66, fy + 4, -86, -65.6, fy + 12, -64, "port")]
+    C += [box(-94, fy, -60, -64, fy + 12, -36, "grey"), box(-94, fy + 12, -60, -70, ry - 4, -36, "grey"),
+          box(-70, fy + 12, -60, -64.4, fy + 13, -36, "grey2"), box(-65, fy + 13, -59, -64.6, ry - 5, -37, "win"),
+          box(-94, ry - 4, -61, -63, ry - 2, -35, "grey2"), box(-82, fy + 12, -40, -70, fy + 18, -38, "dark")]
+    # aft block + small CIWS-free ammunition lift house
+    C += [box(-94, fy, -36, -64, ry, -14, "grey"), box(-64, fy + 6, -32, -63.6, fy + 14, -18, "port")]
     # twin stacks (LHD style) with soot caps and exhaust grilles
-    for zc in (-24, -12):
-        C += [box(32, 74, zc - 5, 44, 86, zc + 3, "grey2"), box(32.6, 86, zc - 4.4, 43.4, 86.6, zc + 2.4, "soot"),
-              box(33, 86, zc - 4, 36, 88, zc + 2, "dark"), box(39, 86, zc - 4, 42, 88, zc + 2, "dark")]
-    C += [box(30, 40, -14, 44, 74, -8, "grey2")]
-    # upper deck above the bridge: navigation radar platform, signal lamps
-    C += [box(24, 78, -60, 44, 84, -36, "grey"), box(23.6, 79, -58, 24, 83, -38, "port"),
-          box(27, 84, -54, 41, 86, -40, "grey2")]
-    # lattice mast: four tilted legs, cross bracing, platforms, yardarm
-    for lx, lz in ((28, -52), (40, -52), (28, -42), (40, -42)):
-        C.append(box(lx - 0.7, 86, lz - 0.7, lx + 0.7, 112, lz + 0.7, "metal",
-                     pivot=[lx, 86, lz], rotation=[(lz + 47) * 1.1, 0, -(lx - 34) * 1.0]))
-    for y in (92, 98, 104):
-        C += [box(28, y, -52, 40, y + 0.6, -51.4, "metal"), box(28, y, -42.6, 40, y + 0.6, -42, "metal"),
-              box(28, y, -52, 28.6, y + 0.6, -42, "metal"), box(39.4, y, -52, 40, y + 0.6, -42, "metal")]
-    C += [box(26, 106, -52, 42, 107, -42, "grate"), box(14, 108, -47.5, 54, 109, -46.5, "metal"),
-          box(33.4, 107, -47.6, 34.6, 126, -46.4, "metal"), box(33, 126, -48, 35, 128, -46, "red")]
-    for x in (16, 22, 46, 52):
-        C.append(box(x - 0.2, 105, -47.2, x + 0.2, 108, -46.8, "dark"))   # signal halyard blocks
-    # SATCOM and EW radomes on outriggers
-    C += [box(42, 84, -34, 48, 85, -28, "grey2"), box(42.5, 85, -33.5, 47.5, 90, -28.5, "dome"),
-          box(43.5, 90, -32.5, 46.5, 91.5, -29.5, "dome"),
-          box(22, 84, -34, 28, 85, -28, "grey2"), box(22.5, 85, -33.5, 27.5, 89, -28.5, "dome"),
-          box(23.5, 89, -32.5, 26.5, 90, -29.5, "dome")]
-    # ECM blisters and side fixed arrays on the island face
-    C += [box(44, 58, -40, 47, 66, -34, "grey2"), box(46.6, 59, -39, 47, 65, -35, "array"),
-          box(19, 40, -50, 22, 48, -44, "grey2"), box(18.6, 41, -49, 19, 47, -45, "array")]
-    # island-top CIWS aft
-    C += ciws(37, 86, -6, 1)
-    C += [box(31, 74, -8, 44, 86, -2, "grey")]
-    # ladders and doors on the island deck face
-    C += [box(21.4, DECK_Y, -30, 22, 40, -26, "dark"), box(21.4, DECK_Y, -58, 22, 40, -54, "dark")]
+    for zc in (-80, -64):
+        C += [box(-92, ry, zc - 6, -70, ry + 26, zc + 6, "grey2"), box(-91.4, ry + 26, zc - 5.4, -70.6, ry + 26.6, zc + 5.4, "soot"),
+              box(-90, ry + 26, zc - 4, -84, ry + 29, zc + 4, "dark"), box(-78, ry + 26, zc - 4, -72, ry + 29, zc + 4, "dark"),
+              box(-92.4, ry + 4, zc - 5, -92, ry + 20, zc + 5, "grate")]
+    # nav deck above the bridge with mast base
+    C += [box(-94, ry + 3, -124, -66, ry + 10, -92, "grey"), box(-66, ry + 4, -122, -65.6, ry + 9, -94, "port"),
+          box(-90, ry + 10, -118, -70, ry + 13, -98, "grey2")]
+    # lattice mast: four tilted legs, cross bracing, platforms, yardarm, topmast with masthead light
+    my = ry + 13
+    for lx, lz in ((-88, -116), (-72, -116), (-88, -100), (-72, -100)):
+        C.append(box(lx - 1, my, lz - 1, lx + 1, my + 58, lz + 1, "metal",
+                     pivot=[lx, my, lz], rotation=[(lz + 108) * 0.55, 0, -(lx + 80) * 0.55]))
+    for y in range(my + 10, my + 56, 11):
+        k = (y - my) / 58.0 * 4
+        C += [box(-88 + k, y, -116 + k, -72 - k, y + 0.8, -115.2 + k, "metal"),
+              box(-88 + k, y, -100.8 - k, -72 - k, y + 0.8, -100 - k, "metal"),
+              box(-88 + k, y, -116 + k, -87.2 + k, y + 0.8, -100 - k, "metal"),
+              box(-72.8 - k, y, -116 + k, -72 - k, y + 0.8, -100 - k, "metal")]
+    C += [box(-90, my + 56, -114, -70, my + 58, -102, "grate"), box(-90, my + 58, -114, -89.4, my + 61, -102, "metal"),
+          box(-70.6, my + 58, -114, -70, my + 61, -102, "metal"),
+          box(-114, my + 48, -108.8, -60, my + 49.5, -107.2, "metal"),                # yardarm
+          box(-81, my + 58, -101, -79, my + 100, -99, "metal"), box(-81.5, my + 100, -101.5, -78.5, my + 103, -98.5, "red")]
+    for x in (-110, -102, -70, -62):
+        C.append(box(x - 0.3, my + 44, -108.3, x + 0.3, my + 48, -107.7, "dark"))      # signal halyard blocks
+    C += [box(-93, my + 24, -112, -90, my + 26, -104, "grey2"), box(-96, my + 18, -112, -93, my + 30, -104, "array")]
+    # SATCOM / EW radomes over Pri-Fly, ECM blisters on the outboard face
+    for zc, h in ((-52, 12), (-42, 10)):
+        C += [box(-90, ry - 2, zc - 4, -82, ry, zc + 4, "grey2"), box(-89.5, ry, zc - 3.5, -82.5, ry + h - 2, zc + 3.5, "dome"),
+              box(-88.5, ry + h - 2, zc - 2.5, -83.5, ry + h, zc + 2.5, "dome")]
+    C += [box(-100, D + 48, -84, -96, D + 60, -70, "grey2"), box(-100.4, D + 49, -83, -100, D + 59, -71, "array"),
+          box(-100, D + 48, -30, -96, D + 60, -18, "grey2"), box(-100.4, D + 49, -29, -100, D + 59, -19, "array")]
     return C
 
 
 def radar_cubes():
-    """SPS-48 style 3-D array: big tilted planar face on a pedestal, spinning about Y at the mast head."""
-    px, py, pz = 34, 112, -47
-    return [box(px - 2, py, pz - 2, px + 2, py + 2, pz + 2, "metal"),
-            box(px - 11, py + 2, pz - 1.5, px + 11, py + 16, pz + 0.5, "array", pivot=[px, py + 2, pz], rotation=[-12, 0, 0]),
-            box(px - 11.5, py + 1.5, pz + 0.5, px + 11.5, py + 16.5, pz + 1.5, "grey2", pivot=[px, py + 2, pz], rotation=[-12, 0, 0]),
-            box(px - 9, py + 16.5, pz - 1, px + 9, py + 18, pz + 1, "metal", pivot=[px, py + 2, pz], rotation=[-12, 0, 0])]
+    """SPS-48 style 3-D array: big tilted planar face on a pedestal spinning at the masthead platform."""
+    px, py, pz = -80, DECK_Y + 70 + 13 + 61, -108
+    return [box(px - 3, py, pz - 3, px + 3, py + 3, pz + 3, "metal"),
+            box(px - 18, py + 3, pz - 2, px + 18, py + 26, pz + 0.6, "array", pivot=[px, py + 3, pz], rotation=[-12, 0, 0]),
+            box(px - 18.6, py + 2.4, pz + 0.6, px + 18.6, py + 26.6, pz + 2, "grey2", pivot=[px, py + 3, pz], rotation=[-12, 0, 0]),
+            box(px - 15, py + 26.6, pz - 1.5, px + 15, py + 29, pz + 1.5, "metal", pivot=[px, py + 3, pz], rotation=[-12, 0, 0])]
 
 
 def radar_aux_cubes():
-    """Long-range air search: wide shallow bar on the forward platform."""
-    px, py, pz = 34, 86, -60
-    return [box(px - 1, py, pz - 1, px + 1, py + 3, pz + 1, "metal"),
-            box(px - 9, py + 3, pz - 1, px + 9, py + 6, pz + 0.4, "array"),
-            box(px - 9, py + 3, pz + 0.4, px + 9, py + 6, pz + 1, "grey2")]
+    """SPS-49 style long-range air search: wide shallow bar on the aft island roof."""
+    px, py, pz = -79, DECK_Y + 70, -25
+    return [box(px - 2, py, pz - 2, px + 2, py + 6, pz + 2, "metal"),
+            box(px - 15, py + 6, pz - 1.5, px + 15, py + 12, pz + 0.4, "array"),
+            box(px - 15, py + 6, pz + 0.4, px + 15, py + 12, pz + 1.5, "grey2")]
 
 
 def strap_cubes():
-    """Deck tie-down chains + titan spot outline at both cargo slots (y just above the deck)."""
+    """Flush tie-down pad eyes + chain runs at both titan spots (at most 0.3 px proud of the deck)."""
     out = []
-    for z in (5, 52):
+    for sx, sz in TITAN_SPOTS:
         for dx, dz in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
-            out.append(box(dx * 10 - 0.4, DECK_Y, z + dz * 10 - 0.4, dx * 10 + 0.4, DECK_Y + 0.3, z + dz * 10 + 0.4,
-                           "metal"))
-            out.append(box(dx * 4, DECK_Y, z + dz * 4 - 0.25, dx * 10, DECK_Y + 0.2, z + dz * 4 + 0.25, "yellow"))
+            out.append(box(sx + dx * 22 - 0.6, DECK_Y, sz + dz * 22 - 0.6, sx + dx * 22 + 0.6, DECK_Y + 0.3,
+                           sz + dz * 22 + 0.6, "metal"))
+            out.append(box(sx + dx * 8, DECK_Y, sz + dz * 8 - 0.3, sx + dx * 22, DECK_Y + 0.2, sz + dz * 8 + 0.3, "yellow"))
     return out
 
 
 def gate_cubes():
-    return [box(-16, 6, 104, 16, 27, 105.4, "gate"), box(-16.4, 26, 104, 16.4, 27.6, 105.6, "grey2"),
-            box(-14, 7, 105.4, -12, 26, 106, "metal"), box(12, 7, 105.4, 14, 26, 106, "metal")]
+    return [box(-34, 26, 302, 34, 74, 303.4, "gate"), box(-34.6, 72, 302, 34.6, 75, 304, "grey2"),
+            box(-30, 27, 303.4, -27, 72, 304.4, "metal"), box(27, 27, 303.4, 30, 72, 304.4, "metal")]
 
 
 def bones():
+    """Built in the pre-mirror frame, then mirrored across X: in game the island must land on starboard."""
+    B = _bones()
+    for b in B:
+        b["pivot"][0] = -b["pivot"][0]
+        if "cubes" in b:
+            b["cubes"] = [mirror(c) for c in b["cubes"]]
+    return B
+
+
+def _bones():
     return [
         {"name": "root", "pivot": [0, 0, 0]},
         {"name": "hull", "parent": "root", "pivot": [0, WATER_Y, 0], "cubes": hull_cubes()},
-        {"name": "stern_gate", "parent": "hull", "pivot": [0, 6, 105], "cubes": gate_cubes()},
-        {"name": "bridge", "parent": "hull", "pivot": [33, DECK_Y, -40], "cubes": island_cubes()},
-        {"name": "radar", "parent": "bridge", "pivot": [34, 112, -47], "cubes": radar_cubes()},
-        {"name": "radar_aux", "parent": "bridge", "pivot": [34, 86, -60], "cubes": radar_aux_cubes()},
-        {"name": "cargo_straps", "parent": "hull", "pivot": [0, DECK_Y, 28], "cubes": strap_cubes()},
+        {"name": "stern_gate", "parent": "hull", "pivot": [0, 26, 302], "cubes": gate_cubes()},
+        {"name": "bridge", "parent": "hull", "pivot": [-79, DECK_Y, -70], "cubes": island_cubes()},
+        {"name": "radar", "parent": "bridge", "pivot": [-80, DECK_Y + 144, -108], "cubes": radar_cubes()},
+        {"name": "radar_aux", "parent": "bridge", "pivot": [-79, DECK_Y + 70, -25], "cubes": radar_aux_cubes()},
+        {"name": "cargo_straps", "parent": "hull", "pivot": [0, DECK_Y, 130], "cubes": strap_cubes()},
     ]
 
 
 # ---------------------------------------------------------------------------- planar UVs
-FACE_AXES = {  # face -> (u axis, u reversed, v axis "y-down" or z, v reversed)
+FACE_AXES = {  # face -> (u axis, u reversed, v axis)
     "north": (0, True, 1), "south": (0, False, 1), "east": (2, True, 1), "west": (2, False, 1),
     "up": (0, False, 2), "down": (0, False, 2)}
 
@@ -305,15 +357,13 @@ def apply_uv(B):
             refs = (xr, None, zr)
             c["uv"] = {}
             for f, (ua, rev, va) in FACE_AXES.items():
-                us = hi[ua] - lo[ua]
-                vs = hi[va] - lo[va]
-                us_c, vs_c = min(us, rw), min(vs, rh)
+                us_c, vs_c = min(hi[ua] - lo[ua], rw), min(hi[va] - lo[va], rh)
                 su = (refs[ua] + rw - hi[ua]) if rev else (lo[ua] - refs[ua])
-                sv = (ytop - hi[1]) if va == 1 else (lo[2] - zr if f == "up" else lo[2] - zr)
+                sv = (ytop - hi[1]) if va == 1 else (lo[2] - zr)
                 su = su % rw if su + us_c > rw or su < 0 else su
                 sv = sv % rh if sv + vs_c > rh or sv < 0 else sv
-                su, sv = min(su, rw - us_c), min(sv, rh - vs_c)
-                ev = 32 if (mat == "side" and f == "east") else 0   # east side has its own hull-number copy
+                su, sv = max(0, min(su, rw - us_c)), max(0, min(sv, rh - vs_c))
+                ev = 84 if (mat == "side" and f == "east") else 0   # east side has its own hull-number copy
                 c["uv"][f] = {"uv": [round(u0 + su, 3), round(v0 + ev + sv, 3)], "uv_size": [round(us_c, 3), round(vs_c, 3)]}
     return B
 
@@ -324,7 +374,11 @@ FONT = {
     "2": ["111", "001", "111", "100", "111"], "3": ["111", "001", "111", "001", "111"],
     "4": ["101", "101", "111", "001", "001"], "5": ["111", "100", "111", "001", "111"],
     "6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"],
-    "8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"]}
+    "8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"],
+    "H": ["101", "101", "111", "101", "101"], "T": ["111", "010", "010", "010", "010"]}
+
+
+MX = lambda pts: [(-x,) + tuple(r) for x, *r in pts]
 
 
 def shade(c, k):
@@ -332,13 +386,15 @@ def shade(c, k):
 
 
 def paint(t):
+    HELO_SPOTS, TITAN_SPOTS = MX(globals()['HELO_SPOTS']), MX(globals()['TITAN_SPOTS'])
     rnd = random.Random(9)
     px = t.set_pixel
 
-    def text(x, y, s, col, sc=2):
-        for i, ch in enumerate(s):
+    def text(x, y, s, col, sc=2, flip=False):
+        # verified in game: unmirrored glyphs read correctly
+        for i, ch in enumerate(s[::-1] if flip else s):
             for gy, row in enumerate(FONT[ch]):
-                for gx, bit in enumerate(row):
+                for gx, bit in enumerate(row[::-1] if flip else row):
                     if bit == "1":
                         t.fill_rect(x + i * 4 * sc + gx * sc, y + gy * sc, sc, sc, *col)
 
@@ -360,108 +416,131 @@ def paint(t):
                 px(u0 + x, v0 + y, int(r * (1 - 0.18 * f) + 150 * 0.18 * f), int(g * (1 - 0.25 * f) + 80 * 0.25 * f),
                    int(b * (1 - 0.3 * f) + 50 * 0.3 * f))
 
-    # --- flight deck (u = x + 56, v = z + 120): dark non-skid, markings
+    # --- flight deck (u = x + 96, v = z + 338): dark non-skid, tie-down grid, markings
     du, dv = MAT["deck"][:2]
-    for y in range(240):
-        for x in range(112):
-            k = 1 + rnd.uniform(-0.06, 0.06) - (0.05 if (x * 31 + y * 17) % 23 == 0 else 0)
+    W, H = MAT["deck"][2:4]
+    for y in range(H):
+        for x in range(W):
+            k = 1 + rnd.uniform(-0.05, 0.05) - (0.05 if (x * 31 + y * 17) % 23 == 0 else 0)
+            if x % 12 == 6 and y % 12 == 6:
+                k *= 0.7                                              # recessed tie-down pad eyes
             px(du + x, dv + y, *shade((62, 64, 68), k))
-    for y in range(0, 240, 16):                                       # non-skid panel joins
-        t.fill_rect(du, dv + y, 112, 1, 52, 54, 58)
+    for y in range(0, H, 24):                                         # non-skid panel joins
+        t.fill_rect(du, dv + y, W, 1, 54, 56, 60)
 
     def dx(x):
-        return du + x + 56
+        return du + int(round(x)) + 96
 
     def dz(z):
-        return dv + z + 120
+        return dv + int(round(z)) + 338
 
-    for z in range(-112, 106, 6):                                     # dashed yellow centreline (port of island)
-        t.fill_rect(dx(-1), dz(z), 2, 4, 214, 182, 58)
-    t.fill_rect(dx(-42), dz(-98), 1, 202, 226, 228, 226)              # white deck edge lines
-    t.fill_rect(dx(41), dz(-98), 1, 202, 226, 228, 226)
-    for i, zc in enumerate((-80, -50, -18, 14, 46, 78)):               # landing spots: yellow circle, white T, number
-        cx = -22
-        for a in range(0, 360, 4):
-            r = 9
-            t.fill_rect(dx(cx + int(r * math.cos(math.radians(a)))), dz(zc + int(r * math.sin(math.radians(a)))), 1, 1,
-                        222, 188, 60)
-        t.fill_rect(dx(cx - 5), dz(zc - 11), 11, 1, 230, 230, 228)
-        text(dx(cx - 13), dz(zc - 2), str(i + 1), (236, 236, 232), 1)
-    for zc in (5, 52):                                                # titan spots: big yellow box + cross
-        for x in range(-16, 17):
-            for z in (-16, 16):
-                t.fill_rect(dx(x), dz(zc + z), 1, 1, 222, 188, 60)
-                t.fill_rect(dx(z), dz(zc + x), 1, 1, 222, 188, 60)
-        t.fill_rect(dx(-6), dz(zc), 13, 1, 232, 232, 230)
-        t.fill_rect(dx(0), dz(zc - 6), 1, 13, 232, 232, 230)
-    for x in range(-40, 41, 8):                                       # stern ramp hash (red/white)
-        t.fill_rect(dx(x), dz(100), 4, 3, 190, 60, 50)
-        t.fill_rect(dx(x + 4), dz(100), 4, 3, 226, 226, 222)
-    for x0, z0, w, h in ((-46, 22, 12, 22), (34, 60, 12, 20)):        # elevator outlines
-        for x in range(w):
-            t.fill_rect(dx(x0 + x), dz(z0), 1, 1, 214, 182, 58)
-            t.fill_rect(dx(x0 + x), dz(z0 + h - 1), 1, 1, 214, 182, 58)
-    text(dx(-14), dz(-104), "7", (236, 236, 232), 3)                  # big bow hull number on the deck
-    text(dx(-2), dz(-104), "7", (236, 236, 232), 3)
-    for _ in range(140):                                              # tyre / oil smudges
-        x, y = rnd.randrange(112), rnd.randrange(240)
-        px(du + x, dv + y, 44, 45, 48)
+    Y, Wt, R = (222, 188, 60), (232, 232, 228), (196, 58, 48)
+    for side in (-1, 1):                                              # white deck edge lines + flush edge lights
+        t.fill_rect(dx(side * 92 - (1 if side > 0 else 0)), dz(-300), 2, 598, *Wt)
+        for z in range(-296, 300, 16):
+            t.fill_rect(dx(side * 95 - 1), dz(z), 2, 2, *((40, 190, 70) if z < 0 else Wt))
+    for z in range(-330, 300, 10):                                    # dashed centreline down the port landing lane
+        t.fill_rect(dx(-45), dz(z), 2, 6, *Wt)
+    for z in range(-140, 0, 8):                                       # island foul line
+        t.fill_rect(dx(56), dz(z), 2, 5, *Y)
+    t.fill_rect(dx(56), dz(0), 2, 280, *Y)
 
-    # --- hull side (u = z + 120 forward->aft on the west face, v = 30 - y)
+    def ring(cx, cz, r, col, wdt=2):
+        for a in range(0, 360):
+            for d in range(wdt):
+                rr = r - d
+                t.fill_rect(dx(cx + rr * math.cos(math.radians(a))), dz(cz + rr * math.sin(math.radians(a))), 1, 1, *col)
+
+    for i, (cx, cz) in enumerate(HELO_SPOTS):                         # helo spots: yellow ring, white lineup T, big number
+        ring(cx, cz, 30, Y, 3)
+        ring(cx, cz, 4, Wt, 2)
+        t.fill_rect(dx(cx - 1), dz(cz - 40), 3, 80, *Wt)              # fore-aft lineup line
+        t.fill_rect(dx(cx - 14), dz(cz - 40), 29, 3, *Wt)             # T bar at the head
+        n = str(i + 1)
+        text(dx(cx + 7), dz(cz - 15), n, Wt, 6)   # reads upright to a pilot approaching from astern
+    for i, (cx, cz) in enumerate(TITAN_SPOTS):                        # titan spots: big hatched yellow box, T + number
+        for d in range(3):
+            for a in range(-28, 29):
+                for e in (-28 + d, 28 - d):
+                    t.fill_rect(dx(cx + a), dz(cz + e), 1, 1, *Y)
+                    t.fill_rect(dx(cx + e), dz(cz + a), 1, 1, *Y)
+        for a in range(-25, 26):                                      # corner hazard hatching
+            for e in range(-25, 26):
+                if (abs(a) > 17 or abs(e) > 17) and (abs(a) > 17 and abs(e) > 17) and (a + e) % 6 < 3:
+                    t.fill_rect(dx(cx + a), dz(cz + e), 1, 1, *Y)
+        text(dx(cx - 14), dz(cz - 10), "T" + str(i + 1), Wt, 4)
+    for x in range(-94, 95, 8):                                       # stern ramp hash (red/white)
+        t.fill_rect(dx(x), dz(292), 4, 6, *R)
+        t.fill_rect(dx(x + 4), dz(292), 4, 6, *Wt)
+    text(dx(-30), dz(-326), "47", Wt, 7)                              # big hull number on the bow
+    for _ in range(900):                                              # tyre / oil smudges
+        x, y = rnd.randrange(W), rnd.randrange(H)
+        t.fill_rect(du + x, dv + y, rnd.randint(1, 3), rnd.randint(1, 6), 46, 47, 50)
+    for cx, cz in HELO_SPOTS:                                         # rotor-wash exhaust scorch round the spots
+        for _ in range(160):
+            a, r = rnd.uniform(0, 6.3), rnd.uniform(6, 26)
+            px(dx(cx + r * math.cos(a)), dz(cz + r * math.sin(a)), 40, 41, 43)
+
+    # --- hull side (west face u = z + 338, v = 82 - y; east copy at v + 84 reads bow at large u)
     su, sv0 = MAT["side"][:2]
-    for sv in (sv0, sv0 + 32):
-        plate(su, sv, 240, 32, GREY, 20, 8, 0.25)
-        for y in range(32):
-            yy = 30 - y - 0.5
-            for x in range(240):
+    SW, SH = MAT["side"][2:4]
+    for sv in (sv0, sv0 + 84):
+        plate(su, sv, SW, SH, GREY, 32, 10, 0.25)
+        for y in range(SH):
+            yy = 82 - y - 0.5
+            for x in range(SW):
                 if yy < WATER_Y:
-                    k = 1 + rnd.uniform(-0.04, 0.04)
-                    px(su + x, sv + y, *shade((150, 44, 36), k))          # antifouling red
-                elif yy < WATER_Y + 2.5:
-                    px(su + x, sv + y, *shade((44, 46, 50), 1 + rnd.uniform(-0.05, 0.05)))   # black boot-top
-                elif yy < WATER_Y + 4.5:
-                    px(su + x, sv + y, *shade(GREY, 0.82 + rnd.uniform(-0.05, 0.05)))      # sea-stained band
-        for x in range(10, 232, 7):                                       # porthole row
-            t.fill_rect(su + x, sv + 7, 2, 2, 40, 44, 52)
-            t.set_pixel(su + x, sv + 7, 120, 140, 160)
-        for x in range(40, 200, 23):                                      # rust weeping from hawse/scuppers
-            for y in range(9, 20):
-                if rnd.random() < 0.8:
-                    px(su + x, sv + y, 150, 98, 70)
-        # hull number near the bow: west face reads bow at small u, east face (v+32) at large u
-        text(su + (24 if sv == sv0 else 194), sv + 4, "47", (44, 46, 50), 3)
+                    px(su + x, sv + y, *shade((150, 44, 36), 1 + rnd.uniform(-0.05, 0.05)))      # antifouling red
+                elif yy < WATER_Y + 4:
+                    px(su + x, sv + y, *shade((44, 46, 50), 1 + rnd.uniform(-0.05, 0.05)))       # black boot-top
+                elif yy < WATER_Y + 8:
+                    px(su + x, sv + y, *shade(GREY, 0.8 + rnd.uniform(-0.05, 0.05)))             # sea-stained band
+        for x in range(12, SW - 8, 9):                                   # two porthole rows
+            for py_ in (14, 30):
+                t.fill_rect(su + x, sv + py_, 2, 2, 40, 44, 52)
+                px(su + x, sv + py_, 120, 140, 160)
+        for x in range(40, SW - 20, 37):                                 # scuppers with rust weeps
+            t.fill_rect(su + x, sv + 8, 3, 2, 40, 42, 46)
+            for y in range(10, 40):
+                if rnd.random() < 0.75:
+                    px(su + x + 1, sv + y, 150, 98, 70)
+        west = sv == sv0
+        bow_u = lambda z: (z + 338) if west else (SW - (z + 338))
+        text(su + bow_u(-280 if west else -230), sv + 24, "47", (44, 46, 50), 7)          # hull number near the bow
+        for z in (-300, 270):                                            # draft marks at bow and stern
+            for k, y in enumerate((44, 52, 60, 68)):
+                text(su + bow_u(z), sv + y - 2, str(8 - k * 2 if k else 8)[-1], Wt, 1)
 
-    # --- superstructure greys
-    plate(*MAT["grey"][:2], 64, 64, GREY, 16, 12, 0.2)
-    plate(*MAT["grey2"][:2], 64, 64, shade(GREY, 0.86), 16, 12, 0.3)
+    # --- superstructure and fittings
+    plate(*MAT["grey"][:2], 128, 128, GREY, 24, 14, 0.2)
+    plate(*MAT["grey2"][:2], 128, 128, shade(GREY, 0.86), 24, 14, 0.3)
     wu, wv = MAT["win"][:2]                                           # alpha-0 glass, dark gasket mullions
-    for y in range(16):
-        for x in range(64):
-            if y in (0, 15) or x % 8 == 0:
+    for y in range(32):
+        for x in range(128):
+            if y in (0, 31) or x % 12 == 0:
                 px(wu + x, wv + y, 50, 54, 60)
             else:
                 px(wu + x, wv + y, 0, 0, 0, 0)
     pu, pv = MAT["port"][:2]
-    plate(pu, pv, 64, 16, GREY, 64, 16, 0)
-    for x in range(3, 64, 8):
-        t.fill_rect(pu + x, pv + 5, 3, 3, 40, 44, 52)
-        px(pu + x, pv + 5, 130, 150, 170)
-    t.fill_rect(pu + 28, pv + 3, 6, 12, 150, 156, 162)                # watertight door
+    plate(pu, pv, 128, 32, GREY, 128, 32, 0)
+    for x in range(3, 128, 8):
+        t.fill_rect(pu + x, pv + 3, 3, 3, 40, 44, 52)
+        px(pu + x, pv + 3, 130, 150, 170)
     gu, gv = MAT["grate"][:2]
     for y in range(16):
-        for x in range(64):
+        for x in range(128):
             px(gu + x, gv + y, *((70, 72, 76) if (x % 3 == 0 or y % 3 == 0) else (36, 38, 40)))
     gu, gv = MAT["gate"][:2]
-    plate(gu, gv, 32, 32, shade(GREY, 0.92), 32, 4, 0.4)
-    t.fill_rect(gu, gv + 28, 32, 4, 190, 160, 50)
+    plate(gu, gv, 64, 64, shade(GREY, 0.92), 64, 6, 0.4)
+    t.fill_rect(gu, gv + 58, 64, 6, 190, 160, 50)
     au, av = MAT["array"][:2]
-    for y in range(32):
-        for x in range(32):
+    for y in range(64):
+        for x in range(64):
             px(au + x, av + y, *((92, 98, 104) if (x % 4 == 0 or y % 4 == 0) else (150, 156, 162)))
     mu, mv = MAT["dome"][:2]
-    for y in range(16):
-        for x in range(32):
-            px(mu + x, mv + y, *shade((236, 236, 230), 1 - y * 0.01 + rnd.uniform(-0.02, 0.02)))
+    for y in range(32):
+        for x in range(64):
+            px(mu + x, mv + y, *shade((236, 236, 230), 1 - y * 0.006 + rnd.uniform(-0.02, 0.02)))
     t.fill_rect(*MAT["dark"][:2], 16, 16, 40, 42, 46)
     for y in range(16):
         for x in range(16):
@@ -469,44 +548,49 @@ def paint(t):
             px(MAT["seat"][0] + x, MAT["seat"][1] + y, 60, 66, 76)
             px(MAT["screen"][0] + x, MAT["screen"][1] + y, *((60, 200, 120) if (y % 3 == 0 and x % 5) else (20, 40, 34)))
             px(MAT["black"][0] + x, MAT["black"][1] + y, 30, 30, 32)
-            px(MAT["bootred"][0] + x, MAT["bootred"][1] + y, *shade((150, 44, 36), 1 + rnd.uniform(-0.05, 0.05)))
-    su2, sv2 = MAT["soot"][:2]
     for y in range(32):
         for x in range(32):
+            px(MAT["bootred"][0] + x, MAT["bootred"][1] + y, *shade((150, 44, 36), 1 + rnd.uniform(-0.05, 0.05)))
+    for y in range(16):
+        for x in range(32):
+            px(MAT["boat"][0] + x, MAT["boat"][1] + y, *((226, 110, 40) if y < 6 else (70, 74, 78)))
+    su2, sv2 = MAT["soot"][:2]
+    for y in range(64):
+        for x in range(64):
             px(su2 + x, sv2 + y, *shade((52, 50, 48), 0.8 + rnd.uniform(0, 0.4)))
     ru, rv = MAT["raft"][:2]
     for y in range(16):
-        for x in range(32):
-            px(ru + x, rv + y, *((210, 212, 206) if x % 4 else (120, 124, 126)))
-    for name, col in (("red", (200, 40, 36)), ("white", (236, 236, 228)), ("yellow", (222, 188, 60)),
-                      ("green", (40, 190, 70))):
+        for x in range(64):
+            px(ru + x, rv + y, *((210, 212, 206) if x % 6 else (120, 124, 126)))
+    for name, col in (("red", (200, 40, 36)), ("white", (236, 236, 228)), ("yellow", Y), ("green", (40, 190, 70))):
         t.fill_rect(*MAT[name][:2], 8, 8, *col)
 
 
 def item_icon(path):
-    """16x16 side profile: grey hull on red bottom, island + mast amidships, flat deck."""
+    """16x16 side profile: long grey hull on red bottom, island + mast at starboard amidships, flat deck."""
     t = TextureDrawer(16, 16)
     g, d, r, k = (176, 182, 188), (120, 126, 132), (150, 44, 36), (44, 46, 50)
     for x in range(0, 16):
-        t.set_pixel(x, 8, *d)                                   # deck
+        t.set_pixel(x, 9, *d)                                   # deck
     for x in range(1, 16):
-        t.set_pixel(x, 9, *g)
         t.set_pixel(x, 10, *g)
+        t.set_pixel(x, 11, *g)
     for x in range(2, 15):
-        t.set_pixel(x, 11, *k)
-        t.set_pixel(x, 12, *r)
-    t.set_pixel(0, 9, *g)
-    for y in range(4, 8):
-        for x in range(6, 10):
+        t.set_pixel(x, 12, *k)
+        t.set_pixel(x, 13, *r)
+    t.set_pixel(0, 10, *g)
+    for y in range(5, 9):
+        for x in range(5, 9):
             t.set_pixel(x, y, *g)
-    t.set_pixel(7, 5, 60, 80, 100)
-    t.set_pixel(8, 5, 60, 80, 100)
-    for y in range(1, 4):
-        t.set_pixel(8, y, *d)
-    t.set_pixel(7, 1, *d)
-    t.set_pixel(9, 1, *d)
-    for x in (3, 6, 11, 13):
-        t.set_pixel(x, 10, 40, 44, 52)
+    t.set_pixel(5, 6, 60, 80, 100)
+    t.set_pixel(6, 6, 60, 80, 100)
+    for y in range(1, 5):
+        t.set_pixel(6, y, *d)
+    t.set_pixel(5, 2, *d)
+    t.set_pixel(7, 2, *d)
+    t.set_pixel(8, 4, *k)
+    for x in (3, 10, 12, 14):
+        t.set_pixel(x, 11, 40, 44, 52)
     t.save(path)
 
 
@@ -515,17 +599,25 @@ def animation(path):
     anim = {"format_version": "1.8.0", "animations": {
         "animation.ocean_carrier.idle": {"loop": True, "animation_length": 6.0, "bones": {
             "hull": {"position": {"0.0": [0, 0, 0], "3.0": [0, -0.5, 0], "6.0": [0, 0, 0]},
-                     "rotation": {"0.0": [0, 0, 0], "1.5": [0.4, 0, 0.7], "3.0": [0, 0, 0], "4.5": [-0.4, 0, -0.7],
+                     "rotation": {"0.0": [0, 0, 0], "1.5": [0.25, 0, 0.5], "3.0": [0, 0, 0], "4.5": [-0.25, 0, -0.5],
                                   "6.0": [0, 0, 0]}},
             "radar": spin(6.0, -360), "radar_aux": spin(3.0, 360)}},
         "animation.ocean_carrier.sail": {"loop": True, "animation_length": 3.0, "bones": {
             "hull": {"position": {"0.0": [0, 0, 0], "1.5": [0, -0.8, 0], "3.0": [0, 0, 0]},
-                     "rotation": {"0.0": [-0.6, 0, 0], "0.75": [0.4, 0, 1.0], "1.5": [0.8, 0, 0],
-                                  "2.25": [0.2, 0, -1.0], "3.0": [-0.6, 0, 0]}},
+                     "rotation": {"0.0": [-0.4, 0, 0], "0.75": [0.2, 0, 0.7], "1.5": [0.5, 0, 0],
+                                  "2.25": [0.1, 0, -0.7], "3.0": [-0.4, 0, 0]}},
             "radar": spin(3.0, -360), "radar_aux": spin(1.5, 360)}}}}
     with open(path, "w") as f:
         json.dump(anim, f, indent=2)
     return anim
+
+
+def world_bbox(c):
+    o, s = c["origin"], c["size"]
+    pts = [[o[0] + i * s[0], o[1] + j * s[1], o[2] + k * s[2]] for i in (0, 1) for j in (0, 1) for k in (0, 1)]
+    if "rotation" in c:
+        pts = [osp.about(p, c["pivot"], c["rotation"]) for p in pts]
+    return [min(p[i] for p in pts) for i in range(3)], [max(p[i] for p in pts) for i in range(3)]
 
 
 def validate(geo, anim):
@@ -540,13 +632,33 @@ def validate(geo, anim):
             for fc in c["uv"].values():
                 (u, v), (w, h) = fc["uv"], fc["uv_size"]
                 assert 0 <= u and 0 <= v and u + w <= TEX and v + h <= TEX and w > 0 and h > 0, (b["name"], c)
-    assert {"hull", "cargo_straps", "radar", "bridge"} <= names
+    assert {"hull", "cargo_straps", "radar", "radar_aux", "stern_gate", "bridge"} <= names
     assert set(anim["animations"]) == {"animation.ocean_carrier.idle", "animation.ocean_carrier.sail"}
     for a in anim["animations"].values():
         assert set(a["bones"]) <= names, set(a["bones"]) - names
-    deck = [c for c in next(b for b in bl if b["name"] == "hull")["cubes"]
-            if c["origin"][1] + c["size"][1] == DECK_Y and c["size"][0] > 80]
-    assert deck, "flight deck must top out at y=30 to match the Java cargo offsets"
+    # flat deck: one cube tops out at DECK_Y over the whole rectangle ...
+    x0, x1, z0, z1 = DECK_RECT
+    hull = next(b for b in bl if b["name"] == "hull")["cubes"]
+    assert any(c["origin"][0] <= x0 and c["origin"][0] + c["size"][0] >= x1 and c["origin"][2] <= z0
+               and c["origin"][2] + c["size"][2] >= z1 and c["origin"][1] + c["size"][1] == DECK_Y for c in hull), "deck slab"
+    # ... and nothing rises above it inside the rectangle except the island (in its footprint) and flush straps
+    ix0, ix1, iz0, iz1 = -ISLAND_RECT[1], -ISLAND_RECT[0], ISLAND_RECT[2], ISLAND_RECT[3]
+    for b in bl:
+        for c in b.get("cubes", []):
+            lo, hi = world_bbox(c)
+            if hi[1] <= DECK_Y + 1e-3:
+                continue
+            cx0, cx1, cz0, cz1 = max(lo[0], x0), min(hi[0], x1), max(lo[2], z0), min(hi[2], z1)
+            if cx1 - cx0 <= 1e-3 or cz1 - cz0 <= 1e-3:
+                continue                                              # wholly outside the deck rectangle
+            if b["name"] == "cargo_straps":
+                assert hi[1] <= DECK_Y + 0.5, c
+                continue
+            assert ix0 - 1e-3 <= cx0 and cx1 <= ix1 + 1e-3 and iz0 - 1e-3 <= cz0 and cz1 <= iz1 + 1e-3, \
+                ("deck clutter above the flight deck", b["name"], lo, hi)
+    for sx, sz in MX(HELO_SPOTS + TITAN_SPOTS):                           # spots on the deck, clear of the island
+        assert x0 + 20 <= sx <= x1 - 20 and z0 + 20 <= sz <= z1 - 20
+        assert not (ix0 - 30 < sx < ix1 + 30 and iz0 - 30 < sz < iz1 + 30), (sx, sz)
     return n
 
 
@@ -554,8 +666,8 @@ def main():
     B = apply_uv(bones())
     geo = {"format_version": "1.12.0", "minecraft:geometry": [{
         "description": {"identifier": "geometry.ocean_carrier", "texture_width": TEX, "texture_height": TEX,
-                        # ~232 px long, mast top at y=130, keel/screws to y=-6
-                        "visible_bounds_width": 16, "visible_bounds_height": 9, "visible_bounds_offset": [0, 4, 0]},
+                        # ~645 px long, 270 px wide incl. elevators, mast top at y=~265
+                        "visible_bounds_width": 48, "visible_bounds_height": 20, "visible_bounds_offset": [0, 8, 0]},
         "bones": B}]}
     geo_path = f"{ASSETS}/geo/ocean_carrier.geo.json"
     anim_path = f"{ASSETS}/animations/ocean_carrier.animation.json"
@@ -570,11 +682,14 @@ def main():
     print("cubes:", n, "bones:", [b["name"] for b in B])
     if "--preview" in sys.argv:
         out = sys.argv[sys.argv.index("--preview") + 1]
+        osp.TEX = TEX
         tex = [[tuple(t.buf[(y * TEX + x) * 4:(y * TEX + x) * 4 + 4]) for x in range(TEX)] for y in range(TEX)]
-        a = render(B, tex, {}, 35, -22, W=760, H=440, scale=2.2)
-        b = render(B, tex, {}, -140, -28, W=760, H=440, scale=2.2)
-        c = render(B, tex, {}, 90, 0, W=760, H=440, scale=2.6)
-        save_png(out, [row[::-1] for row in a + b + c])   # rasterizer is mirror-imaged vs the game
+        a = osp.render(B, tex, {}, 35, -22, W=1100, H=560, scale=1.35)
+        b = osp.render(B, tex, {}, -140, -28, W=1100, H=560, scale=1.35)
+        c = osp.render(B, tex, {}, 90, 0, W=1100, H=420, scale=1.6)
+        osp.save_png(out + "_views.png", [row[::-1] for row in a + b + c])   # rasterizer is mirror-imaged vs the game
+        top = osp.render(B, tex, {}, 90, -90, W=1100, H=780, scale=1.6)
+        osp.save_png(out + "_top.png", [row[::-1] for row in top])
         print("preview", out)
 
 

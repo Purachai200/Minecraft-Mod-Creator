@@ -62,6 +62,10 @@ public class ModCreativeTabs {
                         output.accept(ModItems.CHINOOK_TRANSPORTER.get());
                         output.accept(ModItems.V22_OSPREY.get());
                         output.accept(ModItems.ARMORED_APC.get());
+                        output.accept(ModItems.LCAC_HOVERCRAFT.get());
+                        output.accept(ModItems.C130_HERCULES.get());
+                        output.accept(ModItems.REPAIR_TRUCK.get());
+                        output.accept(com.titancombat.block.ModBlocks.VEHICLE_ASSEMBLY_BAY.get());
                         output.accept(ModItems.MOBILE_SUIT_TRAILER.get());
                         output.accept(ModBlocks.HANGAR_DOCK.get());
 

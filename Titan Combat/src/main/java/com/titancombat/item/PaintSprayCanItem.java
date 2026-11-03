@@ -13,6 +13,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 public class PaintSprayCanItem extends Item {
+    // Kept in common code (the client-side CamoTextures holds the same order)
+    private static final String[] VEHICLE_CAMO_NAMES = {"Factory", "Woodland", "Desert", "Arctic", "Urban"};
 
     public PaintSprayCanItem(Properties properties) {
         super(properties);
@@ -36,10 +38,16 @@ public class PaintSprayCanItem extends Item {
         }
         if (target instanceof com.titancombat.entity.transport.BaseTransportVehicleEntity vehicle) {
             if (!player.level().isClientSide) {
-                MechFaction[] factions = MechFaction.values();
-                int nextIndex = (vehicle.getFaction().ordinal() + (player.isShiftKeyDown() ? -1 : 1) + factions.length) % factions.length;
-                vehicle.setFaction(factions[nextIndex]);
-                player.sendSystemMessage(Component.translatable("message.titancombat.faction_switched", factions[nextIndex].getDisplayName()));
+                if (player.isShiftKeyDown()) {
+                    // Shift: cycle the camouflage pattern layer
+                    vehicle.setCamo(vehicle.getCamo() + 1);
+                    player.displayClientMessage(Component.literal("§a[PAINT SHOP] Camouflage: §e" + VEHICLE_CAMO_NAMES[vehicle.getCamo()]), true);
+                } else {
+                    MechFaction[] factions = MechFaction.values();
+                    int nextIndex = (vehicle.getFaction().ordinal() + 1) % factions.length;
+                    vehicle.setFaction(factions[nextIndex]);
+                    player.sendSystemMessage(Component.translatable("message.titancombat.faction_switched", factions[nextIndex].getDisplayName()));
+                }
                 player.level().playSound(null, vehicle.blockPosition(), SoundEvents.ANVIL_USE, SoundSource.PLAYERS, 0.8F, 1.6F);
             }
             return InteractionResult.sidedSuccess(player.level().isClientSide);

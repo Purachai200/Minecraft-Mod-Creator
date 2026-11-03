@@ -17,6 +17,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -50,11 +51,17 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
             SynchedEntityData.defineId(BaseTransportVehicleEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Integer> DATA_ENERGY =
             SynchedEntityData.defineId(BaseTransportVehicleEntity.class, EntityDataSerializers.INT);
+    /** 0 = intact, 1 = destroyed: rotors/props for aircraft, wheels/running gear for ground vehicles, screws for ships. */
+    public static final EntityDataAccessor<Float> DATA_PROPULSION_DAMAGE =
+            SynchedEntityData.defineId(BaseTransportVehicleEntity.class, EntityDataSerializers.FLOAT);
+    public static final EntityDataAccessor<Integer> DATA_CAMO =
+            SynchedEntityData.defineId(BaseTransportVehicleEntity.class, EntityDataSerializers.INT);
     public static final EntityDataAccessor<Integer> DATA_FACTION =
             SynchedEntityData.defineId(BaseTransportVehicleEntity.class, EntityDataSerializers.INT);
 
     /** Signed speed along the heading in blocks/tick. */
     protected float currentSpeed = 0.0F;
+    private boolean crashing = false;
     /** Degrees the hull turned this tick; carried onto the driver's view like a boat. */
     protected float yawDelta = 0.0F;
     /** Client-only motion read back from position/rotation so wheels, steering and lean also animate on other players' screens. */
@@ -83,6 +90,42 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         this.entityData.define(DATA_HEADLIGHTS, true);
         this.entityData.define(DATA_ENERGY, MAX_ENERGY);
         this.entityData.define(DATA_FACTION, 0);
+        this.entityData.define(DATA_PROPULSION_DAMAGE, 0.0F);
+        this.entityData.define(DATA_CAMO, 0);
+    }
+
+    public static final int CAMO_COUNT = 5;
+
+    /** 0 factory paint, 1 woodland, 2 desert, 3 arctic, 4 urban (see CamoTextures). */
+    public int getCamo() {
+        return this.entityData.get(DATA_CAMO);
+    }
+
+    public void setCamo(int camo) {
+        this.entityData.set(DATA_CAMO, Math.floorMod(camo, CAMO_COUNT));
+    }
+
+    public float getPropulsionDamage() {
+        return this.entityData.get(DATA_PROPULSION_DAMAGE);
+    }
+
+    public void setPropulsionDamage(float damage) {
+        this.entityData.set(DATA_PROPULSION_DAMAGE, Mth.clamp(damage, 0.0F, 1.0F));
+    }
+
+    public boolean isPropulsionDestroyed() {
+        return getPropulsionDamage() >= 1.0F;
+    }
+
+    /** Flies on rotors/props: losing them means no lift. */
+    public boolean isAircraft() {
+        return false;
+    }
+
+    /** Where its propulsion sits as a fraction of hull height: rotors on top for aircraft, wheels at the bottom otherwise. */
+    protected boolean isPropulsionHit(Vec3 hitPos) {
+        double rel = (hitPos.y - this.getY()) / Math.max(0.5D, this.getBbHeight());
+        return isAircraft() ? rel > 0.6D : rel < 0.3D;
     }
 
     public com.titancombat.entity.MechFaction getFaction() {
@@ -294,10 +337,11 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
 
         // 2. Repair Vehicle Hull
         if (held.is(Items.IRON_INGOT) || held.is(Items.IRON_BLOCK)) {
-            if (this.getHealth() < this.getMaxHealth()) {
+            if (this.getHealth() < this.getMaxHealth() || getPropulsionDamage() > 0.0F) {
                 if (!this.level().isClientSide) {
                     float healAmount = held.is(Items.IRON_BLOCK) ? 250.0F : 35.0F;
                     this.heal(healAmount);
+                    setPropulsionDamage(getPropulsionDamage() - (held.is(Items.IRON_BLOCK) ? 1.0F : 0.15F));
                     if (!player.getAbilities().instabuild) held.shrink(1);
                     this.level().playSound(null, this.blockPosition(), SoundEvents.ANVIL_USE, SoundSource.PLAYERS, 1.0F, 1.2F);
                     player.sendSystemMessage(Component.literal("§a[MAINTENANCE] Transport hull repaired: " + (int) this.getHealth() + " / " + (int) this.getMaxHealth() + " HP"));
@@ -360,6 +404,21 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
             this.wheelRotO = this.wheelRot;
             this.wheelRot += forward / 0.875F; // radians rolled by the truck's 14px-radius wheel
             com.titancombat.client.VehicleEngineSound.ensure(this); // client-only branch, so the class never loads on a server
+            float dmg = getPropulsionDamage();
+            if (dmg > 0.3F && this.random.nextFloat() < dmg) {
+                double top = isAircraft() ? this.getBbHeight() : this.getBbHeight() * 0.6D;
+                this.level().addParticle(dmg >= 1.0F ? net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE : net.minecraft.core.particles.ParticleTypes.SMOKE,
+                        this.getX() + (this.random.nextDouble() - 0.5D) * this.getBbWidth(), this.getY() + top,
+                        this.getZ() + (this.random.nextDouble() - 0.5D) * this.getBbWidth(), 0.0D, 0.08D, 0.0D);
+            }
+        } else if (isAircraft() && isPropulsionDestroyed()) {
+            // Server sees the client-flown wreck land: impact blast (no block damage)
+            if (!this.onGround()) {
+                this.crashing = true;
+            } else if (this.crashing) {
+                this.crashing = false;
+                this.level().explode(this, this.getX(), this.getY(), this.getZ(), 2.5F, net.minecraft.world.level.Level.ExplosionInteraction.NONE);
+            }
         }
 
         // Sync cargo state & lock docked Mechs into static weight
@@ -437,7 +496,20 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
                 }
 
                 if (this.isControlledByLocalInstance()) {
+                    if (isAircraft() && isPropulsionDestroyed()) {
+                        crashDescent();
+                        return;
+                    }
+                    // Damaged running gear / rotors cap the throttle: 0% damage = full power, 100% = 30%
+                    float power = 1.0F - 0.7F * getPropulsionDamage();
+                    float zza = driver.zza;
+                    driver.zza = zza * power;
                     travelTransport(driver, travelVector);
+                    driver.zza = zza;
+                    if (isAircraft() && getPropulsionDamage() > 0.5F && !this.onGround()) {
+                        // Shot-up rotors can't hold altitude
+                        this.move(MoverType.SELF, new Vec3(0.0D, -0.16D * (getPropulsionDamage() - 0.5F), 0.0D));
+                    }
                 } else {
                     this.setDeltaMovement(Vec3.ZERO);
                 }
@@ -445,6 +517,15 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
             }
         }
         super.travel(travelVector);
+    }
+
+    /** Rotors gone: the airframe autorotates down, spinning, and slams in. */
+    protected void crashDescent() {
+        Vec3 m = this.getDeltaMovement();
+        this.setDeltaMovement(m.x * 0.98D, Math.max(-1.2D, Math.min(m.y, 0.0D) - 0.06D), m.z * 0.98D); // no lift left: climb dies at once
+        this.yawDelta = 9.0F;
+        this.setYRot(this.getYRot() + this.yawDelta);
+        this.move(MoverType.SELF, this.getDeltaMovement());
     }
 
     /** W/S drives toward the target speed, braking first when pushed against the current direction; coasting rolls to a stop. */
@@ -534,6 +615,7 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
     public boolean canCollideWith(Entity other) {
         // Prevent collision with passengers inside the vehicle bounding box
         if (this.hasPassenger(other)) return false;
+        if (other instanceof DeckColliderEntity tile && tile.getParent() == this) return false; // own deck tiles
         return super.canCollideWith(other);
     }
 
@@ -634,7 +716,31 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
     @Override
     public boolean hurt(DamageSource source, float amount) {
         // Vehicle acts as heavy armor for the mounted Titan; absorbs damage
-        return super.hurt(source, amount);
+        boolean hurt = super.hurt(source, amount);
+        if (hurt && !this.level().isClientSide && !source.is(net.minecraft.tags.DamageTypeTags.IS_FALL)) {
+            Vec3 hitPos = source.getSourcePosition();
+            float share;
+            if (source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)) {
+                share = amount / (this.getMaxHealth() * 0.35F); // blasts shred rotors and tyres wherever they land
+            } else if (hitPos != null && isPropulsionHit(hitPos)) {
+                share = amount / (this.getMaxHealth() * 0.2F);
+            } else {
+                share = 0.0F;
+            }
+            if (share > 0.0F) {
+                boolean wasDestroyed = isPropulsionDestroyed();
+                setPropulsionDamage(getPropulsionDamage() + share);
+                if (!wasDestroyed && isPropulsionDestroyed()) {
+                    this.level().playSound(null, this.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.NEUTRAL, 2.0F, 0.7F);
+                    this.level().playSound(null, this.blockPosition(), SoundEvents.ANVIL_BREAK, SoundSource.NEUTRAL, 1.6F, 0.6F);
+                    if (getDriver() != null) {
+                        getDriver().displayClientMessage(Component.literal(isAircraft()
+                                ? "§c[CRITICAL] ROTOR SYSTEM DESTROYED - LOSING LIFT!" : "§c[CRITICAL] RUNNING GEAR DESTROYED - IMMOBILISED!"), true);
+                    }
+                }
+            }
+        }
+        return hurt;
     }
 
     @Override
@@ -645,6 +751,8 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         tag.putBoolean("Headlights", hasHeadlights());
         tag.putInt("Energy", getEnergy());
         tag.putInt("Faction", getFaction().getId());
+        tag.putFloat("PropulsionDamage", getPropulsionDamage());
+        tag.putInt("Camo", getCamo());
     }
 
     @Override
@@ -655,6 +763,8 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         if (tag.contains("Headlights")) setHeadlights(tag.getBoolean("Headlights"));
         if (tag.contains("Energy")) setEnergy(tag.getInt("Energy"));
         if (tag.contains("Faction")) setFaction(com.titancombat.entity.MechFaction.byId(tag.getInt("Faction")));
+        if (tag.contains("PropulsionDamage")) setPropulsionDamage(tag.getFloat("PropulsionDamage"));
+        if (tag.contains("Camo")) setCamo(tag.getInt("Camo"));
     }
 
     @Override

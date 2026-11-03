@@ -30,6 +30,12 @@ public class ModBlocks {
                     .sound(SoundType.METAL)
                     .noOcclusion()));
 
+    public static final RegistryObject<Block> VEHICLE_ASSEMBLY_BAY = registerBlock("vehicle_assembly_bay",
+            () -> new com.titancombat.assembly.VehicleAssemblyBayBlock(BlockBehaviour.Properties.of()
+                    .strength(4.0F, 12.0F)
+                    .sound(SoundType.METAL)
+                    .requiresCorrectToolForDrops()));
+
     private static <T extends Block> RegistryObject<T> registerBlock(String name, Supplier<T> block) {
         RegistryObject<T> toReturn = BLOCKS.register(name, block);
         registerBlockItem(name, toReturn);

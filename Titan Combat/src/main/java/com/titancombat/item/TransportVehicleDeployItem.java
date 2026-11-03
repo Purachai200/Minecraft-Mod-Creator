@@ -47,6 +47,7 @@ public class TransportVehicleDeployItem extends Item {
                 }
                 if (stack.hasTag()) {
                     vehicle.setFaction(com.titancombat.entity.MechFaction.byId(stack.getTag().getInt("SavedFaction")));
+                    vehicle.setCamo(stack.getTag().getInt("SavedCamo"));
                 }
                 level.addFreshEntity(vehicle);
 

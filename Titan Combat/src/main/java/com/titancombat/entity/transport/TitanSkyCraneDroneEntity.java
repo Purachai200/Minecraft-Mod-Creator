@@ -77,6 +77,11 @@ public class TitanSkyCraneDroneEntity extends BaseTransportVehicleEntity {
     }
 
     @Override
+    public boolean isAircraft() {
+        return true;
+    }
+
+    @Override
     protected void travelTransport(LivingEntity driver, Vec3 travelVector) {
         // W/S pitch the rotors for forward/back thrust (~83 km/h), A/D yaw the airframe
         updateThrottle(driver, 1.15F, 0.5F, 0.03F, 0.05F, 0.02F);

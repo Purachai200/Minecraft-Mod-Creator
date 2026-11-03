@@ -29,6 +29,12 @@ public class ModNetworking {
                 .consumerMainThread(MechControlC2SPacket::handle)
                 .add();
 
+        INSTANCE.messageBuilder(com.titancombat.assembly.AssembleVehicleC2SPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(com.titancombat.assembly.AssembleVehicleC2SPacket::new)
+                .encoder(com.titancombat.assembly.AssembleVehicleC2SPacket::toBytes)
+                .consumerMainThread(com.titancombat.assembly.AssembleVehicleC2SPacket::handle)
+                .add();
+
         INSTANCE.messageBuilder(TitanWeaponActionC2SPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
                 .decoder(TitanWeaponActionC2SPacket::new)
                 .encoder(TitanWeaponActionC2SPacket::toBytes)

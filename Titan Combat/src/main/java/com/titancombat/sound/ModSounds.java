@@ -41,6 +41,9 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> VEHICLE_ENGINE_DIESEL_HEAVY = registerSoundEvent("vehicle_engine_diesel_heavy");
     public static final RegistryObject<SoundEvent> VEHICLE_ENGINE_DIESEL_LIGHT = registerSoundEvent("vehicle_engine_diesel_light");
     public static final RegistryObject<SoundEvent> VEHICLE_ENGINE_SHIP = registerSoundEvent("vehicle_engine_ship");
+    public static final RegistryObject<SoundEvent> VEHICLE_ENGINE_TURBOPROP = registerSoundEvent("vehicle_engine_turboprop");
+    public static final RegistryObject<SoundEvent> VEHICLE_LIFT_FAN = registerSoundEvent("vehicle_lift_fan");
+    public static final RegistryObject<SoundEvent> VEHICLE_REPAIR_WELD = registerSoundEvent("vehicle_repair_weld");
 
     private static RegistryObject<SoundEvent> registerSoundEvent(String name) {
         return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(TitanCombatMod.MODID, name)));
