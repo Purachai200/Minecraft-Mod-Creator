@@ -108,11 +108,19 @@ BONE_MAP = {}
 DETAIL_MAP = {}
 MARKING_MAP = {}
 
+FRAME_MAP = {}   # (x, y) -> (material, face, x0, y0, x1, y1, bone): bare-frame cubes, painted per face by material
+
 for item in PACKED_MANIFEST:
     fac = item.get("faction", "")
     bone = item["bone"]
     cidx = item.get("cube_index", 0)
     faces = item["faces"]
+    if fac == "Frame":
+        for fname, (x0, y0, x1, y1) in faces.items():
+            for py in range(y0, y1):
+                for px in range(x0, x1):
+                    FRAME_MAP[(px, py)] = (item["material"], fname, x0, y0, x1, y1, bone)
+        continue
     for fname, (x0, y0, x1, y1) in faces.items():
         fw, fh = x1 - x0, y1 - y0
         if fw <= 0 or fh <= 0: continue
@@ -326,8 +334,119 @@ def faction_livery(x, y):
     return (194, 178, 128)
 
 
+def camo_base(camo_id, x, y, n_med, n_coarse, default=None):
+    """Base paint for camo scheme camo_id (0 = factory livery, or `default` for frame paint)."""
+    if camo_id == 1: # USMC Woodland (Authentic 4-color MARPAT)
+        bx, by = x // 6, y // 6
+        camo_val = (h2(bx, by, 77) * 100)
+        if camo_val < 35: base_armor = (74, 94, 52)
+        elif camo_val < 60: base_armor = (46, 62, 34)
+        elif camo_val < 82: base_armor = (102, 78, 52)
+        else: base_armor = (22, 26, 20)
+
+    elif camo_id == 2: # Desert Nomad (3-Color Middle-East Desert)
+        dn = math.sin(x * 0.05) * math.cos(y * 0.05) + n_med * 0.6
+        if dn > 0.45: base_armor = (168, 142, 102)
+        elif dn > -0.15: base_armor = (205, 184, 138)
+        else: base_armor = (128, 102, 72)
+
+    elif camo_id == 3: # Cerberus Urban Hex (Stealth Dark Hexagons)
+        hex_grid = ((x // 8) + (y // 14) * 2) % 3
+        base_val = 32 + hex_grid * 8
+        base_armor = (base_val, base_val + 2, base_val + 5)
+
+    elif camo_id == 4: # Arctic Blizzard (Clean Splinter)
+        base_armor = polar_splinter(x, y)
+
+    elif camo_id == 5: # Tigerstripe (Jungle Vietnam Brushstrokes)
+        stripe = (y + int(math.sin(x * 0.08) * 8)) // 8
+        if stripe % 4 == 0: base_armor = (24, 28, 22)
+        elif stripe % 4 == 1: base_armor = (56, 82, 42)
+        elif stripe % 4 == 2: base_armor = (112, 92, 58)
+        else: base_armor = (42, 60, 32)
+
+    elif camo_id == 6: # Industrial Hazard (CAT Safety Yellow & Grime)
+        base_armor = (255, 204, 0)
+        if n_coarse > 0.65:
+            base_armor = mix(base_armor, (60, 50, 30), (n_coarse - 0.65) * 2.0)
+
+    else: # Default 0: faction factory livery
+        base_armor = faction_livery(x, y) if default is None else default
+    return base_armor
+
+
+# ---------------- Bare frame (per-face, by material) ----------------
+FRAME_PAINT = (88, 94, 70)      # factory frame colour: worn olive drab
+DIGITS = {"0": ["111", "101", "101", "101", "111"], "7": ["111", "001", "010", "010", "010"],
+          "3": ["111", "001", "011", "001", "111"]}
+
+
+def paint_frame(x, y, info, camo_id, n_fine, n_med, n_coarse):
+    mat, face, x0, y0, x1, y1, bone = info
+    fw, fh = x1 - x0, y1 - y0
+    lx, ly = x - x0, y - y0
+    edge = lx == 0 or ly == 0 or lx == fw - 1 or ly == fh - 1
+    near = lx <= 1 or ly <= 1 or lx >= fw - 2 or ly >= fh - 2
+    grit = 0.9 + 0.18 * n_fine
+    if mat == "paint":
+        c = mul(camo_base(camo_id, x, y, n_med, n_coarse, default=FRAME_PAINT), grit)
+        if edge and fw >= 4 and fh >= 4 and h2(x, y, 5) < 0.15:
+            c = mul((118, 114, 104), grit)                       # chipped edge, bare steel
+        if face in ("north", "south", "east", "west") and fh >= 4 and h2(x, 0, 9) < 0.18 and ly > fh // 3:
+            c = mix(c, (96, 58, 34), min(0.55, (ly / fh) * 0.7))  # rust run below a weld
+        if edge:
+            c = mul(c, 0.72)                                     # welded seam
+        elif fw >= 5 and fh >= 5 and lx in (1, fw - 2) and ly in (1, fh - 2):
+            c = mul(c, 1.35)                                     # bolt head
+        if bone == "torso" and face in ("east", "west") and fw >= 9 and fh >= 7:   # tub side stencil "07"
+            for i, ch in enumerate("07"):
+                gx, gy = lx - (fw // 2 - 3) - i * 4, ly - 1
+                if 0 <= gx < 3 and 0 <= gy < 5 and DIGITS[ch][gy][gx] == "1":
+                    c = (226, 222, 208)
+        return c
+    if mat == "steel":
+        c = mul((74, 76, 78), grit)
+        return mul(c, 1.25) if (ly == 0 or lx == 0) else mul(c, 0.75) if edge else c
+    if mat == "dark":
+        c = mul((42, 44, 47), grit)
+        return mul(c, 0.7) if edge else c
+    if mat == "chrome":
+        band = abs(lx - fw / 2) < max(1, fw / 4) if face in ("north", "south", "east", "west") else False
+        return mul((205, 210, 216) if band else (150, 156, 164), 0.95 + 0.08 * n_fine)
+    if mat == "rubber":
+        return (18, 18, 20) if (lx + ly) % 3 == 0 else (30, 30, 33)
+    if mat == "hazard":
+        return (238, 188, 18) if (x + y) // 3 % 2 == 0 else (24, 24, 26)
+    if mat == "lamp":
+        return (255, 236, 170) if not near else (255, 168, 30)
+    if mat == "glass":
+        return (40, 140, 110) if not edge else (16, 18, 20)
+    if mat == "exhaust":
+        c = mix((104, 70, 50), (30, 26, 24), 0.35 + 0.4 * n_med)
+        return mul(c, grit)
+    if mat == "seat":
+        return (64, 52, 40) if (lx + ly) % 6 == 0 else mul((42, 38, 34), grit)
+    if mat == "harness":
+        return (170, 40, 30) if not edge else (120, 26, 20)
+    return mul((60, 62, 66), grit)
+
+
+def armor_painters():
+    """Armor-set modules that define paint(x, y, camo_id, n_fine, n_med, n_coarse) -> rgba or None, with the UV rects they own."""
+    import importlib, sys, os
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from armor_sets import SET_IDS
+    out = []
+    for sid in SET_IDS:
+        m = importlib.import_module("armor_sets." + sid)
+        if hasattr(m, "paint") and getattr(m, "UV_REGION", None):
+            out.append((m.paint, m.UV_REGION[1]))
+    return out
+
+
 def generate_texture_buffer(camo_id):
     W, H = 1024, 1024
+    painters = armor_painters()
     buf = bytearray(W * H * 4)
 
     def set_px(x, y, c):
@@ -342,6 +461,20 @@ def generate_texture_buffer(camo_id):
             n_coarse = vnoise(x, y, 36, 303)
 
             col = (42, 45, 50, 255) # Fallback
+
+            if (x, y) in FRAME_MAP:
+                set_px(x, y, paint_frame(x, y, FRAME_MAP[(x, y)], camo_id, n_fine, n_med, n_coarse))
+                continue
+
+            # Armor-set modules may paint their own UV region (None = fall through to the shared livery)
+            custom = None
+            for paint, rects in painters:
+                if any(u <= x < u + w and v <= y < v + h for u, v, w, h in rects):
+                    custom = paint(x, y, camo_id, n_fine, n_med, n_coarse)
+                    break
+            if custom is not None:
+                set_px(x, y, custom)
+                continue
 
             # ==============================================================
             # REGION 1: PELVIS, TORSO, ARMS & LEGS INNER FRAME (0..200, 0..240)
@@ -460,43 +593,7 @@ def generate_texture_buffer(camo_id):
                     else: col = mul((75, 88, 62), 0.9 + 0.15 * n_fine)
 
                 else:
-                    # Select camouflage texture style
-                    if camo_id == 1: # USMC Woodland (Authentic 4-color MARPAT)
-                        bx, by = x // 6, y // 6
-                        camo_val = (h2(bx, by, 77) * 100)
-                        if camo_val < 35: base_armor = (74, 94, 52)
-                        elif camo_val < 60: base_armor = (46, 62, 34)
-                        elif camo_val < 82: base_armor = (102, 78, 52)
-                        else: base_armor = (22, 26, 20)
-
-                    elif camo_id == 2: # Desert Nomad (3-Color Middle-East Desert)
-                        dn = math.sin(x * 0.05) * math.cos(y * 0.05) + n_med * 0.6
-                        if dn > 0.45: base_armor = (168, 142, 102)
-                        elif dn > -0.15: base_armor = (205, 184, 138)
-                        else: base_armor = (128, 102, 72)
-
-                    elif camo_id == 3: # Cerberus Urban Hex (Stealth Dark Hexagons)
-                        hex_grid = ((x // 8) + (y // 14) * 2) % 3
-                        base_val = 32 + hex_grid * 8
-                        base_armor = (base_val, base_val + 2, base_val + 5)
-
-                    elif camo_id == 4: # Arctic Blizzard (Clean Splinter)
-                        base_armor = polar_splinter(x, y)
-
-                    elif camo_id == 5: # Tigerstripe (Jungle Vietnam Brushstrokes)
-                        stripe = (y + int(math.sin(x * 0.08) * 8)) // 8
-                        if stripe % 4 == 0: base_armor = (24, 28, 22)
-                        elif stripe % 4 == 1: base_armor = (56, 82, 42)
-                        elif stripe % 4 == 2: base_armor = (112, 92, 58)
-                        else: base_armor = (42, 60, 32)
-
-                    elif camo_id == 6: # Industrial Hazard (CAT Safety Yellow & Grime)
-                        base_armor = (255, 204, 0)
-                        if n_coarse > 0.65:
-                            base_armor = mix(base_armor, (60, 50, 30), (n_coarse - 0.65) * 2.0)
-
-                    else: # Default 0: faction factory livery
-                        base_armor = faction_livery(x, y)
+                    base_armor = camo_base(camo_id, x, y, n_med, n_coarse)
 
                     # Micro-texture noise
                     col = mul(base_armor, 0.92 + 0.16 * n_fine)
