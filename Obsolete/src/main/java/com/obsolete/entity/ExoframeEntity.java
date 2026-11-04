@@ -114,6 +114,24 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     public static final EntityDataAccessor<Integer> DATA_CLOAK_COOLDOWN =
             SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.INT);
 
+    /** Server-decided, synced: heel roller pods are driving (C held + moving forward on ground with a charged unit). */
+    public static final EntityDataAccessor<Boolean> DATA_ROLLER_DASH =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
+    /** Server-decided, synced: submerged with a charged hydro-jet pack, so the pilot swims in 3D. */
+    public static final EntityDataAccessor<Boolean> DATA_HYDRO_ACTIVE =
+            SynchedEntityData.defineId(ExoframeEntity.class, EntityDataSerializers.BOOLEAN);
+
+    /** Roller dash top speed as a multiple of the walking speed (sprint is 1.35, so this is 2x sprint). */
+    public static final float DASH_SPEED_MULT = 2.7F;
+    /** Max hull yaw change per tick while dashing (degrees): wide skating turns instead of pivoting on the spot. */
+    public static final float DASH_TURN_RATE = 4.0F;
+    /** Hydro-jet cruise speed (blocks/tick) along the look vector; Ctrl boosts it. */
+    public static final double HYDRO_SPEED = 0.30D;
+
+    /** Client render state for the mobility gear: wheel/fan spin angles (radians) and the 0..1 roller deploy pose. */
+    public float clientWheelSpin, clientWheelSpinO, clientFanSpin, clientFanSpinO, clientRollerDeploy, clientRollerDeployO;
+    private float dashBlend = 0.0F;
+
     // Chassis momentum response
     private float smoothedForward = 0.0F;
     private float smoothedStrafe = 0.0F;
@@ -136,6 +154,12 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
 
     /** Seat cushion height in model px; mirrored as 30.8 - SEAT_LOWER in tools/build_exoframe_geo.py (capsules are fitted to it). */
     public static final double SEAT_CUSHION_Y = 19.8D;
+    /**
+     * The pilot (and so the first-person camera, 1.62 above them) rides this much higher than the seat; ExoframeRiderPose
+     * draws the body back down by the same amount. Without it the eye sat below the visible head and the shoulder line,
+     * so the arms towered over the view.
+     */
+    public static final double PILOT_CAMERA_LIFT = 0.4D;
 
     // Raw Animations
     protected static final RawAnimation ANIM_IDLE = RawAnimation.begin().thenLoop("animation.exoframe.idle");
@@ -150,6 +174,7 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     public static final float MODEL_SCALE = 1.8F;
 
     protected static final RawAnimation ANIM_CROUCH_WALK = RawAnimation.begin().thenLoop("animation.exoframe.crouch_walk");
+    protected static final RawAnimation ANIM_ROLLER_DASH = RawAnimation.begin().thenLoop("animation.exoframe.roller_dash");
     protected static final RawAnimation ANIM_FLIGHT = RawAnimation.begin().thenLoop("animation.exoframe.flight");
     protected static final RawAnimation ANIM_FLIGHT_BOOST = RawAnimation.begin().thenLoop("animation.exoframe.flight_boost");
 
@@ -193,6 +218,8 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         this.entityData.define(DATA_FRAME_TIER, 1);
         this.entityData.define(DATA_IS_FLYING, false);
         this.entityData.define(DATA_IS_BOOSTING, false);
+        this.entityData.define(DATA_ROLLER_DASH, false);
+        this.entityData.define(DATA_HYDRO_ACTIVE, false);
         this.entityData.define(DATA_IS_RELOADING, false);
         this.entityData.define(DATA_RELOAD_PROGRESS, 0);
         this.entityData.define(DATA_RELOAD_MAX, 0);
@@ -232,6 +259,20 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
                 || backStack.is(com.obsolete.item.ModItems.MODULE_FLIGHT_BOOSTER.get())
                 || backStack.getItem().getClass().getName().contains("FlightUnitItem")
                 || backStack.getItem().getDescriptionId().contains("flight_unit");
+    }
+
+    /** The equipped mobility item of that kind in its slot, or EMPTY. */
+    public ItemStack getMobilityStack(com.obsolete.item.ExoframeMobilityItem.Kind kind) {
+        ItemStack s = getEquippedSlot(kind.slot);
+        return s.getItem() instanceof com.obsolete.item.ExoframeMobilityItem m && m.getKind() == kind ? s : ItemStack.EMPTY;
+    }
+
+    public boolean isRollerDashing() {
+        return this.entityData.get(DATA_ROLLER_DASH);
+    }
+
+    public boolean isHydroJetActive() {
+        return this.entityData.get(DATA_HYDRO_ACTIVE);
     }
 
     public boolean isFlying() {
@@ -474,7 +515,7 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             double yOffset;
             if (isFirstPassenger) {
                 forwardOffset = -4.3D * MODEL_SCALE / 16.0D;
-                yOffset = isMechCrouching() ? seat - 6.0D * MODEL_SCALE / 16.0D : seat;
+                yOffset = (isMechCrouching() ? seat - 6.0D * MODEL_SCALE / 16.0D : seat) + PILOT_CAMERA_LIFT;
             } else {
                 // Secondary evacuee secured on rear winch cargo mount
                 forwardOffset = 18.0D * MODEL_SCALE / 16.0D;
@@ -511,10 +552,6 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
     @Override
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
-        // Shift-dismount beside a Titan Combat transport: clamp the Exoframe onto it as cargo
-        if (!this.level().isClientSide && passenger instanceof Player pilot && pilot.isShiftKeyDown() && this.getPassengers().isEmpty()) {
-            com.obsolete.compat.TitanCombatDock.tryDock(this, pilot);
-        }
         if (passenger != null) {
             passenger.resetFallDistance();
             passenger.fallDistance = 0.0F;
@@ -576,8 +613,12 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         if (this.isAlive() && !isDying()) {
             LivingEntity rider = this.getControllingPassenger();
             if (this.isVehicle() && rider != null) {
-                // Steer mech with pilot view
-                this.setYRot(rider.getYRot());
+                // Steer mech with pilot view (rate-limited while skating on the rollers)
+                float yaw = rider.getYRot();
+                if (isRollerDashing()) {
+                    yaw = this.getYRot() + Mth.clamp(Mth.wrapDegrees(yaw - this.getYRot()), -DASH_TURN_RATE, DASH_TURN_RATE);
+                }
+                this.setYRot(yaw);
                 this.yRotO = this.getYRot();
                 this.setXRot(rider.getXRot() * 0.5F);
                 this.setRot(this.getYRot(), this.getXRot());
@@ -608,9 +649,16 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
         smoothedForward += (targetForward - smoothedForward) * accelRate;
         smoothedStrafe += (targetStrafe - smoothedStrafe) * accelRate;
 
+        // Roller dash: ramps up/coasts down instead of snapping (momentum), strafe mostly locked out
+        boolean dashing = isRollerDashing() && smoothedForward > 0.1F;
+        dashBlend += ((dashing ? 1.0F : 0.0F) - dashBlend) * (dashing ? 0.12F : 0.10F);
+        if (dashing) smoothedStrafe *= 0.3F;
+
         float speed = (float) this.getAttributeValue(Attributes.MOVEMENT_SPEED);
         if (isAiming()) {
             speed *= 0.65F; // Tactical ADS aim stance speed
+        } else if (dashBlend > 0.05F && smoothedForward > 0.05F) {
+            speed *= 0.5F + dashBlend * (DASH_SPEED_MULT - 0.5F); // from crouch pace up to 2x sprint
         } else if (isMechCrouching()) {
             speed *= 0.50F; // 50% speed while crouching
         } else if (rider.isSprinting() && smoothedForward > 0.1F) {
@@ -717,6 +765,29 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             }
         }
 
+        // Hydro-jet: free 3D swimming while submerged. Takes precedence over the float ring and gravity; the ring
+        // only turns the idle hold into a slow rise, and the diving ballast's blow (Space) still adds lift in tick().
+        if (isHydroJetActive() && this.isInWater()) {
+            this.resetFallDistance();
+            Vec3 look = rider.getLookAngle();
+            float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
+            double spd = HYDRO_SPEED * (rider.isSprinting() ? 1.4D : 1.0D);
+            double tx = look.x * smoothedForward * spd + Math.cos(yawRad) * smoothedStrafe * spd * 0.6D;
+            double tz = look.z * smoothedForward * spd + Math.sin(yawRad) * smoothedStrafe * spd * 0.6D;
+            double ty = look.y * smoothedForward * spd;
+            if (InputHelper.isJumping(rider)) {
+                ty = 0.22D;
+            } else if (isMechCrouching()) {
+                ty = -0.22D;
+            } else if (Math.abs(smoothedForward) < 0.1F) {
+                ty = hasItemEquipped(ModItems.ARMOR_FLOAT_RING.get()) ? 0.08D : 0.0D;
+            }
+            Vec3 cur = this.getDeltaMovement();
+            this.setDeltaMovement(cur.x + (tx - cur.x) * 0.15D, cur.y + (ty - cur.y) * 0.15D, cur.z + (tz - cur.z) * 0.15D);
+            this.move(MoverType.SELF, this.getDeltaMovement());
+            return;
+        }
+
         // Amphibious float ring: surface paddling & buoyancy
         if (hasItemEquipped(ModItems.ARMOR_FLOAT_RING.get()) && this.isInWater()) {
             double fluidHeight = this.getFluidHeight(FluidTags.WATER);
@@ -751,6 +822,7 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             }
         }
         if (this.level().isClientSide) {
+            tickMobilityRender();
             if (isMechMeleeing()) {
                 clientMeleeTicks++;
             } else {
@@ -874,8 +946,10 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
                 }
             }
 
-            // Footsteps & dust puffs
-            if (isMoving && this.onGround()) {
+            tickMobilityGear(serverLevel, rider, isPiloted);
+
+            // Footsteps & dust puffs (none while skating on the rollers)
+            if (isMoving && this.onGround() && !isRollerDashing()) {
                 int stepInterval = isSprinting ? 10 : 18;
                 footstepTimer++;
                 if (footstepTimer >= stepInterval) {
@@ -1004,8 +1078,8 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             }
         }
 
-        // Amphibious float ring passive buoyancy (floats mech to water surface even when unpiloted)
-        if (hasItemEquipped(ModItems.ARMOR_FLOAT_RING.get()) && this.isInWater()) {
+        // Amphibious float ring passive buoyancy (floats mech to water surface even when unpiloted; the hydro-jet overrides it)
+        if (hasItemEquipped(ModItems.ARMOR_FLOAT_RING.get()) && this.isInWater() && !isHydroJetActive()) {
             double fluidHeight = this.getFluidHeight(FluidTags.WATER);
             if (fluidHeight > 0.4D) {
                 this.setDeltaMovement(this.getDeltaMovement().x, Math.max(this.getDeltaMovement().y, 0.22D), this.getDeltaMovement().z);
@@ -1031,6 +1105,74 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
                 this.level().playSound(null, this.blockPosition(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.PLAYERS, 0.8F, 1.8F);
             }
         }
+    }
+
+    /** Server: decides roller dash / hydro-jet state, drains FE, emits sparks, bubbles and the drive sounds. */
+    private void tickMobilityGear(ServerLevel sl, @Nullable LivingEntity rider, boolean isPiloted) {
+        var R = com.obsolete.item.ExoframeMobilityItem.Kind.ROLLER_DASH;
+        var H = com.obsolete.item.ExoframeMobilityItem.Kind.HYDRO_JET;
+        ItemStack roller = getMobilityStack(R);
+        ItemStack jet = getMobilityStack(H);
+        boolean forward = rider != null && rider.zza > 0.1F;
+
+        boolean dash = isPiloted && !roller.isEmpty() && isMechCrouching() && forward && !isFlying() && !this.isInWater()
+                && (this.onGround() || isRollerDashing()) && com.obsolete.item.ExoframeMobilityItem.drain(roller);
+        if (dash != isRollerDashing()) this.entityData.set(DATA_ROLLER_DASH, dash);
+
+        boolean submerged = this.isInWater() && this.getFluidHeight(FluidTags.WATER) > this.getBbHeight() * 0.45D;
+        boolean steering = rider != null && (forward || rider.zza < -0.1F || Math.abs(rider.xxa) > 0.1F
+                || InputHelper.isJumping(rider) || isMechCrouching());
+        boolean hydro = isPiloted && !jet.isEmpty() && submerged
+                && com.obsolete.item.ExoframeMobilityItem.getEnergy(jet) >= H.drain;
+        if (hydro && steering) com.obsolete.item.ExoframeMobilityItem.drain(jet);
+        if (hydro != isHydroJetActive()) this.entityData.set(DATA_HYDRO_ACTIVE, hydro);
+
+        float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
+        double sin = Math.sin(yawRad), cos = Math.cos(yawRad);
+        if (dash && this.onGround()) {
+            // heel pods sit ~0.4 block behind each ankle, 0.45 out to the side
+            for (int side = -1; side <= 1; side += 2) {
+                double hx = this.getX() + side * 0.45D * cos + 0.75D * sin;
+                double hz = this.getZ() + side * 0.45D * sin - 0.75D * cos;
+                sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, hx, this.getY() + 0.05D, hz, 2, 0.08D, 0.02D, 0.08D, 0.12D);
+                if (this.tickCount % 2 == 0) {
+                    sl.sendParticles(ParticleTypes.POOF, hx, this.getY() + 0.1D, hz, 1, 0.1D, 0.02D, 0.1D, 0.01D);
+                }
+            }
+            if (this.tickCount % 10 == 0) {
+                this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_ROLLER_DASH.get(), SoundSource.PLAYERS, 1.2F,
+                        0.9F + (float) Math.min(0.4D, this.getDeltaMovement().horizontalDistance() * 0.5D));
+            }
+        }
+        if (hydro && steering) {
+            for (int side = -1; side <= 1; side += 2) {
+                double nx = this.getX() + side * 0.92D * cos + 1.75D * sin;   // nozzle exits (x 8.2, z 16 model units)
+                double nz = this.getZ() + side * 0.92D * sin - 1.75D * cos;
+                sl.sendParticles(ParticleTypes.BUBBLE, nx, this.getY() + 2.05D, nz, 4, 0.12D, 0.12D, 0.12D, 0.05D);
+                if (this.tickCount % 3 == 0) {
+                    sl.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP, nx, this.getY() + 2.05D, nz, 1, 0.05D, 0.05D, 0.05D, 0.02D);
+                }
+            }
+            if (this.tickCount % 20 == 0) {
+                this.level().playSound(null, this.blockPosition(), ModSounds.EXOFRAME_HYDRO_JET.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+            }
+        }
+        if (isPiloted && !roller.isEmpty() && isMechCrouching() && forward && !dash && this.onGround()
+                && this.tickCount % 20 == 0 && rider instanceof ServerPlayer sp) {
+            sp.displayClientMessage(Component.translatable("message.obsolete.roller_dash.no_power").withStyle(ChatFormatting.RED), true);
+        }
+    }
+
+    /** Client: advances wheel/fan spin and the roller deploy pose for ExoframeModel. */
+    private void tickMobilityRender() {
+        clientWheelSpinO = clientWheelSpin;
+        clientFanSpinO = clientFanSpin;
+        clientRollerDeployO = clientRollerDeploy;
+        double v = Math.sqrt(this.getDeltaMovement().horizontalDistanceSqr());
+        // wheel radius 1.4 model px * MODEL_SCALE = 0.1575 blocks; spin = distance / radius
+        if (isRollerDashing()) clientWheelSpin += (float) (v / (1.4D * MODEL_SCALE / 16.0D));
+        clientRollerDeploy += ((isRollerDashing() ? 1.0F : 0.0F) - clientRollerDeploy) * 0.25F;
+        clientFanSpin += isHydroJetActive() ? 1.1F : 0.0F;
     }
 
     public boolean hasItemEquipped(Item item) {
@@ -1726,6 +1868,9 @@ public class ExoframeEntity extends PathfinderMob implements GeoEntity, MenuProv
             }
             if (isFlying()) {
                 return state.setAndContinue(isFlightBoosting() ? ANIM_FLIGHT_BOOST : ANIM_FLIGHT);
+            }
+            if (isRollerDashing()) {
+                return state.setAndContinue(ANIM_ROLLER_DASH);
             }
             if (isMechCrouching()) {
                 return state.setAndContinue(state.isMoving() ? ANIM_CROUCH_WALK : ANIM_CROUCH);

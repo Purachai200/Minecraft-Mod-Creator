@@ -1,10 +1,11 @@
 """
-High-Clarity 16x16 Pixel Art Icon Generator for ALL 87 OBSOLETE Mecha Mod Items.
-Pure Python - zero external dependencies.
+High-Clarity 16x16 Pixel Art Icon Generator for the OBSOLETE Mecha Mod items.
+Pure Python - zero external dependencies. Hand-weapon icons are rendered from exoframe.geo.json (WEAPON_ICONS).
 """
 import struct
 import zlib
 import os
+import math
 
 def create_png_16x16(pixel_grid):
     raw = bytearray()
@@ -286,177 +287,8 @@ ART_ROLL_CAGE = """
 ................
 """
 
-# 6. WEAPONS
-ART_MINIGUN = """
-..............XX
-............XXDD
-...........XDDDD
-.........XXDDDDX
-.......XXDDDDDDX
-.....XXDDXDDDDDX
-...XXDDX.XDDDDDX
-.XXDDX...XDDDDDX
-XLLX.....XDDDDDX
-XLLX.....XDDDDDD
-.XMMX...XDDDDDDX
-..XMLLXXDDDDDDXX
-...XMMMMDDDDXX..
-....XXXXXXXX....
-................
-................
-"""
+# 6. ROLE WEAPONS (exoframe hand weapons are rendered from the model, see WEAPON_ICONS)
 
-ART_AUTOCANNON_30MM = """
-..............XX
-...........XXXDD
-.........XXDDDDX
-......XXXDDDDXXX
-...XXXDDDDXXX...
-.XXDDDDXXX......
-XDDDDXX.........
-XDDXX...XMMX....
-.XX....XMLLMX...
-.......XMMMMX...
-.......XDDDDX...
-........XMMX....
-........XMMX....
-.........XX.....
-................
-................
-"""
-
-ART_BATTLE_RIFLE = """
-................
-........XXXXXXXX
-......XXDDDDDDDX
-....XXDDDDDDDDDX
-..XXDDXDDDDDDDDX
-.XDDXX.XDDDDDDDX
-.XDX...XMMLLMMXX
-.XX....XMMMMMMX.
-.......XDDDDDDX.
-.......XDD..XDX.
-.......XX....XX.
-................
-................
-................
-................
-................
-"""
-
-ART_SHOTGUN = """
-...............X
-.............XXD
-...........XXDDX
-........XXXDDXXX
-.....XXXDDXXXX..
-..XXXDDXXXX.....
-.XDDXXXX........
-XDDXX..XMMX.....
-XX....XMLLMX....
-......XMMMMX....
-......XDDDDX....
-.......XXXX.....
-................
-................
-................
-................
-"""
-
-ART_GRENADE_LAUNCHER = """
-.............XXX
-..........XXXDDD
-........XXDDDDXX
-......XXDDDDDDX.
-....XXDDDDDDDDX.
-...XDDXXDDDDDDX.
-..XDDX..XDDDDDX.
-.XDDX...XDDDDDX.
-.XDDX...XDDDDDX.
-..XDDX..XDDDDDX.
-...XDDXXDDDDDDX.
-....XX..XDDDDDX.
-........XDD..XX.
-.........XX.....
-................
-................
-"""
-
-ART_RECOILLESS_RIFLE = """
-...............X
-.............XXD
-...........XXDDX
-.........XXDDDDX
-......XXXDDDDDDX
-...XXXDDDDDDDDXX
-..XDDDDDDDDDDX..
-.XDDXDDDDDDDDX..
-.XDX.XMMXDDDDX..
-.XX..XMLLMXDDX..
-.....XMMMMX.XX..
-......XDDX......
-.......XX.......
-................
-................
-................
-"""
-
-ART_ATGM = """
-............XXXX
-..........XXDDDD
-........XXDDDDDD
-......XXDDDDDDDD
-....XXDDDDDDDDDD
-..XXDDDDDDDDDDXX
-.XDDDDDDDDDDDDX.
-XDDDDDDDDDDDDDX.
-XDDXCCCCCCCCXDDX
-.XX.CCCCCCCC.XX.
-....CCCCCCCC....
-.....XXXXXX.....
-................
-................
-................
-................
-"""
-
-ART_FLAMETHROWER = """
-..............XX
-............XXRR
-...........XRRWW
-.........XXRRWWX
-.......XXRRWWXX.
-.....XXDDDDXX...
-...XXDDDDDDX....
-..XDDDDDDDDX....
-.XDDDDDDDDDX....
-.XDD..XMMMMX....
-.XX...XMLLMX....
-......XMMMMX....
-.......XXXX.....
-................
-................
-................
-"""
-
-ART_VIBRO_BLADE = """
-..............CC
-.............CCC
-............CCCX
-...........CCCX.
-..........CCCX..
-.........CCCX...
-........CCCX....
-.......CCCX.....
-......CCCX......
-.....CCCX.......
-....CCCX........
-...XMMX.........
-..XMLLX.........
-.XMMMMX.........
-.XXXXX..........
-................
-"""
 
 ART_RIOT_SHIELD = """
 ...XXXXXXXXXX...
@@ -515,100 +347,6 @@ XMMMX.X.........
 .XXX............
 """
 
-ART_ASSAULT_RIFLE = """
-................
-........XXXXXXXX
-......XXDDDDDDDX
-....XXDDDDDDDDDX
-..XXDDDDDDDDDDDX
-.XDDDDDDDDDDDDDX
-.XDDXX.XDDDDDDDX
-.XDX...XMMLLMMXX
-.XX....XMMMMMMX.
-.......XDDDDDDX.
-.......XDD..XDX.
-.......XX....XX.
-................
-................
-................
-................
-"""
-
-ART_SNIPER_RIFLE = """
-...............X
-.............XXX
-...........XXDDX
-.........XXDDDDX
-......XXXDDDDDDX
-...XXXDDDDDDDDXX
-.XXDDDDDDDDDDX..
-XDDDDDDDDDDDDX..
-.XXXXX..XMMMMX..
-........XMLLMX..
-........XMMMMX..
-.........XDDX...
-.........XDDX...
-..........XX....
-................
-................
-"""
-
-ART_MACHINE_GUN = """
-...............X
-............XXXX
-.........XXXDDDD
-......XXXDDDDDDD
-...XXXDDDDDDDDDD
-.XXDDDDDDDDDDDDX
-XDDDDDDDDDDDDDDX
-XDDDD..XDDDDDDDX
-.XXXX..XMMLLMMXX
-.......XMMMMMMX.
-......XDDDDDDDDX
-......XDDDDDDDDX
-.......XXXXXXXX.
-................
-................
-................
-"""
-
-ART_RPG7 = """
-...............X
-.............XXG
-............XGGG
-...........XGGGG
-..........XGGGGX
-........XXDDGGX.
-......XXDDDDXX..
-....XXDDDDXX....
-...XMMDDXX......
-..XMLLMX........
-.XMMMMX.........
-.XDDDDX.........
-..XXXX..........
-................
-................
-................
-"""
-
-ART_ROCKET_LAUNCHER = """
-...........XXXXX
-.........XXDDDDX
-.......XXDDDDDDX
-.....XXDDDDDDDDX
-...XXDDDDDDDDDDX
-.XXDDDDDDDDDDDDX
-XDDDDDDDDDDDDDDX
-XDDXCCCCCCCCXDDX
-.XX.CCCCCCCC.XX.
-....CCCCCCCC....
-.....XMMMMX.....
-.....XMLLMX.....
-......XXXX......
-................
-................
-................
-"""
 
 # 7. INDUSTRIAL TOOLS
 ART_MINING_DRILL = """
@@ -1146,6 +884,44 @@ ART_ASSEMBLY_STATION = """
 ................
 """
 
+ART_ROLLER_DASH = """
+................
+................
+....XXXXXXXX....
+...XMMMMMMMMX...
+...XMYYMMYYMX...
+...XXXXXXXXXX...
+..XXXX.XX.XXXX..
+.XRRRRX..XRRRRX.
+XRRDDRRXXRRDDRRX
+XRDLLDRXXRDLLDRX
+XRDLLDRXXRDLLDRX
+XRRDDRRXXRRDDRRX
+.XRRRRX..XRRRRX.
+..XXXX....XXXX..
+................
+................
+"""
+
+ART_HYDRO_JET = """
+................
+..XXXX....XXXX..
+.XOOOOX..XOOOOX.
+.XXXXXX..XXXXXX.
+XMMMMMMXXMMMMMMX
+XMXXXXMXXMXXXXMX
+XMXCLXMXXMXCLXMX
+XMXLCXMXXMXLCXMX
+XMXXXXMXXMXXXXMX
+XMMMMMMXXMMMMMMX
+.XDDDDX..XDDDDX.
+..XDDX....XDDX..
+..XCCX....XCCX..
+...XX......XX...
+................
+................
+"""
+
 # Map All 87 Items to Specific Arts & Palettes
 ICONS_MAP = [
     # 1. Helmets (14)
@@ -1207,24 +983,10 @@ ICONS_MAP = [
     ("armor_specter_legs.png", ART_LEGS, PAL_SPECTER),
     ("armor_valkyrie_legs.png", ART_LEGS, PAL_VALKYRIE),
 
-    # 5. Weapons (17)
-    ("exoframe_minigun.png", ART_MINIGUN, {'.': _, 'X': BLK, 'M': DKG, 'D': GRY, 'L': WHT}),
-    ("exoframe_autocannon_30mm.png", ART_AUTOCANNON_30MM, {'.': _, 'X': BLK, 'M': DKG, 'D': GRY, 'L': WHT}),
-    ("exoframe_battle_rifle.png", ART_BATTLE_RIFLE, {'.': _, 'X': BLK, 'M': DKG, 'D': GRY, 'L': WHT}),
-    ("exoframe_shotgun_breacher.png", ART_SHOTGUN, {'.': _, 'X': BLK, 'M': DKG, 'D': GRY, 'L': WHT}),
-    ("exoframe_grenade_launcher.png", ART_GRENADE_LAUNCHER, {'.': _, 'X': BLK, 'M': DKG, 'D': GRY, 'L': WHT}),
-    ("exoframe_recoilless_rifle.png", ART_RECOILLESS_RIFLE, {'.': _, 'X': BLK, 'M': DKG, 'D': GRY, 'L': WHT}),
-    ("exoframe_atgm_guided.png", ART_ATGM, {'.': _, 'X': BLK, 'D': (68, 78, 58, 255), 'C': CYN}),
-    ("exoframe_flamethrower.png", ART_FLAMETHROWER, {'.': _, 'X': BLK, 'M': DKG, 'D': GRY, 'L': WHT, 'R': RED, 'W': YEL}),
-    ("exoframe_vibro_blade.png", ART_VIBRO_BLADE, {'.': _, 'X': BLK, 'C': CYN, 'M': DKG, 'L': WHT}),
+    # 5. Role weapons (exoframe hand weapons are rendered from the model, see WEAPON_ICONS)
     ("exoframe_riot_shield.png", ART_RIOT_SHIELD, {'.': _, 'X': BLK, 'Y': (30, 42, 60, 255), 'C': CYN, 'D': DKG}),
     ("exoframe_stun_baton.png", ART_STUN_BATON, {'.': _, 'X': BLK, 'M': DKG, 'D': GRY, 'C': CYN}),
     ("exoframe_fishing_rod.png", ART_FISHING_ROD, {'.': _, 'X': BLK, 'M': DKG, 'D': GRY, 'R': RED, 'W': WHT}),
-    ("exoframe_assault_rifle.png", ART_ASSAULT_RIFLE, {'.': _, 'X': BLK, 'M': DKG, 'D': GRY, 'L': WHT}),
-    ("exoframe_sniper_rifle.png", ART_SNIPER_RIFLE, {'.': _, 'X': BLK, 'M': DKG, 'D': GRY, 'L': WHT}),
-    ("exoframe_machine_gun.png", ART_MACHINE_GUN, {'.': _, 'X': BLK, 'M': DKG, 'D': GRY, 'L': WHT}),
-    ("exoframe_rpg7.png", ART_RPG7, {'.': _, 'X': BLK, 'G': (68, 82, 58, 255), 'D': (150, 95, 45, 255), 'M': DKG, 'L': WHT}),
-    ("exoframe_rocket_launcher.png", ART_ROCKET_LAUNCHER, {'.': _, 'X': BLK, 'D': (68, 78, 58, 255), 'C': YEL, 'M': DKG, 'L': WHT}),
 
     # 6. Industrial Tools (3)
     ("tool_mining_drill.png", ART_MINING_DRILL, {'.': _, 'X': BLK, 'D': (220, 190, 40, 255), 'M': DKG, 'L': WHT}),
@@ -1251,6 +1013,8 @@ ICONS_MAP = [
     ("module_targeting_computer.png", ART_TARGETING_CHIP, {'.': _, 'X': BLK, 'C': (40, 180, 80, 255), 'L': CYN}),
     ("module_usmc_comms.png", ART_RADIO_PACK, {'.': _, 'X': BLK, 'M': (68, 82, 58, 255), 'D': (44, 54, 38, 255), 'L': (98, 118, 84, 255), 'C': CYN}),
     ("module_valkyrie_sensor.png", ART_TARGETING_CHIP, {'.': _, 'X': BLK, 'C': CYN, 'L': GLD}),
+    ("module_roller_dash.png", ART_ROLLER_DASH, {'.': _, 'X': BLK, 'M': (88, 96, 104, 255), 'Y': YEL, 'R': (30, 30, 32, 255), 'D': GRY, 'L': WHT}),
+    ("module_hydro_jet.png", ART_HYDRO_JET, {'.': _, 'X': BLK, 'O': ORG, 'M': (88, 96, 104, 255), 'C': CYN, 'L': WHT, 'D': DKG}),
 
     # 8. Ammunition (10)
     ("ammo_762_minigun.png", ART_AMMO_BELT, {'.': _, 'X': BLK, 'B': BRS, 'D': (160, 120, 30, 255)}),
@@ -1278,8 +1042,79 @@ ICONS_MAP = [
 
 OUT_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "src/main/resources/assets/obsolete/textures/item"))
 
+# ==================== WEAPON ICONS RENDERED FROM THE MODEL ====================
+# Exoframe weapon icons are drawn from the weapon bones of exoframe.geo.json (left-side orthographic view, tilted
+# 30 degrees muzzle-up, muzzle to the right), coloured by tools/weapon_materials.json, so an icon always matches its in-game model.
+HERE = os.path.dirname(__file__)
+GEO = os.path.join(HERE, "..", "src/main/resources/assets/obsolete/geo/exoframe.geo.json")
+WEAPON_ICONS = {   # item texture -> weapon bone
+    "exoframe_assault_rifle.png": "weapon_assault_rifle", "exoframe_sniper_rifle.png": "weapon_sniper_amr",
+    "exoframe_machine_gun.png": "weapon_machine_gun", "exoframe_minigun.png": "weapon_minigun_m134",
+    "exoframe_rocket_launcher.png": "weapon_rocket_launcher", "exoframe_rpg7.png": "weapon_rpg7_heavy",
+    "exoframe_battle_rifle.png": "weapon_battle_rifle", "exoframe_autocannon_30mm.png": "weapon_autocannon_30mm",
+    "exoframe_shotgun_breacher.png": "weapon_shotgun_breacher", "exoframe_grenade_launcher.png": "weapon_grenade_launcher",
+    "exoframe_recoilless_rifle.png": "weapon_recoilless_rifle", "exoframe_atgm_guided.png": "weapon_atgm_guided",
+    "exoframe_flamethrower.png": "weapon_flamethrower", "exoframe_vibro_blade.png": "weapon_vibro_blade",
+    "exoframe_antitank_rifle.png": "weapon_antitank_rifle", "exoframe_pile_bunker.png": "weapon_pile_bunker",
+    "exoframe_smoke_launcher.png": "weapon_smoke_launcher",
+}
+ICON_COLORS = {
+    "gunmetal": (70, 74, 80), "blued": (52, 58, 74), "steel": (150, 156, 164), "chrome": (205, 210, 216), "heat": (112, 92, 84),
+    "paint": (92, 102, 70), "ammo_can": (84, 94, 62), "fuel": (168, 44, 34), "warhead": (92, 102, 66), "mag": (64, 66, 70),
+    "wood": (138, 82, 42), "polymer": (40, 40, 42), "rubber": (30, 30, 30), "fabric": (110, 102, 74), "brass": (214, 172, 66),
+    "copper": (186, 106, 54), "rail": (58, 62, 70), "optic": (34, 36, 40), "lens": (50, 140, 220), "lens_g": (50, 190, 110),
+    "hazard": (236, 192, 30), "perforated": (60, 64, 70), "shells": (186, 36, 30), "smoke": (196, 198, 190), "ember": (255, 170, 40),
+    "glow": (70, 230, 255), "blade_edge": (230, 234, 240),
+}
+
+
+def render_weapon_icon(bone_name, geo_bones, materials, tilt=math.radians(-30), ss=4):
+    cubes = next(b for b in geo_bones if b["name"] == bone_name)["cubes"]
+    mats = materials[bone_name]
+    boxes = [(c["origin"], c["size"], mats[i]) for i, c in enumerate(cubes)]
+    zs = [o[2] for o, s, m in boxes] + [o[2] + s[2] for o, s, m in boxes]
+    ys = [o[1] for o, s, m in boxes] + [o[1] + s[1] for o, s, m in boxes]
+    ct, st = math.cos(tilt), math.sin(tilt)
+    # screen: u runs muzzle-ward (-z) and up, v runs down
+    corners = [(-z * ct + y * st, -(z * st + y * ct)) for z in zs for y in ys]
+    umin, umax = min(c[0] for c in corners), max(c[0] for c in corners)
+    vmin, vmax = min(c[1] for c in corners), max(c[1] for c in corners)
+    scale = 14.0 / max(umax - umin, vmax - vmin)
+    uc, vc = (umin + umax) / 2, (vmin + vmax) / 2
+    grid = [[None] * 16 for _ in range(16)]
+    for py in range(16):
+        for px in range(16):
+            acc = []
+            for sy in range(ss):
+                for sx in range(ss):
+                    u = (px + (sx + 0.5) / ss - 8) / scale + uc
+                    v = (py + (sy + 0.5) / ss - 8) / scale + vc
+                    z = -(u * ct - (-v) * st)        # invert the tilt
+                    y = u * st + (-v) * ct
+                    best = None
+                    for o, s, m in boxes:
+                        if o[2] <= z <= o[2] + s[2] and o[1] <= y <= o[1] + s[1]:
+                            near = o[0] + s[0]       # seen from the left (+x) side
+                            if best is None or near > best[0]:
+                                best = (near, m, (y - o[1]) / max(s[1], 1e-3))
+                    if best:
+                        acc.append((best[1], 1.15 - 0.35 * (1 - best[2])))   # (material, light from above)
+            if len(acc) >= ss * ss * 0.35:
+                mat = max(set(m for m, _ in acc), key=lambda m: sum(1 for a, _ in acc if a == m))   # crisp material edges
+                k = sum(l for m, l in acc if m == mat) / sum(1 for m, _ in acc if m == mat)
+                grid[py][px] = tuple(min(255, int(c * k)) for c in ICON_COLORS.get(mat, (90, 90, 90))) + (255,)
+    out = [[grid[y][x] or (0, 0, 0, 0) for x in range(16)] for y in range(16)]
+    for y in range(16):        # dark outline around the silhouette
+        for x in range(16):
+            if grid[y][x] is None and any(0 <= y + dy < 16 and 0 <= x + dx < 16 and grid[y + dy][x + dx]
+                                          for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0))):
+                out[y][x] = BLK
+    return out
+
+
 if __name__ == "__main__":
-    print(f"Generating all {len(ICONS_MAP)} distinct 16x16 pixel art item icons into {OUT_DIR}...")
+    import json
+    print(f"Generating item icons into {OUT_DIR}...")
     os.makedirs(OUT_DIR, exist_ok=True)
     for fname, art, pal in ICONS_MAP:
         grid = parse_ascii_art(art, pal)
@@ -1287,4 +1122,9 @@ if __name__ == "__main__":
         target = os.path.join(OUT_DIR, fname)
         with open(target, "wb") as f:
             f.write(png_bytes)
-    print(f"Successfully generated all {len(ICONS_MAP)} item icons with high clarity!")
+    geo_bones = json.load(open(GEO, encoding="utf-8"))["minecraft:geometry"][0]["bones"]
+    materials = json.load(open(os.path.join(HERE, "weapon_materials.json"), encoding="utf-8"))
+    for fname, bone in WEAPON_ICONS.items():
+        with open(os.path.join(OUT_DIR, fname), "wb") as f:
+            f.write(create_png_16x16(render_weapon_icon(bone, geo_bones, materials)))
+    print(f"Wrote {len(ICONS_MAP)} ASCII icons and {len(WEAPON_ICONS)} model-rendered weapon icons.")

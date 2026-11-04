@@ -17,6 +17,8 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> EXOFRAME_STEP_SPRINT = register("exoframe_step_sprint");
     public static final RegistryObject<SoundEvent> EXOFRAME_SERVO = register("exoframe_servo");
     public static final RegistryObject<SoundEvent> EXOFRAME_ENGINE_IDLE = register("exoframe_engine_idle");
+    public static final RegistryObject<SoundEvent> EXOFRAME_ROLLER_DASH = register("exoframe_roller_dash");
+    public static final RegistryObject<SoundEvent> EXOFRAME_HYDRO_JET = register("exoframe_hydro_jet");
     public static final RegistryObject<SoundEvent> EXOFRAME_LAND = register("exoframe_land");
     public static final RegistryObject<SoundEvent> EXOFRAME_LAND_HEAVY = register("exoframe_land_heavy");
 

@@ -170,6 +170,9 @@ BONES = [
     ('weapon_atgm_guided', 'right_hand_weapon_mount', [-7.0, 16.0, -2.0], [600, 520]),
     ('weapon_flamethrower', 'right_hand_weapon_mount', [-7.0, 16.0, -2.0], [720, 520]),
     ('weapon_vibro_blade', 'right_hand_weapon_mount', [-7.0, 16.0, -2.0], [840, 520]),
+    ('weapon_antitank_rifle', 'right_hand_weapon_mount', [-7.0, 16.0, -2.0], [0, 736]),
+    ('weapon_pile_bunker', 'right_hand_weapon_mount', [-7.0, 16.0, -2.0], [0, 736]),
+    ('weapon_smoke_launcher', 'right_hand_weapon_mount', [-7.0, 16.0, -2.0], [0, 736]),
     ('armor_head_police', 'head', [0, 32, -1], [0, 660]),
     ('canopy_police', 'torso', [0, 20, 0], [0, 660]),
     ('armor_chest_police', 'torso', [0, 20, 0], [0, 660]),
@@ -182,6 +185,15 @@ BONES = [
     ('armor_float_ring', 'pelvis', [0, 17, 0], [500, 660]),
     ('backpack_radar', 'torso', [0, 24, 8], [750, 660]),
     ('weapon_fishing_rod', 'right_hand_weapon_mount', [-7.0, 16.0, -2.0], [240, 840]),
+    # mobility equipment (tools/armor_sets/mobility.py): roller dash pods (unit pivot = heel hinge, wheel pivot = axle)
+    ('roller_left_unit', 'left_foot', [4.5, 2.4, 4.6], [520, 524]),
+    ('roller_left_wheel', 'roller_left_unit', [4.5, 1.4, 6.2], [520, 524]),
+    ('roller_right_unit', 'right_foot', [-4.5, 2.4, 4.6], [520, 524]),
+    ('roller_right_wheel', 'roller_right_unit', [-4.5, 1.4, 6.2], [520, 524]),
+    # hydro-jet pack; fan pivots sit on the duct axes
+    ('backpack_hydrojet', 'torso', [0, 24, 8], [520, 524]),
+    ('hydrojet_left_fan', 'backpack_hydrojet', [8.2, 18.5, 12.0], [520, 524]),
+    ('hydrojet_right_fan', 'backpack_hydrojet', [-8.2, 18.5, 12.0], [520, 524]),
 ]
 
 C = {}      # bone -> [box]
@@ -377,111 +389,207 @@ for mod in SETS:
 
 
 # ==================== WEAPONS & TOOLS (mount at right_hand_weapon_mount) ====================
+# OBSOLETE (2019) field-built style: oversized but believable infantry weapons. Every weapon cube carries a paint
+# material (WMAT, written to tools/weapon_materials.json) that scratch/build_weapon_textures_and_uvs.py paints.
+# Gun axis: x = X (-8), muzzle toward -z. Grip / support points are the ExoframeArmIK.Hold numbers; keep them inside
+# the pistol grip and the fore-end, and keep the muzzles near their old z so the projectile offsets still line up.
 X = -8.0
+WMAT = {}   # weapon bone -> [material] parallel to C[bone]
 
-# 1. 20mm Assault Rifle
+
+def Wp(bone, mat, *boxes):
+    C.setdefault(bone, []).extend(boxes)
+    WMAT.setdefault(bone, []).extend([mat] * len(boxes))
+
+
+def K(w, y0, y1, z0, z1, dx=0.0):
+    """Box centred on the gun axis (+ dx): width w, y0..y1, z0..z1."""
+    return (X + dx - w / 2, y0, z0, w, y1 - y0, z1 - z0)
+
+
+def KX(x0, x1, y0, y1, z0, z1):
+    """Box by offsets from the gun axis."""
+    return (X + x0, y0, z0, x1 - x0, y1 - y0, z1 - z0)
+
+
+def tz(cy, z0, z1, r, dx=0.0):
+    """Round tube along z (three-box octagon)."""
+    return disc_z(X + dx, cy, z0, r, z1 - z0)
+
+
+def grip(ytop, ztop, ybot, zbot, w=1.3, d=1.8, n=4):
+    """Raked pistol grip from the receiver (ytop, ztop) down to (ybot, zbot)."""
+    return stepped(X - w / 2, ytop, ztop, ybot, zbot, w, d, n)
+
+
+def guard(y_bot, z_front, z_back, y_top):
+    """Trigger guard loop + trigger blade."""
+    return [K(0.5, y_bot, y_bot + 0.35, z_front, z_back), K(0.5, y_bot, y_top, z_front - 0.3, z_front),
+            K(0.3, y_bot + 0.6, y_top, (z_front + z_back) / 2 - 0.15, (z_front + z_back) / 2 + 0.15)]
+
+
+# 1. Type-20 20mm battle carbine: stamped receiver, wood furniture, curved steel box magazine, side-folding stock
 g = "weapon_assault_rifle"
-add(g, (X - 1.0, 13.0, -9.0, 2.0, 2.4, 9.0),
-    (X - 1.05, 14.4, -8.0, 0.1, 0.6, 3.0),
-    (X - 0.8, 15.4, -9.0, 1.6, 0.4, 9.0),
-    *[(X - 0.9, 15.8, z, 1.8, 0.2, 0.4) for z in (-8.6, -7.4, -6.2, -5.0, -3.8, -2.6)],
-    (X - 0.6, 16.0, -7.6, 1.2, 0.4, 1.0), (X - 0.6, 16.0, -3.4, 1.2, 0.4, 1.0),
-    (X - 0.7, 16.4, -8.4, 1.4, 1.4, 6.0),
-    (X - 0.9, 16.2, -9.4, 1.8, 1.8, 1.0), (X - 0.8, 16.3, -2.6, 1.6, 1.6, 0.8),
-    (X - 0.5, 16.5, -9.5, 1.0, 1.0, 0.1),
-    (X - 0.8, 13.2, -18.0, 1.6, 2.0, 9.0),
-    *[(X - 0.85, 14.4, z, 1.7, 0.4, 0.5) for z in (-17, -15.5, -14, -12.5, -11)],
-    (X - 0.8, 12.6, -17.0, 1.6, 0.6, 4.0),
-    (X - 0.4, 13.8, -25.0, 0.8, 0.8, 7.0),
-    (X - 0.3, 14.9, -24.0, 0.6, 0.3, 6.0),
-    (X - 0.6, 13.6, -27.0, 1.2, 1.2, 2.0),
-    (X - 0.7, 13.9, -26.4, 1.4, 0.6, 0.6),
-    (X - 0.3, 15.2, -24.6, 0.6, 0.8, 0.5),
-    *stepped(X - 0.7, 13.0, -6.6, 8.6, -5.2, 1.4, 1.8, 4),
-    (X - 0.75, 8.2, -5.9, 1.5, 0.5, 2.0),
-    (X - 0.6, 10.6, -1.8, 1.2, 2.6, 1.4),
-    (X - 0.3, 12.0, -3.4, 0.6, 1.0, 0.3),
-    (X - 0.5, 12.2, -4.0, 1.0, 0.2, 2.2),
-    (X - 0.8, 13.4, 0.0, 1.6, 1.8, 3.0),
-    (X - 0.9, 12.4, 3.0, 1.8, 3.0, 1.0),
-    (X - 0.4, 12.4, 1.2, 0.8, 1.0, 1.8))
+Wp(g, "gunmetal", K(2.2, 12.4, 15.2, -6.4, 0.8))                                   # stamped receiver
+Wp(g, "gunmetal", K(2.0, 15.2, 15.7, -6.0, 0.6))                                   # dust cover
+Wp(g, "steel", *[K(2.06, 15.45, 15.8, z, z + 0.3) for z in (-5.2, -3.2, -1.2)])     # cover ribs
+Wp(g, "steel", K(1.4, 15.2, 16.2, -6.8, -5.8))                                      # rear sight block
+Wp(g, "brass", KX(-1.2, -1.1, 13.7, 14.5, -4.8, -2.4))                              # brass in the ejection port
+Wp(g, "steel", KX(-2.0, -1.1, 14.3, 14.8, -5.8, -5.2))                              # charging handle
+Wp(g, "steel", KX(-1.25, -1.1, 12.9, 13.3, -2.6, -0.6))                             # selector lever
+Wp(g, "steel", *guard(10.9, -4.0, -1.6, 12.4))
+Wp(g, "wood", *grip(12.4, -1.6, 9.2, -0.3))                                         # wood pistol grip
+Wp(g, "gunmetal", K(1.4, 8.9, 9.3, -1.0, 0.8))                                      # grip cap
+Wp(g, "gunmetal", K(2.0, 11.8, 12.4, -6.4, -3.8))                                   # magazine well
+Wp(g, "mag", *stepped(X - 0.85, 11.9, -5.1, 6.4, -7.4, 1.7, 2.6, 5))                # curved steel box magazine
+Wp(g, "gunmetal", K(1.9, 6.0, 6.5, -8.9, -5.9))                                     # magazine floor plate
+Wp(g, "wood", K(2.4, 12.6, 14.6, -14.6, -6.4))                                      # lower handguard
+Wp(g, "wood", K(2.0, 14.6, 15.5, -13.6, -6.4))                                      # upper handguard
+Wp(g, "steel", K(2.6, 12.4, 15.0, -15.0, -14.4), K(2.6, 12.4, 15.0, -6.9, -6.4))    # handguard retainers
+Wp(g, "gunmetal", K(0.9, 14.9, 15.6, -15.6, -13.6))                                 # gas tube
+Wp(g, "gunmetal", K(1.3, 13.0, 16.0, -17.5, -15.6))                                 # gas block / front sight base
+Wp(g, "steel", K(0.3, 16.0, 17.1, -17.0, -16.6))                                    # front sight post
+Wp(g, "steel", KX(-0.7, -0.45, 16.0, 17.1, -17.2, -16.4), KX(0.45, 0.7, 16.0, 17.1, -17.2, -16.4))   # sight ears
+Wp(g, "blued", *tz(14.0, -24.0, -14.6, 0.55))                                       # barrel
+Wp(g, "steel", K(0.5, 12.6, 13.4, -19.2, -17.6))                                    # bayonet lug
+Wp(g, "heat", *tz(14.0, -27.2, -24.0, 0.95))                                        # muzzle brake
+Wp(g, "gunmetal", K(2.4, 13.7, 14.3, -26.4, -25.8), K(2.4, 13.7, 14.3, -25.0, -24.4))   # brake side ports
+Wp(g, "gunmetal", K(1.6, 12.8, 15.0, 0.8, 1.8))                                     # stock hinge
+Wp(g, "gunmetal", K(0.8, 14.0, 14.8, 1.8, 7.6))                                     # stock top strut
+Wp(g, "gunmetal", *stepped(X - 0.4, 13.2, 2.2, 10.8, 7.2, 0.8, 1.2, 4))             # stock lower strut
+Wp(g, "rubber", K(1.8, 10.4, 15.2, 7.4, 8.4))                                       # butt plate
+Wp(g, "fabric", K(1.4, 14.8, 15.6, 3.0, 6.6))                                       # canvas cheek wrap
+Wp(g, "gunmetal", K(1.0, 15.7, 16.3, -4.8, -2.2))                                   # optic rail mount
+Wp(g, "optic", K(1.4, 16.3, 17.5, -5.4, -1.8))                                      # box reflex sight
+Wp(g, "lens", K(1.0, 16.5, 17.3, -5.5, -5.4))
+Wp(g, "optic", K(1.6, 17.5, 17.8, -5.8, -4.6))                                      # sun hood
+Wp(g, "fabric", KX(-1.3, -1.1, 12.8, 13.6, -14.0, -7.0))                            # sling
 
-# 2. USMC 20mm Anti-Materiel Precision Sniper Rifle
+# 2. USMC 20mm anti-materiel rifle: long fluted barrel, double-baffle brake, big scope on rings, folded bipod, box mag
 g = "weapon_sniper_amr"
-add(g, (X - 1.2, 12.8, -12.0, 2.4, 2.8, 14.0),
-    (X - 1.0, 15.6, -14.0, 2.0, 0.6, 16.0),
-    (X - 0.8, 16.4, -10.0, 1.6, 1.6, 8.0),
-    *disc_z(X, 17.2, -11.0, 1.2, 1.4),
-    *disc_z(X, 17.2, -1.4, 1.0, 1.2),
-    (X - 0.4, 17.2, -11.2, 0.8, 0.8, 0.2),
-    (X - 0.5, 13.8, -34.0, 1.0, 1.0, 22.0),
-    (X - 0.9, 13.4, -37.0, 1.8, 1.8, 3.0),
-    (X - 1.0, 13.7, -36.4, 2.0, 1.2, 1.8),
-    (X - 1.0, 13.2, -22.0, 2.0, 2.0, 10.0),
-    (X - 0.4, 16.8, -18.0, 0.8, 1.8, 4.0),
-    (X - 0.8, 11.2, -20.0, 1.6, 2.0, 1.4),
-    (X - 1.6, 6.0, -20.6, 0.5, 5.4, 0.5),
-    (X + 1.1, 6.0, -20.6, 0.5, 5.4, 0.5),
-    (X - 0.8, 10.4, -3.0, 1.6, 2.6, 1.4),
-    (X - 1.1, 11.6, 2.0, 2.2, 3.4, 2.0))
+Wp(g, "gunmetal", K(2.4, 13.0, 15.6, -10.5, 2.0))                                   # upper receiver
+Wp(g, "paint", K(2.2, 11.6, 13.0, -9.0, 1.0))                                       # lower receiver
+Wp(g, "rail", K(1.6, 15.6, 16.1, -12.0, 1.6))                                       # full-length top rail
+Wp(g, "gunmetal", K(1.8, 16.1, 17.5, -8.6, -7.8), K(1.8, 16.1, 17.5, -2.6, -1.8))   # scope rings
+Wp(g, "optic", *tz(17.9, -9.0, -0.5, 0.7))                                          # scope tube
+Wp(g, "optic", *tz(17.9, -12.6, -9.0, 1.1))                                         # objective bell
+Wp(g, "lens", K(1.5, 17.25, 18.55, -12.7, -12.6))
+Wp(g, "optic", *tz(17.9, -0.5, 1.4, 0.9))                                           # eyepiece
+Wp(g, "rubber", *tz(17.9, 1.4, 2.0, 0.85))                                          # eye cup
+Wp(g, "steel", K(0.8, 18.5, 19.3, -5.6, -4.6), KX(-1.5, -0.6, 17.5, 18.3, -5.6, -4.6))   # turrets
+Wp(g, "blued", *tz(14.3, -34.0, -10.5, 0.75))                                       # 20mm barrel
+Wp(g, "paint", K(2.6, 12.6, 15.6, -22.0, -10.5))                                    # barrel shroud / fore-end
+Wp(g, "gunmetal", *[K(2.7, 13.5, 14.7, z, z + 0.7) for z in (-20.5, -18.5, -16.5, -14.5, -12.5)])   # cooling slots
+Wp(g, "heat", K(2.6, 13.1, 15.5, -38.0, -34.0))                                     # double-baffle brake
+Wp(g, "gunmetal", *[K(3.0, 13.5, 15.1, z, z + 0.5) for z in (-37.2, -35.9, -34.6)])  # baffle fins
+Wp(g, "steel", KX(-0.25, 0.25, 15.6, 16.8, -21.0, -20.4), KX(-0.25, 0.25, 15.6, 16.8, -17.6, -17.0))   # handle posts
+Wp(g, "rubber", K(0.6, 16.8, 17.3, -21.2, -16.8))                                   # carry handle
+Wp(g, "gunmetal", K(1.6, 11.6, 12.6, -21.0, -19.6))                                 # bipod yoke
+Wp(g, "steel", KX(-1.0, -0.4, 11.0, 11.6, -32.0, -20.0), KX(0.4, 1.0, 11.0, 11.6, -32.0, -20.0))   # folded legs
+Wp(g, "rubber", KX(-1.1, -0.3, 10.6, 11.6, -32.6, -31.8), KX(0.3, 1.1, 10.6, 11.6, -32.6, -31.8))  # feet
+Wp(g, "ammo_can", K(1.9, 7.6, 11.6, -7.6, -4.2))                                    # 5-round box magazine
+Wp(g, "gunmetal", K(2.1, 7.2, 7.6, -7.8, -4.0))
+Wp(g, "steel", *guard(10.4, -3.8, -1.6, 11.6))
+Wp(g, "polymer", *grip(11.8, -2.6, 8.8, -1.4))
+Wp(g, "paint", K(1.6, 13.8, 15.2, 2.0, 8.5), K(1.6, 10.8, 12.2, 4.0, 8.5), K(1.4, 12.2, 13.8, 2.0, 3.6))   # skeleton stock
+Wp(g, "rubber", K(2.2, 9.8, 15.6, 8.5, 9.4))                                        # recoil pad
+Wp(g, "polymer", K(1.4, 15.2, 16.0, 3.0, 7.0))                                      # cheek riser
+Wp(g, "steel", K(0.6, 7.6, 10.8, 6.6, 7.2))                                         # rear monopod
+Wp(g, "rubber", K(1.2, 7.2, 7.6, 6.3, 7.5))
+Wp(g, "steel", KX(-2.2, -1.2, 14.0, 14.6, -0.8, -0.2), KX(-2.7, -2.1, 13.5, 14.7, -1.0, 0.0))   # bolt handle + knob
 
-# 3. 12.7mm Heavy Machine Gun
+# 3. 12.7mm general-purpose machine gun: perforated jacket, side ammo can + brass belt, carry handle, folded bipod
 g = "weapon_machine_gun"
-add(g, (X - 1.2, 12.2, -10.0, 2.4, 3.0, 10.0),
-    (X - 1.0, 13.4, -24.0, 2.0, 2.0, 14.0),
-    *[(X - 1.2, 12.5, z, 2.4, 0.5, 0.8) for z in range(-23, -10, 2)],
-    (X - 0.5, 13.5, -28.0, 1.0, 1.0, 4.0),
-    *disc_z(X, 14.0, -29.0, 0.9, 1.4),
-    (X + 1.4, 10.0, -9.0, 3.4, 4.8, 5.4),
-    (X + 1.6, 14.8, -8.6, 3.0, 0.4, 4.6),
-    (X + 0.6, 13.8, -7.0, 1.2, 1.2, 1.6),
-    *[(X + 0.8 + 0.2 * i, 14.1, -7.2 + 0.4 * i, 0.4, 0.6, 0.3) for i in range(4)],
-    (X - 0.7, 9.4, -3.2, 1.4, 2.8, 1.6),
-    (X - 1.0, 12.8, 1.0, 2.0, 2.4, 3.4),
-    (X - 1.1, 11.8, 4.0, 2.2, 3.6, 0.8))
+Wp(g, "gunmetal", K(2.4, 11.6, 14.8, -11.0, 0.4))                                   # receiver
+Wp(g, "gunmetal", K(2.2, 14.8, 15.6, -7.4, -1.0))                                   # feed cover
+Wp(g, "steel", K(0.8, 15.2, 15.8, -1.6, -0.8))                                      # cover latch
+Wp(g, "gunmetal", KX(1.2, 2.4, 13.0, 14.6, -6.6, -3.4))                             # feed tray
+Wp(g, "ammo_can", KX(2.6, 6.0, 7.4, 12.2, -8.8, -2.4))                              # 200-round can
+Wp(g, "paint", KX(2.5, 6.1, 12.2, 12.6, -9.0, -2.2))                                # can lid
+Wp(g, "steel", KX(3.6, 5.0, 12.6, 13.0, -6.2, -5.0))                                # can handle
+Wp(g, "brass", *[KX(2.3, 3.3, 12.6, 14.3, z, z + 0.4) for z in (-6.2, -5.6, -5.0, -4.4, -3.8)])   # linked rounds
+Wp(g, "copper", *[KX(3.3, 3.7, 12.9, 14.0, z + 0.05, z + 0.35) for z in (-6.2, -5.6, -5.0, -4.4, -3.8)])
+Wp(g, "perforated", K(2.0, 12.4, 14.6, -24.0, -11.0))                               # barrel jacket
+Wp(g, "steel", *[K(2.2, 12.3, 14.7, z, z + 0.5) for z in (-22.6, -19.4, -16.2, -13.0)])   # jacket bands
+Wp(g, "blued", *tz(13.5, -28.5, -24.0, 0.6))                                        # barrel
+Wp(g, "heat", *tz(13.5, -30.6, -28.5, 0.95))                                        # conical flash hider
+Wp(g, "steel", K(0.3, 14.6, 16.0, -23.4, -23.0))                                    # front sight
+Wp(g, "steel", KX(-0.3, 0.3, 14.6, 16.2, -17.0, -16.4), KX(-0.3, 0.3, 14.6, 16.2, -12.6, -12.0))   # handle posts
+Wp(g, "polymer", K(0.6, 16.2, 16.8, -17.2, -11.8))                                  # barrel-change handle
+Wp(g, "gunmetal", K(1.4, 11.6, 12.4, -23.6, -22.4))                                 # bipod yoke
+Wp(g, "steel", KX(-0.9, -0.3, 11.0, 11.6, -23.0, -13.0), KX(0.3, 0.9, 11.0, 11.6, -23.0, -13.0))
+Wp(g, "polymer", *grip(11.6, -2.8, 8.2, -1.6))
+Wp(g, "steel", *guard(9.6, -5.0, -2.8, 11.6))
+Wp(g, "polymer", K(1.8, 11.2, 14.0, 0.4, 6.4))                                      # stock
+Wp(g, "rubber", K(2.0, 10.0, 14.4, 6.4, 7.4))                                       # butt
+Wp(g, "steel", K(1.0, 15.6, 16.6, -1.6, -0.8))                                      # rear sight
+Wp(g, "steel", KX(-2.2, -1.2, 12.6, 13.2, -9.6, -9.0))                              # cocking handle
+Wp(g, "fabric", KX(-1.3, -1.2, 11.8, 12.6, -10.6, 0.0))                             # sling
 
-# 4. M134 Minigun
+# 4. Four-barrel rotary minigun: boxy drive housing, clamped barrel cluster, top handle, flex chute to a clip-on ammo pack
 g = "weapon_minigun_m134"
-add(g, *disc_z(X, 14.0, -8.0, 2.4, 8.0),
-    *disc_z(X, 14.0, -9.0, 2.2, 1.0),
-    *[b for angle in (math.pi * i / 3 for i in range(6)) for b in [
-        (X + 1.2 * math.cos(angle) - 0.25, 14.0 + 1.2 * math.sin(angle) - 0.25, -28.0, 0.5, 0.5, 19.0)
-    ]],
-    *disc_z(X, 14.0, -15.0, 1.6, 0.6),
-    *disc_z(X, 14.0, -22.0, 1.6, 0.6),
-    *disc_z(X, 14.0, -27.6, 1.6, 0.8),
-    (X - 0.6, 16.6, -6.0, 1.2, 2.4, 4.0),
-    (X - 0.8, 10.0, -2.0, 1.6, 3.0, 1.8),
-    (X + 2.2, 12.4, -6.0, 1.8, 3.2, 2.6))
+Wp(g, "gunmetal", *tz(13.4, -7.0, -2.4, 1.8))                                       # main housing
+Wp(g, "steel", *tz(13.4, -8.0, -7.0, 1.6))                                          # rotor face plate
+Wp(g, "paint", K(2.4, 12.6, 15.0, -2.4, 2.6))                                       # drive motor
+Wp(g, "hazard", K(2.5, 12.55, 15.05, -2.4, -2.0))                                   # motor warning band
+Wp(g, "gunmetal", *[K(2.6, 12.8, 14.8, z, z + 0.25) for z in (-1.4, -0.4, 0.6, 1.6)])   # cooling fins
+Wp(g, "steel", *tz(13.8, 2.6, 3.2, 1.0))                                            # motor end cap
+for bx, by in ((-0.65, 0.65), (0.65, 0.65), (-0.65, -0.65), (0.65, -0.65)):
+    Wp(g, "blued", K(0.65, 13.4 + by - 0.325, 13.4 + by + 0.325, -27.0, -8.0, bx))  # barrels
+Wp(g, "steel", *tz(13.4, -20.0, -19.4, 1.35), *tz(13.4, -26.6, -26.0, 1.35))         # barrel clamps
+Wp(g, "heat", *[K(0.75, 13.4 + by - 0.375, 13.4 + by + 0.375, -27.6, -27.0, bx)
+                for bx, by in ((-0.65, 0.65), (0.65, 0.65), (-0.65, -0.65), (0.65, -0.65))])   # scorched muzzles
+Wp(g, "steel", KX(-0.3, 0.3, 15.2, 16.4, -4.4, -3.8), KX(-0.3, 0.3, 15.2, 16.4, 0.0, 0.6))   # handle posts
+Wp(g, "rubber", K(0.7, 15.6, 16.4, -4.6, 0.8))                                      # top handle
+Wp(g, "polymer", *grip(12.6, -1.6, 9.4, -0.4))
+Wp(g, "steel", K(0.3, 11.4, 12.6, -3.0, -2.7))                                      # trigger paddle
+Wp(g, "gunmetal", KX(1.6, 2.9, 12.2, 13.8, -6.4, -3.2))                             # delinker
+Wp(g, "gunmetal", KX(1.9, 3.1, 12.4, 13.4, -3.2, 0.4))                              # flex feed chute
+Wp(g, "steel", *[KX(1.8, 3.2, 12.3, 13.5, z, z + 0.2) for z in (-2.4, -1.4, -0.4)])  # chute links
+Wp(g, "ammo_can", KX(1.8, 5.0, 8.4, 12.4, -1.0, 5.0))                               # clip-on ammo pack
+Wp(g, "paint", KX(1.7, 5.1, 12.4, 12.8, -1.2, 5.2))                                 # pack lid
+Wp(g, "brass", KX(2.2, 3.0, 12.4, 12.6, 0.0, 0.6))                                  # belt entry
+Wp(g, "rubber", KX(-1.6, -1.2, 12.8, 13.4, -2.0, 3.0))                              # power cable
 
-# 5. Quad Missile Pod
+# 5. Quad rocket pod: welded box launcher with four framed tubes, blast covers, offset sight unit and grips
 g = "weapon_rocket_launcher"
-for cx in (X - 1.6, X + 1.6):
+Wp(g, "paint", KX(-3.3, 3.3, 10.9, 17.5, -14.0, 2.0))                               # launcher box
+Wp(g, "gunmetal", KX(-3.5, 3.5, 10.7, 17.7, -14.6, -14.0), KX(-3.5, 3.5, 10.7, 17.7, 2.0, 2.6))   # end frames
+Wp(g, "gunmetal", *[KX(-3.5, 3.5, 10.7, 17.7, z, z + 0.6) for z in (-9.0, -3.0)])   # stiffener bands
+for dx in (-1.6, 1.6):
     for cy in (12.6, 15.8):
-        add(g, (cx - 1.5, cy - 1.5, -15.0, 3.0, 0.4, 18.0), (cx - 1.5, cy + 1.1, -15.0, 3.0, 0.4, 18.0),
-            (cx - 1.5, cy - 1.1, -15.0, 0.4, 2.2, 18.0), (cx + 1.1, cy - 1.1, -15.0, 0.4, 2.2, 18.0),
-            (cx - 1.1, cy - 1.1, -13.0, 2.2, 2.2, 0.3),
-            (cx - 0.4, cy - 0.4, -13.6, 0.8, 0.8, 0.6))
-add(g, *[(X - 3.4, 10.8, z, 6.8, 6.8, 0.6) for z in (-15.6, -6.0, 2.6)],
-    (X - 0.4, 17.6, -10.0, 0.8, 1.4, 4.0),
-    (X - 0.8, 18.6, -10.6, 1.6, 1.4, 3.0),
-    (X - 0.6, 18.8, -10.7, 1.2, 1.0, 0.2),
-    (X - 0.7, 8.0, -4.0, 1.4, 2.8, 1.6),
-    (X - 1.0, 10.4, -5.0, 2.0, 0.6, 3.6),
-    (X + 3.4, 12.0, -4.0, 0.6, 4.0, 3.0))
+        Wp(g, "polymer", K(2.4, cy - 1.2, cy + 1.2, -14.8, -14.6, dx))             # tube mouth
+        Wp(g, "warhead", K(1.2, cy - 0.6, cy + 0.6, -15.0, -14.8, dx))             # rocket nose
+        Wp(g, "hazard", K(2.2, cy - 1.1, cy + 1.1, 2.6, 2.9, dx))                  # rear blast cap
+Wp(g, "rail", K(1.4, 10.2, 10.9, -10.0, 0.0))                                       # under rail
+Wp(g, "polymer", *grip(10.2, -3.6, 7.2, -2.6))
+Wp(g, "polymer", K(1.2, 7.6, 10.2, -6.2, -4.8))                                     # fore grip
+Wp(g, "steel", K(0.3, 9.0, 10.2, -4.5, -4.2))                                       # trigger
+Wp(g, "optic", KX(-4.6, -3.3, 14.6, 16.6, -10.0, -6.0))                             # sight unit (outboard)
+Wp(g, "lens_g", KX(-4.5, -3.4, 14.8, 16.4, -10.1, -10.0))
+Wp(g, "steel", K(0.6, 17.5, 18.3, -8.6, -2.4))                                      # carry handle
+Wp(g, "rubber", K(2.0, 10.6, 13.6, 2.6, 3.6))                                       # shoulder pad
 
-# 6. Heavy RPG-7
+# 6. RPG-7 pattern launcher: blued tube, wooden heat guard, flared venturi, PGO sight, loaded PG-7 warhead
 g = "weapon_rpg7_heavy"
-add(g,
-    *disc_z(X, 14.0, -14.0, 1.0, 20.0),
-    *disc_z(X, 14.0, -4.0, 1.2, 8.0),
-    *disc_z(X, 14.0, 6.0, 1.5, 2.6),
-    *disc_z(X, 14.0, -22.0, 2.6, 8.0),
-    *disc_z(X, 14.0, -25.0, 2.0, 3.0),
-    (X - 0.4, 13.6, -28.0, 0.8, 0.8, 3.0),
-    (X - 0.6, 9.6, -7.0, 1.2, 2.6, 1.4),
-    (X - 0.6, 9.6, 0.0, 1.2, 2.6, 1.4),
-    (X - 0.5, 15.6, -8.0, 1.0, 1.6, 2.4))
+Wp(g, "blued", *tz(14.0, -12.0, 10.0, 1.0))                                         # launch tube
+Wp(g, "wood", *tz(14.0, -7.0, -1.5, 1.35))                                          # wooden heat guard
+Wp(g, "gunmetal", K(1.0, 12.6, 13.0, -5.0, 2.0))                                    # grip bar
+Wp(g, "polymer", *grip(12.6, -4.4, 10.0, -3.6, 1.2, 1.6, 3))                        # front grip
+Wp(g, "polymer", *grip(12.9, 0.2, 9.6, 1.4))                                        # trigger grip
+Wp(g, "steel", K(0.3, 11.6, 12.6, -0.6, -0.3))                                      # trigger
+Wp(g, "heat", *tz(14.0, 10.0, 11.5, 1.4))                                           # venturi
+Wp(g, "gunmetal", *tz(14.0, 11.5, 13.0, 1.8))                                       # flared exhaust
+Wp(g, "optic", KX(1.0, 2.4, 14.6, 16.6, -3.6, 0.6))                                 # PGO-7 sight (left)
+Wp(g, "rubber", KX(1.2, 2.2, 15.0, 16.2, 0.6, 1.6))
+Wp(g, "lens", KX(1.1, 2.3, 14.8, 16.4, -3.7, -3.6))
+Wp(g, "steel", K(0.3, 15.0, 16.0, -9.0, -8.6), K(0.6, 15.0, 15.8, -1.0, -0.6))      # iron sights
+Wp(g, "gunmetal", *tz(14.0, -14.5, -12.0, 0.7))                                     # warhead neck
+Wp(g, "warhead", *tz(14.0, -20.5, -14.5, 2.3))                                      # warhead body
+Wp(g, "hazard", *tz(14.0, -17.2, -16.6, 2.35))                                      # fuze band
+Wp(g, "warhead", *tz(14.0, -22.5, -20.5, 1.6), *tz(14.0, -24.0, -22.5, 0.9))        # ogive
+Wp(g, "steel", *tz(14.0, -26.0, -24.0, 0.35))                                       # standoff probe
+Wp(g, "fabric", KX(-1.15, -1.0, 12.6, 13.4, -10.0, 8.0))                            # sling
 
 # 7. Mining Drill
 g = "tool_mining_drill"
@@ -516,130 +624,253 @@ add(g, (X - 2.2, 10.4, -9.0, 4.4, 6.2, 7.0),
 for z in range(-29, -10, 1):
     add(g, (X - 0.45, 17.4, z, 0.9, 0.4, 0.5), (X - 0.45, 10.0, z, 0.9, 0.4, 0.5))
 
-# ==================== 8 NEW WEAPONS ====================
-# 9. Battle Rifle (7.62mm marksman precision)
+# 9. 7.62mm DMR battle rifle: roller-delayed receiver, vented polymer handguard, straight steel mag, claw-mount scope
 g = "weapon_battle_rifle"
-add(g,
-    (X - 0.9, 13.0, -9.0, 1.8, 2.4, 9.0),
-    (X - 0.4, 13.8, -26.0, 0.8, 0.8, 17.0),
-    (X - 0.6, 13.6, -28.0, 1.2, 1.2, 2.0),
-    (X - 0.6, 9.0, -6.0, 1.2, 4.0, 1.8),
-    (X - 0.6, 10.6, -1.8, 1.2, 2.6, 1.4),
-    (X - 0.8, 12.8, 0.0, 1.6, 2.6, 3.6),
-    (X - 0.6, 16.0, -7.0, 1.2, 1.2, 5.0),
-    *disc_z(X, 16.6, -7.8, 0.9, 1.0),
-    *disc_z(X, 16.6, -1.8, 0.8, 1.0))
+Wp(g, "gunmetal", K(2.0, 12.6, 15.2, -6.0, 1.0))                                    # receiver
+Wp(g, "gunmetal", K(1.0, 14.8, 15.6, -12.5, -6.0))                                  # cocking tube
+Wp(g, "polymer", K(1.8, 11.6, 12.6, -4.4, 0.6))                                     # trigger housing
+Wp(g, "polymer", K(2.2, 12.6, 14.8, -14.0, -6.0))                                   # handguard
+Wp(g, "gunmetal", *[K(2.3, 13.1, 13.5, z, z + 0.9) for z in (-12.6, -11.0, -9.4, -7.8)])   # vent slots
+Wp(g, "steel", KX(-1.6, -0.5, 15.0, 15.4, -11.4, -10.8))                            # cocking lever
+Wp(g, "blued", *tz(14.0, -25.0, -14.0, 0.5))                                        # barrel
+Wp(g, "gunmetal", K(0.9, 14.6, 16.2, -15.6, -14.4))                                 # front sight hood
+Wp(g, "heat", *tz(14.0, -27.0, -25.0, 0.75))                                        # birdcage flash hider
+Wp(g, "gunmetal", K(1.7, 13.85, 14.15, -26.6, -25.4))
+Wp(g, "mag", K(1.6, 7.4, 12.6, -6.2, -4.0))                                         # straight steel 20-round mag
+Wp(g, "gunmetal", K(1.8, 7.0, 7.4, -6.4, -3.8))
+Wp(g, "steel", *guard(10.9, -3.9, -1.6, 11.6))
+Wp(g, "polymer", *grip(12.4, -1.6, 9.2, -0.3))
+Wp(g, "polymer", K(1.6, 12.4, 15.0, 1.0, 4.0), K(1.8, 11.0, 15.2, 4.0, 7.2))        # fixed stock
+Wp(g, "rubber", K(2.0, 10.6, 15.4, 7.2, 7.8))
+Wp(g, "steel", *tz(15.6, -1.0, 0.2, 0.55))                                          # drum rear sight
+Wp(g, "gunmetal", K(1.2, 15.2, 15.9, -4.8, -1.4))                                   # claw mount
+Wp(g, "optic", *tz(16.6, -6.4, 0.2, 0.6))                                           # scope
+Wp(g, "optic", *tz(16.6, -7.8, -6.4, 0.85))
+Wp(g, "rubber", *tz(16.6, 0.2, 1.2, 0.75))
+Wp(g, "lens", K(1.2, 16.0, 17.2, -7.9, -7.8))
+Wp(g, "steel", K(0.6, 17.2, 17.8, -3.4, -2.6))                                      # elevation turret
 
-# 10. 30mm Heavy Autocannon
+# 10. 30mm hand-held autocannon: armoured receiver, side drum, recoil buffers over a heavy barrel, multi-port brake
 g = "weapon_autocannon_30mm"
-add(g,
-    (X - 1.4, 12.0, -11.0, 2.8, 3.6, 12.0),
-    (X - 1.1, 13.2, -26.0, 2.2, 2.2, 15.0),
-    (X - 0.6, 13.7, -32.0, 1.2, 1.2, 6.0),
-    (X - 1.3, 13.2, -35.0, 2.6, 2.2, 3.0),
-    *disc_x(X - 3.8, 13.0, -7.0, 3.2, 2.4),
-    (X - 0.7, 9.2, -3.2, 1.4, 3.0, 1.6),
-    (X - 1.2, 12.4, 1.0, 2.4, 3.0, 2.4))
+Wp(g, "paint", K(3.0, 11.6, 15.6, -12.0, 1.2))                                      # receiver
+Wp(g, "gunmetal", K(3.2, 15.6, 16.0, -11.6, 0.8))                                   # top plate
+Wp(g, "steel", *[K(0.4, 16.0, 16.25, z, z + 0.4, dx) for z in (-10.0, -6.0, -2.0) for dx in (-1.2, 1.2)])   # bolts
+Wp(g, "ammo_can", *disc_x(X + 1.5, 12.6, -6.0, 2.6, 2.0))                           # side drum
+Wp(g, "steel", *disc_x(X + 3.5, 12.6, -6.0, 1.1, 0.4))                              # drum hub / winding key
+Wp(g, "blued", *tz(13.8, -30.0, -12.0, 0.9))                                        # 30mm barrel
+Wp(g, "steel", *tz(15.6, -20.0, -12.0, 0.45, -0.7), *tz(15.6, -20.0, -12.0, 0.45, 0.7))   # recoil buffers
+Wp(g, "gunmetal", K(2.6, 12.6, 16.4, -16.0, -15.4), K(2.6, 12.6, 16.4, -20.6, -20.0))     # barrel cradle bands
+Wp(g, "heat", K(2.8, 12.6, 15.0, -35.0, -30.0))                                     # muzzle brake
+Wp(g, "gunmetal", *[K(3.4, 13.2, 14.4, z, z + 0.6) for z in (-34.2, -32.8, -31.4)])
+Wp(g, "polymer", *grip(11.6, -2.8, 8.4, -1.8))
+Wp(g, "steel", K(0.3, 10.6, 11.6, -4.0, -3.7))                                      # trigger
+Wp(g, "gunmetal", K(2.2, 11.0, 15.0, 1.2, 3.6))                                     # buffer stock
+Wp(g, "rubber", K(2.6, 10.6, 15.4, 3.6, 4.4))
+Wp(g, "gunmetal", KX(-2.2, -1.5, 11.6, 13.0, -8.0, -5.0))                           # ejection chute
+Wp(g, "optic", K(1.0, 16.0, 17.2, -5.0, -3.0))
+Wp(g, "lens", K(0.8, 16.2, 17.0, -5.1, -5.0))
 
-# 11. Tactical Combat Breacher Shotgun
+# 11. 8-gauge breaching shotgun: AA-12 style box receiver, carry handle rail, saddle shells, big drum, standoff teeth
 g = "weapon_shotgun_breacher"
-add(g,
-    (X - 1.0, 12.8, -10.0, 2.0, 2.6, 10.0),
-    (X - 0.5, 14.0, -23.0, 1.0, 1.0, 13.0),
-    (X - 0.5, 12.6, -21.0, 1.0, 1.0, 11.0),
-    (X - 0.8, 12.2, -16.0, 1.6, 1.6, 4.0),
-    (X - 0.8, 13.7, -25.0, 1.6, 1.6, 2.0),
-    (X - 0.6, 10.4, -2.0, 1.2, 2.6, 1.4),
-    (X - 0.8, 15.6, -8.0, 1.6, 0.8, 4.0))
+Wp(g, "paint", K(2.2, 12.4, 15.4, -9.0, 0.8))                                       # receiver
+Wp(g, "gunmetal", K(0.6, 15.4, 16.6, -8.0, -7.4), K(0.6, 15.4, 16.6, -1.4, -0.8))   # handle posts
+Wp(g, "gunmetal", K(1.0, 16.6, 17.2, -8.4, -0.4))                                   # carry handle
+Wp(g, "rail", K(0.9, 17.2, 17.5, -8.0, -1.0))
+Wp(g, "polymer", K(2.4, 12.6, 15.0, -15.0, -9.0))                                   # handguard
+Wp(g, "gunmetal", *[K(2.5, 13.4, 13.8, z, z + 1.0) for z in (-14.0, -12.4, -10.8)])
+Wp(g, "blued", *tz(14.0, -22.0, -15.0, 0.75))                                       # barrel
+Wp(g, "heat", K(2.2, 12.6, 15.4, -23.4, -22.0))                                     # breaching muzzle
+Wp(g, "steel", *[K(0.5, y0, y0 + 0.6, -24.4, -23.4, dx) for dx in (-0.85, 0.85) for y0 in (12.4, 15.0)])   # teeth
+Wp(g, "mag", *disc_x(X - 1.4, 9.0, -5.6, 3.0, 2.8))                                 # 20-round drum
+Wp(g, "steel", *disc_x(X + 1.4, 9.0, -5.6, 1.0, 0.3))                               # drum hub
+Wp(g, "shells", *[KX(1.1, 1.5, 13.0, 14.6, z, z + 0.6) for z in (-14.4, -13.6, -12.8, -12.0, -11.2)])   # side saddle
+Wp(g, "steel", *guard(10.9, -2.6, -1.6, 12.4))
+Wp(g, "polymer", *grip(12.4, -1.6, 9.2, -0.4))
+Wp(g, "polymer", K(1.8, 12.6, 15.4, 0.8, 6.8))                                      # stock
+Wp(g, "rubber", K(2.0, 11.6, 15.8, 6.8, 7.6))
 
-# 12. 40mm Rotary Multi-Grenade Launcher
+# 12. 40mm six-shot revolving grenade launcher: open frame, fluted cylinder, short fat barrel, folding stock
 g = "weapon_grenade_launcher"
-add(g,
-    (X - 1.1, 12.6, -10.0, 2.2, 2.8, 10.0),
-    *disc_z(X, 14.0, -11.0, 2.4, 6.0),
-    (X - 0.7, 13.8, -21.0, 1.4, 1.4, 10.0),
-    *disc_z(X, 14.5, -22.0, 1.0, 1.0),
-    (X - 0.5, 8.4, -16.0, 1.0, 4.0, 1.2),
-    (X - 0.6, 9.8, -2.2, 1.2, 2.8, 1.4),
-    (X - 1.3, 15.6, -7.0, 0.4, 2.0, 2.0))
+Wp(g, "gunmetal", K(1.4, 16.6, 17.2, -12.0, -1.0))                                  # top strap
+Wp(g, "gunmetal", K(1.8, 11.4, 17.0, -2.6, -1.0), K(1.8, 11.4, 17.0, -12.6, -11.2))  # frame ends
+for k in range(6):
+    a = math.pi / 2 + k * math.pi / 3
+    dx, cy = 1.7 * math.cos(a), 14.0 + 1.7 * math.sin(a)
+    Wp(g, "paint", K(1.4, cy - 0.7, cy + 0.7, -11.0, -2.8, dx))                   # chamber
+    Wp(g, "brass", K(1.0, cy - 0.5, cy + 0.5, -2.8, -2.6, dx))                    # case heads
+Wp(g, "steel", *tz(14.0, -11.4, -2.4, 0.5))                                         # spindle
+Wp(g, "paint", *tz(15.7, -21.0, -12.6, 1.05))                                       # 40mm barrel
+Wp(g, "gunmetal", K(2.6, 14.0, 17.2, -16.0, -15.0))                                 # barrel collar / rail
+Wp(g, "heat", *tz(15.7, -21.6, -21.0, 1.2))                                         # muzzle crown
+Wp(g, "polymer", K(1.4, 12.0, 14.6, -19.0, -13.0))                                  # fore grip
+Wp(g, "polymer", *grip(11.6, -1.9, 8.6, -0.8))
+Wp(g, "steel", *guard(10.4, -3.4, -1.8, 11.4))
+Wp(g, "gunmetal", K(1.2, 13.8, 14.6, -1.0, 5.6), K(0.8, 11.2, 11.8, -1.0, 5.6))    # folding stock struts
+Wp(g, "rubber", K(1.8, 10.6, 15.0, 5.6, 6.4))
+Wp(g, "optic", KX(-2.0, -1.0, 16.4, 18.0, -9.0, -6.8))                              # leaf reflex sight (outboard)
+Wp(g, "lens_g", KX(-1.9, -1.1, 16.7, 17.8, -9.1, -9.0))
 
-# 13. 84mm Recoilless Rifle
+# 13. 84mm recoilless rifle: banded tube, venturi breech with handle, shoulder pad, offset optic, twin grips
 g = "weapon_recoilless_rifle"
-add(g,
-    *disc_z(X, 14.0, -18.0, 1.4, 28.0),
-    *disc_z(X, 14.0, 9.0, 2.0, 3.0),
-    *disc_z(X, 14.0, -19.0, 2.2, 1.0),
-    (X - 1.8, 14.2, -8.0, 1.0, 2.0, 4.0),
-    (X - 0.6, 9.6, -2.0, 1.2, 2.8, 1.4),
-    (X - 0.6, 9.8, -9.0, 1.2, 2.6, 1.4))
+Wp(g, "paint", *tz(14.2, -22.0, 9.0, 1.4))                                          # launch tube
+Wp(g, "gunmetal", *[b for z in (-21.4, -14.0, -6.0, 2.0) for b in tz(14.2, z, z + 0.6, 1.55)])   # bands
+Wp(g, "gunmetal", *tz(14.2, -23.0, -22.0, 1.65))                                    # muzzle flare
+Wp(g, "gunmetal", *tz(14.2, 9.0, 11.0, 1.8))                                        # breech
+Wp(g, "heat", *tz(14.2, 11.0, 12.6, 1.5))                                           # venturi
+Wp(g, "steel", KX(1.6, 2.4, 13.6, 15.0, 9.4, 10.6), KX(-2.2, -1.6, 13.6, 14.8, 9.4, 10.6))   # breech handle + hinge
+Wp(g, "fabric", K(1.6, 11.0, 12.8, 2.0, 7.0))                                       # padded shoulder rest
+Wp(g, "gunmetal", K(1.2, 12.8, 13.2, -4.0, 1.6))                                    # grip bar
+Wp(g, "polymer", *grip(12.8, 0.1, 9.6, 1.1, 1.2, 1.7, 3))                           # trigger grip
+Wp(g, "polymer", *grip(12.8, -3.2, 10.0, -2.4, 1.2, 1.6, 3))                        # fore grip
+Wp(g, "gunmetal", KX(-2.0, -1.2, 13.8, 14.8, -6.0, -2.0))                           # sight bracket (outboard)
+Wp(g, "optic", KX(-3.4, -2.0, 13.6, 15.4, -7.0, -1.6))
+Wp(g, "lens", KX(-3.3, -2.1, 13.8, 15.2, -7.1, -7.0))
+Wp(g, "rubber", KX(-3.2, -2.2, 13.8, 15.2, -1.6, -0.8))
+Wp(g, "gunmetal", K(0.6, 15.6, 16.6, -12.0, -11.4), K(0.6, 15.6, 16.6, -8.6, -8.0))  # handle posts
+Wp(g, "polymer", K(0.6, 16.6, 17.0, -12.2, -8.0))                                   # carry handle
 
-# 14. Guided Heavy ATGM Launcher
+# 14. Guided ATGM: fat launch canister with end caps and bands, boxy command launch unit with twin optics
 g = "weapon_atgm_guided"
-add(g,
-    (X - 2.0, 11.6, -16.0, 4.0, 4.4, 22.0),
-    (X - 1.8, 11.8, -16.4, 3.6, 4.0, 0.6),
-    (X - 1.2, 16.2, -8.0, 2.4, 2.0, 4.0),
-    *disc_z(X - 0.6, 17.2, -8.6, 0.6, 0.8),
-    *disc_z(X + 0.6, 17.2, -8.6, 0.6, 0.8),
-    (X - 0.6, 8.6, -4.0, 1.2, 3.0, 1.6),
-    (X - 0.6, 9.0, -11.0, 1.2, 2.6, 1.6))
+Wp(g, "paint", *tz(14.2, -18.0, 6.0, 2.3))                                          # launch canister
+Wp(g, "gunmetal", *tz(14.2, -18.6, -18.0, 2.5), *tz(14.2, 6.0, 6.6, 2.5))           # end rings
+Wp(g, "rubber", K(3.0, 12.7, 15.7, -18.8, -18.6), K(3.0, 12.7, 15.7, 6.6, 6.8))     # blast caps
+Wp(g, "fabric", *[b for z in (-12.0, -4.0, 2.0) for b in tz(14.2, z, z + 0.5, 2.45)])   # strap bands
+Wp(g, "paint", KX(-5.0, -2.3, 11.6, 15.6, -6.6, -0.4))                              # command launch unit (outboard)
+Wp(g, "lens", KX(-4.6, -3.8, 13.4, 14.8, -6.8, -6.6))
+Wp(g, "lens_g", KX(-3.4, -2.6, 13.4, 14.8, -6.8, -6.6))
+Wp(g, "rubber", KX(-4.8, -2.5, 12.4, 15.2, -0.4, 0.6))                              # display hood
+Wp(g, "steel", KX(-4.6, -2.7, 15.6, 16.2, -5.0, -2.0))                              # CLU handle
+Wp(g, "gunmetal", KX(-4.6, -2.7, 11.0, 11.6, -5.0, -1.0))                           # battery
+Wp(g, "gunmetal", K(1.2, 11.6, 11.9, -5.0, 0.0))                                    # grip rail
+Wp(g, "polymer", *grip(11.6, -2.4, 8.6, -1.4, 1.2, 1.7, 3))
+Wp(g, "polymer", K(1.1, 9.0, 11.6, -4.6, -3.4))                                     # fore grip
 
-# 15. Heavy Flamethrower
+# 15. Heavy flamethrower: valve block, shielded wand, igniter, twin strapped fuel tanks and hose loop
 g = "weapon_flamethrower"
-add(g,
-    (X - 1.0, 12.8, -12.0, 2.0, 2.6, 12.0),
-    (X - 0.5, 13.8, -26.0, 1.0, 1.0, 14.0),
-    *disc_z(X - 0.8, 10.6, -14.0, 1.0, 8.0),
-    *disc_z(X + 0.8, 10.6, -14.0, 1.0, 8.0),
-    (X - 0.3, 15.0, -26.6, 0.6, 0.6, 1.4),
-    (X - 0.8, 12.0, -18.0, 1.6, 1.6, 4.0),
-    (X - 0.6, 10.0, -3.0, 1.2, 2.8, 1.4))
+Wp(g, "gunmetal", K(2.0, 11.8, 14.6, -8.0, 0.8))                                    # valve block
+Wp(g, "steel", *tz(13.8, -24.0, -8.0, 0.55))                                        # wand
+Wp(g, "perforated", K(1.8, 12.8, 15.0, -20.0, -10.0))                               # heat shield
+Wp(g, "heat", *tz(13.8, -26.0, -24.0, 0.85))                                        # nozzle
+Wp(g, "gunmetal", K(1.0, 12.0, 12.9, -25.0, -22.6))                                 # igniter
+Wp(g, "ember", K(0.4, 12.1, 12.6, -25.6, -25.0))                                    # pilot flame
+Wp(g, "fuel", *tz(10.0, -16.0, -6.0, 1.2, -1.3), *tz(10.0, -16.0, -6.0, 1.2, 1.3))   # fuel tanks
+Wp(g, "steel", *tz(10.0, -16.6, -16.0, 0.9, -1.3), *tz(10.0, -16.6, -16.0, 0.9, 1.3))
+Wp(g, "fabric", K(5.2, 8.6, 11.4, -14.2, -13.6), K(5.2, 8.6, 11.4, -8.2, -7.6))     # tank straps
+Wp(g, "hazard", K(5.1, 8.7, 11.3, -11.0, -10.6))
+Wp(g, "lens", K(0.8, 11.2, 12.0, -12.0, -11.2, 1.3))                                # pressure gauge
+Wp(g, "rubber", KX(1.4, 2.0, 10.0, 12.4, -6.0, -5.4), KX(1.0, 2.0, 12.4, 13.0, -6.0, -3.6))   # hose loop
+Wp(g, "polymer", *grip(11.8, -2.2, 8.8, -1.2))
+Wp(g, "steel", K(0.3, 10.8, 11.8, -3.6, -3.3))
+Wp(g, "gunmetal", K(1.4, 12.4, 14.2, 0.8, 4.6))                                     # brace
+Wp(g, "rubber", K(1.8, 11.6, 14.8, 4.6, 5.4))
 
-# 16. Tactical Vibro-Blade
+# 16. Vibro-blade: wrapped grip, heavy guard, vibration motor housing, broad cleaver blade with serrated spine
 g = "weapon_vibro_blade"
-add(g,
-    (X - 0.5, 11.0, -3.0, 1.0, 2.4, 1.2),
-    (X - 1.2, 12.8, -4.2, 2.4, 1.2, 3.6),
-    (X - 0.6, 9.8, -3.0, 1.2, 1.2, 1.2),
-    (X - 0.3, 13.6, -28.0, 0.6, 1.4, 24.0),
-    (X - 0.15, 12.4, -28.0, 0.3, 1.2, 24.0),
-    (X - 0.25, 13.0, -30.0, 0.5, 1.6, 2.0),
-    (X - 0.4, 14.8, -24.0, 0.8, 0.4, 18.0))
+Wp(g, "fabric", K(1.0, 11.4, 12.6, -2.6, 0.8))                                      # wrapped grip
+Wp(g, "steel", K(1.4, 11.2, 12.8, 0.8, 1.6))                                        # pommel
+Wp(g, "gunmetal", K(2.4, 10.6, 14.2, -3.4, -2.6))                                   # guard
+Wp(g, "paint", K(1.6, 11.6, 14.4, -7.0, -3.4))                                      # motor housing
+Wp(g, "gunmetal", *[K(1.7, 13.4, 13.7, z, z + 0.3) for z in (-6.4, -5.6, -4.8, -4.0)])
+Wp(g, "glow", KX(-0.85, -0.8, 12.2, 12.8, -5.8, -4.6))                              # status LED
+Wp(g, "steel", K(0.5, 11.0, 14.6, -29.0, -7.0))                                     # blade body
+Wp(g, "blade_edge", K(0.3, 10.4, 11.0, -29.0, -7.0))                                # cutting edge
+Wp(g, "gunmetal", K(0.8, 14.6, 15.2, -27.0, -7.0))                                  # spine
+Wp(g, "steel", K(0.5, 11.0, 13.4, -30.4, -29.0), K(0.5, 11.0, 12.2, -31.6, -30.4))  # clipped tip
+Wp(g, "blade_edge", K(0.3, 10.4, 11.0, -31.4, -29.0))
+Wp(g, "gunmetal", *[K(0.6, 15.2, 15.6, z, z + 0.5) for z in (-14.0, -12.8, -11.6, -10.4, -9.2)])   # serrations
+Wp(g, "glow", K(0.55, 13.4, 13.6, -26.0, -7.4))                                     # resonator line
 
+# 17. 20mm bolt-action anti-tank rifle (new): very long barrel, side-venting brake, wood furniture, spring buffer stock,
+#     offset scope, carry handle, deployed bipod. Uses the SNIPER hold.
+g = "weapon_antitank_rifle"
+Wp(g, "gunmetal", *tz(14.0, -8.0, 1.0, 1.1))                                        # round receiver
+Wp(g, "blued", *tz(14.0, -14.0, -8.0, 0.8), *tz(14.0, -38.0, -14.0, 0.55))          # stepped barrel
+Wp(g, "heat", K(2.4, 13.0, 15.0, -41.6, -38.0))                                     # side-venting brake
+Wp(g, "gunmetal", K(2.9, 13.4, 14.6, -41.0, -40.5), K(2.9, 13.4, 14.6, -39.6, -39.1))
+Wp(g, "wood", K(1.8, 12.2, 13.8, -12.0, -6.0))                                      # fore-end
+Wp(g, "wood", K(1.6, 11.6, 13.2, -6.0, 1.0))                                        # stock body
+Wp(g, "wood", *grip(12.0, -2.6, 9.0, -1.2))
+Wp(g, "steel", *guard(10.6, -4.0, -1.8, 11.6))
+Wp(g, "brass", KX(-1.2, -1.0, 13.6, 14.4, -5.0, -2.6))                              # round in the loading port
+Wp(g, "steel", *tz(13.8, 1.0, 5.0, 0.6))                                            # buffer tube
+Wp(g, "steel", *[K(1.4, 13.1, 14.5, z, z + 0.3) for z in (1.6, 2.4, 3.2, 4.0)])     # buffer spring coils
+Wp(g, "rubber", K(1.8, 10.6, 15.6, 5.0, 6.2))                                       # butt pad
+Wp(g, "fabric", K(1.2, 14.2, 15.4, 1.6, 4.6))                                       # cheek pad
+Wp(g, "steel", KX(-2.4, -1.0, 14.0, 14.6, -0.6, 0.0))                               # bolt handle
+Wp(g, "wood", KX(-2.8, -2.2, 13.4, 14.6, -0.8, 0.2))
+Wp(g, "gunmetal", K(0.5, 15.0, 16.2, -13.6, -13.0), K(0.5, 15.0, 16.2, -10.4, -9.8))   # handle posts
+Wp(g, "wood", K(0.6, 16.2, 16.8, -14.0, -9.4))                                      # carry handle
+Wp(g, "gunmetal", KX(-1.8, -1.0, 14.2, 15.4, -6.0, -2.0))                           # offset scope mount
+Wp(g, "optic", *tz(15.8, -7.0, -0.4, 0.55, -1.9))
+Wp(g, "optic", *tz(15.8, -8.6, -7.0, 0.8, -1.9))
+Wp(g, "lens", KX(-2.5, -1.3, 15.2, 16.4, -8.7, -8.6))
+Wp(g, "rubber", *tz(15.8, -0.4, 0.6, 0.7, -1.9))
+Wp(g, "gunmetal", K(1.4, 12.6, 13.4, -21.0, -20.0))                                 # bipod yoke
+Wp(g, "steel", KX(-1.0, -0.5, 8.0, 12.6, -21.0, -20.4), KX(0.5, 1.0, 8.0, 12.6, -21.0, -20.4))   # deployed legs
+Wp(g, "rubber", KX(-1.4, -0.2, 7.6, 8.0, -21.4, -20.0), KX(0.2, 1.4, 7.6, 8.0, -21.4, -20.0))
 
-add("weapon_riot_shield",
-    (4.5, 9.0, -6.5, 6.0, 20.0, 0.8),   # Center shield body
-    (10.5, 9.0, -5.7, 1.8, 20.0, 1.2),  # Left curved wing
-    (2.7, 9.0, -5.7, 1.8, 20.0, 1.2),   # Right curved wing
-    (5.5, 23.0, -6.7, 4.0, 2.0, 0.4),   # Transparent viewport insert
-    (2.5, 29.0, -6.5, 10.0, 0.8, 2.0),  # Heavy top strike edge
-    (2.5, 8.2, -6.5, 10.0, 0.8, 2.0),   # Bottom strike rim
-    (6.0, 16.5, -4.5, 2.0, 2.0, 4.0))   # Forearm clamp bracket
+# 18. Hydraulic pile bunker (new): charge magazine on a boxy ram housing, twin rams, chrome stake with a hardened tip,
+#     braced back along the forearm. Uses the VIBRO_BLADE (one-hand melee) hold.
+g = "weapon_pile_bunker"
+Wp(g, "rubber", K(1.0, 10.8, 13.0, -1.6, -0.4))                                     # grip handle
+Wp(g, "paint", K(3.2, 12.2, 15.8, -15.0, -2.4))                                     # ram housing
+Wp(g, "hazard", K(3.3, 12.1, 15.9, -15.0, -14.4))
+Wp(g, "gunmetal", *[K(3.3, 13.0, 13.3, z, z + 0.3) for z in (-12.0, -10.5, -9.0)])  # vent ribs
+Wp(g, "gunmetal", *tz(14.0, -16.2, -15.0, 1.6))                                     # stake collar
+Wp(g, "chrome", *tz(14.0, -23.0, -16.2, 0.75))                                      # stake
+Wp(g, "heat", K(1.0, 13.5, 14.5, -24.2, -23.0), K(0.5, 13.75, 14.25, -25.0, -24.2))  # hardened tip
+Wp(g, "chrome", KX(-2.4, -1.6, 12.4, 13.4, -14.0, -3.0), KX(1.6, 2.4, 12.4, 13.4, -14.0, -3.0))   # rams
+Wp(g, "gunmetal", K(2.0, 15.8, 17.0, -8.0, -3.0))                                   # charge magazine
+Wp(g, "brass", *[KX(1.0, 1.3, 16.0, 16.9, z, z + 0.8) for z in (-7.6, -6.4, -5.2, -4.0)])   # drive charges
+Wp(g, "steel", KX(-1.4, -0.9, 12.4, 13.0, -1.0, 4.0), KX(0.9, 1.4, 12.4, 13.0, -1.0, 4.0))   # forearm braces
+Wp(g, "paint", K(3.0, 11.6, 15.0, 4.0, 5.6))                                        # forearm cuff
+Wp(g, "fabric", K(3.1, 12.0, 14.6, 4.4, 5.2))                                       # cuff strap
 
-add("weapon_stun_baton",
-    (X - 0.5, 11.0, -3.0, 1.0, 5.0, 1.0),  # Rubberized grip handle
-    (X - 1.0, 16.0, -3.5, 2.0, 0.6, 2.0),  # Shock guard disc
-    (X - 0.4, 16.6, -2.9, 0.8, 16.0, 0.8), # Polycarbonate core shaft
-    (X - 0.6, 32.6, -3.1, 1.2, 3.0, 1.2),  # Stun electrode tip
-    (X - 0.6, 20.0, -3.1, 1.2, 0.5, 1.2),  # Arc ring 1
-    (X - 0.6, 24.0, -3.1, 1.2, 0.5, 1.2),  # Arc ring 2
-    (X - 0.6, 28.0, -3.1, 1.2, 0.5, 1.2))  # Arc ring 3
+# 19. 66mm quad smoke discharger (new): four short tubes in clamps on a base plate, smoke canisters, grips, stock pad.
+#     Uses the GRENADE_LAUNCHER hold; tubes sit outboard (-x) so the aimed launcher clears the head.
+g = "weapon_smoke_launcher"
+Wp(g, "gunmetal", K(3.4, 11.4, 12.2, -12.0, -1.8, -0.8))                            # base plate
+for dx in (-2.2, 0.2):
+    for cy in (13.4, 15.6):
+        Wp(g, "paint", *tz(cy, -12.6, -2.8, 1.05, dx))                            # discharger tube
+        Wp(g, "smoke", K(1.3, cy - 0.65, cy + 0.65, -12.9, -12.6, dx))            # canister nose
+Wp(g, "gunmetal", KX(-3.5, 1.5, 12.2, 16.8, -10.6, -10.0), KX(-3.5, 1.5, 12.2, 16.8, -5.4, -4.8))   # clamps
+Wp(g, "gunmetal", KX(-3.4, 1.4, 12.2, 16.8, -2.8, -1.8))                            # breech block
+Wp(g, "rubber", KX(1.0, 1.4, 11.8, 12.6, -2.6, 1.0))                                # firing cable
+Wp(g, "polymer", *grip(11.4, -1.9, 8.6, -0.8))
+Wp(g, "steel", *guard(10.4, -3.4, -1.8, 11.4))
+Wp(g, "polymer", K(1.2, 8.8, 11.4, -12.6, -11.4))                                   # fore grip
+Wp(g, "polymer", K(2.0, 11.8, 14.4, -1.8, 3.6))                                     # stock pad
+Wp(g, "rubber", K(2.2, 11.2, 14.8, 3.6, 4.4))
+Wp(g, "optic", KX(-4.2, -3.3, 14.0, 15.6, -9.0, -7.0))                              # range sight (outboard)
+Wp(g, "lens_g", KX(-4.1, -3.4, 14.2, 15.4, -9.1, -9.0))
+Wp(g, "hazard", KX(-3.5, 1.5, 12.2, 12.5, -12.0, -11.2))                            # muzzle warning strip
 
-# 6. Harbour Fishing Rod
-add("weapon_fishing_rod",
-    (X - 0.8, 12.0, -3.0, 1.6, 4.0, 1.6), # Mounting collar
-    *ring_x(X - 1.2, 14.0, -4.5, 1.8, 2.4),# Winch spool
-    (X - 0.5, 16.0, -4.0, 1.0, 12.0, 1.0), # Base rod section
-    (X - 0.4, 28.0, -4.0, 0.8, 12.0, 0.8), # Mid telescoping rod
-    (X - 0.3, 40.0, -4.0, 0.6, 12.0, 0.6), # Tip carbon rod
-    (X - 0.3, 22.0, -4.8, 0.6, 0.6, 0.8),  # Guide ring 1
-    (X - 0.3, 34.0, -4.8, 0.6, 0.6, 0.8),  # Guide ring 2
-    (X - 0.3, 46.0, -4.8, 0.6, 0.6, 0.8),  # Guide ring 3
-    (X - 0.3, 51.5, -4.8, 0.6, 0.6, 0.8),  # Guide ring 4
-    (X - 0.5, 48.0, -6.0, 1.0, 1.6, 1.0))  # Bobber tackle
+Wp("weapon_riot_shield", "shield_plate",
+   (4.5, 9.0, -6.5, 6.0, 20.0, 0.8),   # Center shield body
+   (10.5, 9.0, -5.7, 1.8, 20.0, 1.2),  # Left curved wing
+   (2.7, 9.0, -5.7, 1.8, 20.0, 1.2))   # Right curved wing
+Wp("weapon_riot_shield", "shield_glass", (5.5, 23.0, -6.7, 4.0, 2.0, 0.4))   # viewport
+Wp("weapon_riot_shield", "steel", (2.5, 29.0, -6.5, 10.0, 0.8, 2.0), (2.5, 8.2, -6.5, 10.0, 0.8, 2.0))   # strike rims
+Wp("weapon_riot_shield", "gunmetal", (6.0, 16.5, -4.5, 2.0, 2.0, 4.0))       # forearm clamp
+
+Wp("weapon_stun_baton", "rubber", (X - 0.5, 11.0, -3.0, 1.0, 5.0, 1.0))      # grip
+Wp("weapon_stun_baton", "gunmetal", (X - 1.0, 16.0, -3.5, 2.0, 0.6, 2.0))    # guard disc
+Wp("weapon_stun_baton", "polymer", (X - 0.4, 16.6, -2.9, 0.8, 16.0, 0.8))    # shaft
+Wp("weapon_stun_baton", "stun", (X - 0.6, 32.6, -3.1, 1.2, 3.0, 1.2))        # electrode tip
+Wp("weapon_stun_baton", "steel", *[(X - 0.6, y, -3.1, 1.2, 0.5, 1.2) for y in (20.0, 24.0, 28.0)])   # arc rings
+
+Wp("weapon_fishing_rod", "gunmetal", (X - 0.8, 12.0, -3.0, 1.6, 4.0, 1.6))
+Wp("weapon_fishing_rod", "steel", *ring_x(X - 1.2, 14.0, -4.5, 1.8, 2.4))
+Wp("weapon_fishing_rod", "graphite", (X - 0.5, 16.0, -4.0, 1.0, 12.0, 1.0), (X - 0.4, 28.0, -4.0, 0.8, 12.0, 0.8),
+   (X - 0.3, 40.0, -4.0, 0.6, 12.0, 0.6))
+Wp("weapon_fishing_rod", "chrome", *[(X - 0.3, y, -4.8, 0.6, 0.6, 0.8) for y in (22.0, 34.0, 46.0, 51.5)])
+Wp("weapon_fishing_rod", "fuel", (X - 0.5, 48.0, -6.0, 1.0, 1.6, 1.0))      # bobber
 
 # the riot shield hangs off left_hand, authored around the pre-Phase-1 wrist (x 7, y 17.6)
 C["weapon_riot_shield"] = shift(C["weapon_riot_shield"], (2.0, -1.0, 0.0))
+for _b, _m in WMAT.items():
+    assert len(_m) == len(C[_b]), f"material list out of step for {_b}"
 
 # ==================== RIDER ENVELOPE & CLEARANCE CHECKS ====================
 def overlaps(a, b, eps=0.05):
@@ -736,6 +967,10 @@ AIM_HOLDS = {
     "weapon_vibro_blade": ((-8, 12.0, -1.0), (-5.5, 24.0, -7.0), 0.02, 0.50),
     "weapon_stun_baton": ((-8, 12.0, -1.0), (-5.5, 24.0, -7.0), 0.02, 0.50),
     "weapon_fishing_rod": ((-8, 12.0, -1.0), (-5.5, 25.0, -7.0), 0.02, 0.50),
+    # new field weapons reuse existing holds (SNIPER, VIBRO_BLADE, GRENADE_LAUNCHER)
+    "weapon_antitank_rifle": ((-8, 11.7, -2.3), (-5.6, 27.5, -6.8), 0.04, 1.0),
+    "weapon_pile_bunker": ((-8, 12.0, -1.0), (-5.5, 24.0, -7.0), 0.02, 0.50),
+    "weapon_smoke_launcher": ((-8, 11.2, -1.5), (-6.2, 25.0, -7.3), 0.03, 0.85),
 }
 
 gun_head_clashes = []
@@ -821,6 +1056,8 @@ for fac_name, bone_list, free_rects in REGIONS:
             entry["material"] = MAT[b_name][idx]
         packed_manifest.append(entry)
 
+with open(os.path.join(HERE, "weapon_materials.json"), "w", encoding="utf-8") as f:   # read by the weapon painter
+    json.dump(WMAT, f, indent=1)
 with open(os.path.join(HERE, "packed_armor_uvs.json"), "w", encoding="utf-8") as f:
     json.dump(packed_manifest, f, indent=2)
 

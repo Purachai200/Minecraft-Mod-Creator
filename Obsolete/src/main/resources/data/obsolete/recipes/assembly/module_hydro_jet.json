@@ -1,0 +1,21 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "obsolete:servo_motor"
+    },
+    {
+      "item": "obsolete:hydraulic_cylinder"
+    },
+    {
+      "item": "minecraft:prismarine_shard"
+    }
+  ],
+  "result": {
+    "item": "obsolete:module_hydro_jet",
+    "count": 1
+  }
+}

@@ -473,6 +473,37 @@ def gen_impact_metal(var_id):
 
 # ----------------- MAIN EXECUTION -----------------
 
+def gen_roller_dash():
+    # Heel roller pods: rising electric motor whine over a gritty tyre/skid hiss (loops every 0.5 s)
+    dur = 0.55
+    n = int(SAMPLE_RATE * dur)
+    raw = []
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        whine = math.sin(2 * math.pi * (820.0 + 260.0 * t) * t) * 0.28 + math.sin(2 * math.pi * 1640.0 * t) * 0.10
+        grit = (random.random() * 2.0 - 1.0) * (0.35 + 0.25 * random.random())
+        env = min(1.0, t / 0.03) * min(1.0, (dur - t) / 0.05)
+        raw.append((whine + grit * 0.6) * env)
+    hiss = biquad_filter(raw, "bp", 2400, 0.9)
+    body = biquad_filter(raw, "lp", 1800, 0.7)
+    export_wav("exoframe_roller_dash", [clamp(0.7 * a + 0.6 * b) for a, b in zip(hiss, body)])
+
+
+def gen_hydro_jet():
+    # Muffled underwater impeller: low pulsing thrum and churn, heavily low-passed
+    dur = 1.0
+    n = int(SAMPLE_RATE * dur)
+    raw = []
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        thrum = math.sin(2 * math.pi * 72.0 * t) * (0.5 + 0.2 * math.sin(2 * math.pi * 9.0 * t))
+        blade = math.sin(2 * math.pi * 216.0 * t) * 0.18
+        churn = (random.random() * 2.0 - 1.0) * 0.4
+        env = min(1.0, t / 0.05) * min(1.0, (dur - t) / 0.08)
+        raw.append((thrum + blade + churn) * env)
+    export_wav("exoframe_hydro_jet", biquad_filter(raw, "lp", 380, 0.8))
+
+
 if __name__ == "__main__":
     print(f"Synthesizing all custom mecha sound effects into {OUT_DIR}...")
     for v in (1, 2, 3, 4):
@@ -485,6 +516,8 @@ if __name__ == "__main__":
         gen_impact_metal(v)
 
     gen_engine_idle()
+    gen_roller_dash()
+    gen_hydro_jet()
     gen_landing(heavy=False)
     gen_landing(heavy=True)
     gen_cockpit_hatch(open_hatch=True)

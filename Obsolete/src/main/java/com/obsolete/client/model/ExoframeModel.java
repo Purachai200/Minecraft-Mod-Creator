@@ -57,7 +57,7 @@ public class ExoframeModel extends GeoModel<ExoframeEntity> {
         boolean shouldHideFrameHead = false;
 
         for (ExoframeArmorSlot slot : ExoframeArmorSlot.values()) {
-            if (slot == ExoframeArmorSlot.MAIN_WEAPON || slot == ExoframeArmorSlot.BACK) continue;
+            if (slot == ExoframeArmorSlot.MAIN_WEAPON) continue; // BACK only shows registered gear (hydro-jet); boosters draw their own layer
             ItemStack stack = exoframe.getModularInventory().getStackInSlot(slot.getIndex());
             if (stack.isEmpty()) continue;
 
@@ -156,6 +156,25 @@ public class ExoframeModel extends GeoModel<ExoframeEntity> {
                 }
             }
         }
+
+        // ==================== MOBILITY GEAR: roller pods and hydro-jet fans ====================
+        float pt = state.getPartialTick();
+        float deploy = net.minecraft.util.Mth.lerp(pt, exoframe.clientRollerDeployO, exoframe.clientRollerDeploy);
+        float wheel = net.minecraft.util.Mth.lerp(pt, exoframe.clientWheelSpinO, exoframe.clientWheelSpin);
+        float fan = net.minecraft.util.Mth.lerp(pt, exoframe.clientFanSpinO, exoframe.clientFanSpin);
+        for (String side : new String[]{"left", "right"}) {
+            CoreGeoBone unit = bone("roller_" + side + "_unit");
+            if (unit != null) unit.setRotX((1.0F - deploy) * 1.4F); // stowed: folded up behind the heel
+            CoreGeoBone w = bone("roller_" + side + "_wheel");
+            if (w != null) w.setRotX(wheel);
+            // the frame's knee rollers spin with the pods while dashing
+            CoreGeoBone knee = bone(side + "_knee_wheel");
+            if (knee != null) knee.setRotX(wheel * 0.6F);
+        }
+        CoreGeoBone fanL = bone("hydrojet_left_fan");
+        if (fanL != null) fanL.setRotZ(fan);
+        CoreGeoBone fanR = bone("hydrojet_right_fan");
+        if (fanR != null) fanR.setRotZ(-fan);
 
         // ==================== DATA-DRIVEN WEAPONS & WORKING TOOLS ====================
         ItemStack weaponStack = exoframe.getModularInventory().getStackInSlot(ExoframeArmorSlot.MAIN_WEAPON.getIndex());

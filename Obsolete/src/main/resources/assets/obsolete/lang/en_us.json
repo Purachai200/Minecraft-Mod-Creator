@@ -162,5 +162,15 @@
   "item.obsolete.module_active_cloak": "Active Optical Camouflage Module",
   "key.obsolete.reload_weapon": "Reload Exoframe Weapon",
   "key.obsolete.mech_cloak": "Activate Optical Camouflage",
-  "gui.obsolete.slot_back": "Back (Flight / Stealth Module)"
+  "gui.obsolete.slot_back": "Back (Flight / Stealth Module)",
+  "item.obsolete.exoframe_antitank_rifle": "20mm Bolt-Action Anti-Tank Rifle",
+  "item.obsolete.exoframe_pile_bunker": "Hydraulic Pile Bunker Breaching Ram",
+  "item.obsolete.exoframe_smoke_launcher": "66mm Quad Smoke Discharger",
+  "item.obsolete.module_roller_dash": "Roller Dash Heel Units",
+  "item.obsolete.module_hydro_jet": "Hydro-Jet Twin Ducted Propulsor",
+  "tooltip.obsolete.roller_dash.usage": "Hold C while moving forward to drop into a roller dash (2x sprint, wide turns).",
+  "tooltip.obsolete.hydro_jet.usage": "Underwater: swim where you look. Space rises, C dives, Ctrl boosts.",
+  "message.obsolete.roller_dash.no_power": "[ROLLER UNITS OUT OF POWER - RECHARGE FE]",
+  "subtitles.obsolete.exoframe_roller_dash": "Exoframe rollers skid",
+  "subtitles.obsolete.exoframe_hydro_jet": "Hydro-jet churns"
 }

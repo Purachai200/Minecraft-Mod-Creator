@@ -89,5 +89,15 @@
   "item.obsolete.module_rescue_winch": "รอกกู้ภัยสลิงลากจูงพร้อมระบบหายใจช่วยชีวิต",
   "item.obsolete.armor_float_ring": "ห่วงชูชีพลอยน้ำสำหรับการสำรวจทางน้ำ",
   "item.obsolete.module_search_radar": "เสาเรดาร์ตรวจจับเป้ายุทธวิธี Phased-Array",
-  "item.obsolete.exoframe_fishing_rod": "เบ็ดตกปลาวินช์ขนาดใหญ่ติดหุ่นยนต์"
+  "item.obsolete.exoframe_fishing_rod": "เบ็ดตกปลาวินช์ขนาดใหญ่ติดหุ่นยนต์",
+  "item.obsolete.exoframe_antitank_rifle": "ปืนไรเฟิลต่อต้านรถถัง 20 มม. ลูกเลื่อน",
+  "item.obsolete.exoframe_pile_bunker": "ไพล์บังเกอร์ไฮดรอลิกพังประตู",
+  "item.obsolete.exoframe_smoke_launcher": "เครื่องยิงระเบิดควัน 66 มม. 4 ท่อ",
+  "item.obsolete.module_roller_dash": "ชุดล้อโรลเลอร์แดชที่ส้นเท้า",
+  "item.obsolete.module_hydro_jet": "ใบพัดไอพ่นน้ำแบบท่อคู่ (Hydro-Jet)",
+  "tooltip.obsolete.roller_dash.usage": "กด C ค้างขณะเดินหน้าเพื่อเข้าท่าโรลเลอร์แดช (เร็ว 2 เท่าของวิ่ง เลี้ยวกว้าง)",
+  "tooltip.obsolete.hydro_jet.usage": "ใต้น้ำ: ว่ายไปตามทิศที่มอง Space ขึ้น, C ดำลง, Ctrl เร่ง",
+  "message.obsolete.roller_dash.no_power": "[ชุดล้อโรลเลอร์พลังงานหมด - ชาร์จ FE]",
+  "subtitles.obsolete.exoframe_roller_dash": "ล้อเอ็กโซเฟรมไถลเสียดสี",
+  "subtitles.obsolete.exoframe_hydro_jet": "ไอพ่นน้ำหมุนปั่น"
 }

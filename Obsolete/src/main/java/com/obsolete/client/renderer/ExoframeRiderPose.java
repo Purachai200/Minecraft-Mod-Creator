@@ -56,6 +56,9 @@ public final class ExoframeRiderPose {
         if (!(event.getEntity() instanceof AbstractClientPlayer player) || !(player.getVehicle() instanceof ExoframeEntity exo)) return;
         // shouldRiderSit() is false, so vanilla never locks the rider's body to the mount: do it here, or the body
         // follows the camera and the legs swing out through the capsule walls. The head may still look ±75°.
+        // Undo the camera lift for the body so the pilot still sits on the seat
+        event.getPoseStack().pushPose();
+        event.getPoseStack().translate(0.0D, -ExoframeEntity.PILOT_CAMERA_LIFT, 0.0D);
         player.yBodyRot = exo.yBodyRot;
         player.yBodyRotO = exo.yBodyRotO;
         player.yHeadRot = exo.yBodyRot + Mth.clamp(Mth.wrapDegrees(player.yHeadRot - exo.yBodyRot), -75.0F, 75.0F);
@@ -70,6 +73,14 @@ public final class ExoframeRiderPose {
     @SubscribeEvent
     public static void onPost(RenderPlayerEvent.Post event) {
         if (!(event.getEntity() instanceof AbstractClientPlayer player) || !piloting(player)) return;
+        try {
+            postLimbs(event, player);
+        } finally {
+            event.getPoseStack().popPose(); // pairs with the lift push in onPre
+        }
+    }
+
+    private static void postLimbs(RenderPlayerEvent.Post event, AbstractClientPlayer player) {
         PlayerModel<AbstractClientPlayer> model = event.getRenderer().getModel();
         ModelPart[] parts = limbs(model);
         for (int i = 0; i < parts.length; i++) {

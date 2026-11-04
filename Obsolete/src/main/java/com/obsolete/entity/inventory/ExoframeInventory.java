@@ -46,7 +46,8 @@ public class ExoframeInventory extends ItemStackHandler implements Container {
                         || stack.is(com.obsolete.item.ModItems.MODULE_SHOULDER_MISSILE.get())
                         || stack.getItem() instanceof ExoframeRocketLauncherItem
                         || stack.getItem() instanceof ExoframeRPG7Item
-                        || !(stack.getItem() instanceof ExoframeArmorItem) && !(stack.getItem() instanceof ExoframeWeaponItem) && !(stack.getItem() instanceof ExoframeFlightBoosterItem) && !isHandTool(stack);
+                        || !(stack.getItem() instanceof ExoframeArmorItem) && !(stack.getItem() instanceof ExoframeWeaponItem)
+                        && !stack.is(com.obsolete.item.ModItems.MODULE_HYDRO_JET.get()) && !(stack.getItem() instanceof ExoframeFlightBoosterItem) && !isHandTool(stack);
             case MAIN_WEAPON:
                 return stack.getItem() instanceof ExoframeWeaponItem || isHandTool(stack);
             case BACK:
@@ -55,6 +56,7 @@ public class ExoframeInventory extends ItemStackHandler implements Container {
                         || stack.is(com.obsolete.item.ModItems.MODULE_VTOL_WINGS.get())
                         || stack.is(com.obsolete.item.ModItems.MODULE_DRONE_LIFTER.get())
                         || stack.is(com.obsolete.item.ModItems.MODULE_ACTIVE_CLOAK.get())
+                        || stack.is(com.obsolete.item.ModItems.MODULE_HYDRO_JET.get())
                         || stack.getItem().getClass().getName().contains("FlightUnitItem")
                         || stack.getItem().getDescriptionId().contains("flight_unit");
             default:

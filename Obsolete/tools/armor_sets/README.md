@@ -71,5 +71,6 @@ Phase 1 dropped the old split-toe boot pads from `build_shin_greave`, because th
 | industrial | Industrial | armor_roll_cage |
 | amphibious | Amphibious | armor_float_ring |
 | utility | (utility slot) | backpack_cargo, backpack_ammo, backpack_radar |
+| mobility | Mobility | roller_left/right_unit (+ roller_*_wheel, spun on the axle by `ExoframeModel`), backpack_hydrojet (+ hydrojet_*_fan). Atlas (520, 524, 500, 132). |
 
-Weapons and tools, including the riot shield, the stun baton and the fishing rod, stay in `build_exoframe_geo.py`.
+Weapons and tools, including the riot shield, the stun baton and the fishing rod, stay in `build_exoframe_geo.py`. Author each weapon cube with `Wp(bone, material, ...)`: the generator writes the materials to `tools/weapon_materials.json`, which the weapon painter (`scratch/build_weapon_textures_and_uvs.py`) and the weapon item icons (`tools/generate_item_icons.py`) read. A new weapon bone also needs an `AIM_HOLDS` entry for the aimed-gun-vs-head-armor check.

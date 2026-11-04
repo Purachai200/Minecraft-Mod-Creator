@@ -1,0 +1,21 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:hydraulic_cylinder"
+    },
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "minecraft:piston"
+    },
+    {
+      "item": "minecraft:iron_block"
+    }
+  ],
+  "result": {
+    "item": "obsolete:exoframe_pile_bunker",
+    "count": 1
+  }
+}

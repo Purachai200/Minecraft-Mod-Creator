@@ -117,6 +117,8 @@ public class ModCreativeTabs {
                                 output.accept(ModItems.MODULE_VTOL_WINGS.get());
                                 output.accept(ModItems.MODULE_DRONE_LIFTER.get());
                                 output.accept(ModItems.MODULE_ACTIVE_CLOAK.get());
+                                output.accept(ModItems.MODULE_ROLLER_DASH.get());
+                                output.accept(ModItems.MODULE_HYDRO_JET.get());
 
                                 // 7. Working Tools
                                 output.accept(ModItems.TOOL_MINING_DRILL.get());
@@ -138,6 +140,9 @@ public class ModCreativeTabs {
                                 output.accept(ModItems.EXOFRAME_ATGM_GUIDED.get());
                                 output.accept(ModItems.EXOFRAME_FLAMETHROWER.get());
                                 output.accept(ModItems.EXOFRAME_VIBRO_BLADE.get());
+                                output.accept(ModItems.EXOFRAME_ANTITANK_RIFLE.get());
+                                output.accept(ModItems.EXOFRAME_PILE_BUNKER.get());
+                                output.accept(ModItems.EXOFRAME_SMOKE_LAUNCHER.get());
 
                                 // Role Variants
                                 output.accept(ModItems.ARMOR_POLICE_HEAD.get());

@@ -2,7 +2,7 @@
 import importlib
 
 SET_IDS = ("sand", "usmc", "cerberus", "votoms", "outlander", "polar", "salvage", "shiden", "khamsin",
-           "riverine", "specter", "valkyrie", "police", "rescue", "industrial", "amphibious", "utility")
+           "riverine", "specter", "valkyrie", "police", "rescue", "industrial", "amphibious", "utility", "mobility")
 
 
 def load_all():

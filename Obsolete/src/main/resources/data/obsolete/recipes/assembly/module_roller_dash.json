@@ -1,0 +1,21 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "obsolete:servo_motor"
+    },
+    {
+      "item": "obsolete:servo_motor"
+    },
+    {
+      "item": "minecraft:redstone_block"
+    }
+  ],
+  "result": {
+    "item": "obsolete:module_roller_dash",
+    "count": 1
+  }
+}

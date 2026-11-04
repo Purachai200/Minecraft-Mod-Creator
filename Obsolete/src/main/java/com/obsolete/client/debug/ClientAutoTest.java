@@ -575,15 +575,386 @@ public final class ClientAutoTest {
                 });
                 mc.options.setCameraType(CameraType.FIRST_PERSON);
             }),
-            new Step(880, mc -> {
-                ObsoleteMod.LOGGER.info("[autotest] anim scenario done");
-                mc.stop();
-            })
     };
+    private static Step[] animAll; // ANIM + weapon gallery, built lazily (items register after class load)
+
+    /** Every hand weapon: rest 3/4, aimed side and aimed 3/4; the new field weapons also fire once (ANIM FIRE line). */
+    private static Step[] buildAnimSteps() {
+        java.util.List<Step> steps = new java.util.ArrayList<>(java.util.Arrays.asList(ANIM));
+        Object[][] gallery = {
+                {"assault_rifle", ModItems.EXOFRAME_ASSAULT_RIFLE, null}, {"sniper_amr", ModItems.EXOFRAME_SNIPER_RIFLE, null},
+                {"machine_gun", ModItems.EXOFRAME_MACHINE_GUN, null}, {"minigun", ModItems.EXOFRAME_MINIGUN, null},
+                {"rocket_pod", ModItems.EXOFRAME_ROCKET_LAUNCHER, null}, {"rpg7", ModItems.EXOFRAME_RPG7, null},
+                {"battle_rifle", ModItems.EXOFRAME_BATTLE_RIFLE, null}, {"autocannon", ModItems.EXOFRAME_AUTOCANNON_30MM, null},
+                {"shotgun_breacher", ModItems.EXOFRAME_SHOTGUN_BREACHER, null}, {"grenade_launcher", ModItems.EXOFRAME_GRENADE_LAUNCHER, null},
+                {"recoilless", ModItems.EXOFRAME_RECOILLESS_RIFLE, null}, {"atgm", ModItems.EXOFRAME_ATGM_GUIDED, null},
+                {"flamethrower", ModItems.EXOFRAME_FLAMETHROWER, null}, {"vibro_blade", ModItems.EXOFRAME_VIBRO_BLADE, null},
+                {"stun_baton", ModItems.EXOFRAME_STUN_BATON, null},
+                {"antitank_rifle", ModItems.EXOFRAME_ANTITANK_RIFLE, ModItems.AMMO_20MM},
+                {"pile_bunker", ModItems.EXOFRAME_PILE_BUNKER, ModItems.AMMO_SHOTGUN_SLUG},
+                {"smoke_launcher", ModItems.EXOFRAME_SMOKE_LAUNCHER, ModItems.AMMO_40MM_GRENADE},
+        };
+        int t = 890;
+        for (Object[] g : gallery) {
+            String name = (String) g[0];
+            @SuppressWarnings("unchecked") var item = (java.util.function.Supplier<Item>) g[1];
+            @SuppressWarnings("unchecked") var ammo = (java.util.function.Supplier<Item>) g[2];
+            steps.add(new Step(t, mc -> serverExoById(mc, (p, exo) -> {
+                exo.teleportTo(exoX, exoY, exoZ); // the piloted walk/sprint steps moved it off the camera mark
+                exo.setDeltaMovement(Vec3.ZERO);
+                exo.setYRot(0.0F);
+                exo.yRotO = 0.0F;
+                exo.setYBodyRot(0.0F);
+                exo.setYHeadRot(0.0F);
+                exo.setXRot(0.0F);
+                exo.setAiming(false);
+                loadout(exo, item.get());
+            })));
+            steps.add(new Step(t + 3, mc -> view(mc, -40)));
+            steps.add(new Step(t + 18, mc -> shot(mc, "w_" + name + "_rest_3q")));
+            steps.add(new Step(t + 20, mc -> serverExoById(mc, (p, exo) -> exo.setAiming(true))));
+            steps.add(new Step(t + 22, mc -> view(mc, -90)));
+            steps.add(new Step(t + 40, mc -> shot(mc, "w_" + name + "_aim_side")));
+            steps.add(new Step(t + 42, mc -> view(mc, -40)));
+            steps.add(new Step(t + 58, mc -> shot(mc, "w_" + name + "_aim_3q")));
+            if (ammo != null) {
+                steps.add(new Step(t + 60, mc -> serverExoById(mc, (p, exo) -> {
+                    p.getInventory().add(new ItemStack(ammo.get(), 16));
+                    float yaw = p.getYRot(), pitch = p.getXRot();
+                    p.setYRot(exo.getYRot()); // fire straight ahead of the exoframe, away from the camera
+                    p.setXRot(0.0F);
+                    boolean fired = item.get() instanceof ExoframeWeaponItem w && w.performFire(exo, p);
+                    p.setYRot(yaw);
+                    p.setXRot(pitch);
+                    if (fired) ObsoleteMod.LOGGER.info("[autotest] ANIM FIRE PASS: {}", name);
+                    else ObsoleteMod.LOGGER.error("[autotest] ANIM FIRE FAIL: {}", name);
+                })));
+                steps.add(new Step(t + 66, mc -> shot(mc, "w_" + name + "_fire")));
+            }
+            t += 70;
+        }
+        steps.add(new Step(t + 10, mc -> {
+            ObsoleteMod.LOGGER.info("[autotest] anim scenario done");
+            mc.stop();
+        }));
+        return steps.toArray(new Step[0]);
+    }
 
     // OBSOLETE_AUTOTEST=armor: the four faction sets, front 3/4 and rear 3/4.
     private static Step[] armor; // built lazily: items are not registered yet when this class loads
     private static Step[] gameplay; // built lazily: items/entities registered at world-load
+
+    // OBSOLETE_AUTOTEST=flightgear: each flight module seated on the back in flight (rear + 3/4), then the
+    // first-person cockpit view standing and crouched to check the pilot camera height.
+    private static Step[] flightgear;
+
+    private static Step[] buildFlightGearSteps() {
+        java.util.List<Step> steps = new java.util.ArrayList<>(java.util.List.of(SHOWCASE[0], SHOWCASE[1], SHOWCASE[2]));
+        String[] names = {"booster", "vtol", "drone"};
+        int t = 80;
+        for (int i = 0; i < names.length; i++) {
+            final int idx = i;
+            final String n = names[i];
+            steps.add(new Step(t, mc -> serverExoById(mc, (p, exo) -> {
+                var mod = idx == 0 ? ModItems.MODULE_FLIGHT_BOOSTER.get() : idx == 1 ? ModItems.MODULE_VTOL_WINGS.get() : ModItems.MODULE_DRONE_LIFTER.get();
+                exo.getModularInventory().setStackInSlot(ExoframeArmorSlot.BACK.getIndex(), new ItemStack(mod));
+                exo.syncArmorMaskAndNotify();
+                if (!p.isPassenger()) p.startRiding(exo, true);
+                exo.setNoGravity(true);
+                exo.setPos(exoX, exoY + 4.0D, exoZ);
+                exo.setFlying(true);
+            })));
+            steps.add(new Step(t + 5, mc -> {
+                mc.options.hideGui = true;
+                mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+                mc.player.setXRot(15.0F);
+            }));
+            steps.add(new Step(t + 25, mc -> shot(mc, "fg_" + n + "_rear")));
+            steps.add(new Step(t + 27, mc -> {
+                mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+                mc.player.setYRot(mc.player.getYRot() + 35.0F);
+                mc.player.setXRot(-20.0F);
+            }));
+            steps.add(new Step(t + 45, mc -> shot(mc, "fg_" + n + "_front34")));
+            steps.add(new Step(t + 47, mc -> mc.player.setYRot(mc.player.getYRot() - 35.0F)));
+            t += 50;
+        }
+        // Pilot camera height: first person, standing then crouched, level and looking up
+        steps.add(new Step(t, mc -> serverExoById(mc, (p, exo) -> {
+            exo.getModularInventory().setStackInSlot(ExoframeArmorSlot.BACK.getIndex(), ItemStack.EMPTY);
+            exo.syncArmorMaskAndNotify();
+            exo.setFlying(false);
+            exo.setNoGravity(false);
+            exo.setPos(exoX, exoY, exoZ);
+        })));
+        steps.add(new Step(t + 10, mc -> {
+            mc.options.hideGui = false;
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            mc.player.setXRot(0.0F);
+        }));
+        steps.add(new Step(t + 30, mc -> shot(mc, "fg_cam_firstperson_level")));
+        steps.add(new Step(t + 32, mc -> mc.player.setXRot(-30.0F)));
+        steps.add(new Step(t + 45, mc -> shot(mc, "fg_cam_firstperson_up")));
+        steps.add(new Step(t + 47, mc -> {
+            mc.player.setXRot(0.0F);
+            mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+        }));
+        steps.add(new Step(t + 65, mc -> shot(mc, "fg_cam_thirdperson_pilot_seated")));
+        steps.add(new Step(t + 70, mc -> {
+            ObsoleteMod.LOGGER.info("[autotest] flightgear scenario done");
+            mc.stop();
+        }));
+        return steps.toArray(new Step[0]);
+    }
+
+    // OBSOLETE_AUTOTEST=mobility: roller dash vs walk/sprint distance, C-standing crouch, hydro-jet swim in a deep
+    // pool (with and without the pack), plus screenshots of the dash stance, the roller pods, the jets and the icons.
+    private static Step[] mobility;
+    private static final java.util.Map<String, Double> MOB = new java.util.HashMap<>();
+    private static final int MOB_N = 40;   // ticks per distance run
+
+    /** Pool (x+20, 9 wide, 41 long) floor block y; water fills floor+1 .. exoY-1. */
+    private static int poolFloor() { return (int) exoY - 15; }
+
+    /** Dismount, place the mech, equip, remount, then hold the given keys for MOB_N ticks and record displacement. */
+    private static int mobRun(java.util.List<Step> steps, int t, String label, java.util.function.Supplier<Vec3> at,
+                              Item utility, Item back, boolean up, boolean sprint, boolean crouch, boolean jump,
+                              Consumer<Minecraft> midShot) {
+        steps.add(new Step(t, mc -> serverExoById(mc, (p, exo) -> {
+            Vec3 a = at.get();   // exoX/Y/Z are only known once the scenario has started
+            double x = a.x, y = a.y, z = a.z;
+            p.stopRiding();
+            var inv = exo.getModularInventory();
+            for (int i = 0; i < inv.getSlots(); i++) inv.setStackInSlot(i, ItemStack.EMPTY);
+            if (utility != null) inv.setStackInSlot(ExoframeArmorSlot.UTILITY.getIndex(), new ItemStack(utility));
+            if (back != null) inv.setStackInSlot(ExoframeArmorSlot.BACK.getIndex(), new ItemStack(back));
+            exo.syncArmorMaskAndNotify();
+            exo.setMechCrouching(false);
+            exo.moveTo(x, y, z, 0.0F, 0.0F);
+            exo.setYRot(0.0F);
+            exo.setYBodyRot(0.0F);
+            exo.setDeltaMovement(Vec3.ZERO);
+            p.addEffect(new net.minecraft.world.effect.MobEffectInstance(MobEffects.WATER_BREATHING, 2400, 0, false, false));
+            p.connection.teleport(x, y + 4.0D, z, 0.0F, 0.0F, java.util.Collections.emptySet());
+        })));
+        steps.add(new Step(t + 6, mc -> serverExoById(mc, (p, exo) -> {
+            boolean ok = p.startRiding(exo, true);
+            ObsoleteMod.LOGGER.info("[autotest] mob ride {} ok={} exo={} player={}", label, ok, exo.position(), p.position());
+            p.setYRot(0.0F);
+            p.setXRot(0.0F);
+        })));
+        steps.add(new Step(t + 10, mc -> {
+            if (mc.player.getVehicle() == null && mc.level.getEntity(exoframeId) != null) mc.player.startRiding(mc.level.getEntity(exoframeId), true);
+            mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+        }));
+        steps.add(new Step(t + 20, mc -> {
+            mobLabel = label;
+            mobKeys = new boolean[]{up, sprint, crouch, jump};
+            mobMid = midShot;
+            mobStart = null;
+            mobLeft = MOB_N;
+            mobWait = 0;
+        }));
+        return t + 30;
+    }
+
+    // A measured run counts client ticks (the client drives the ridden mech one travel step per tick) and freezes the
+    // step clock meanwhile, so a lagging integrated server cannot stretch or shorten the run.
+    private static String mobLabel;
+    private static boolean[] mobKeys;
+    private static Consumer<Minecraft> mobMid;
+    private static Vec3 mobStart, mobLate;
+    private static int mobLeft, mobWait, mobShotIn;
+    private static String mobShotName;
+
+    /** Mid-run hook: switch the camera now, take the screenshot a few ticks later once the view has re-rendered. */
+    private static Consumer<Minecraft> mobShot(CameraType cam, String name) {
+        return mc -> {
+            mc.options.setCameraType(cam);
+            mobShotName = name;
+            mobShotIn = 4;
+        };
+    }
+
+    private static void mobKeys(Minecraft mc, boolean up, boolean sprint, boolean crouch, boolean jump) {
+        mc.options.keyUp.setDown(up);
+        mc.options.keySprint.setDown(sprint);
+        mc.options.keyJump.setDown(jump);
+        com.obsolete.client.ModKeyMappings.KEY_MECH_CROUCH.setDown(crouch);
+    }
+
+    private static void mobTick(Minecraft mc) {
+        Entity v = mc.player.getVehicle();
+        if (v == null) {
+            if (mobWait % 20 == 10) {   // boarding packets can be lost while the server catches up: retry both sides
+                Entity e = mc.level.getEntity(exoframeId);
+                ObsoleteMod.LOGGER.info("[autotest] mob {} waiting for boarding, client exo={} player={}", mobLabel, e, mc.player.position());
+                if (e != null) mc.player.startRiding(e, true);
+                serverExoById(mc, (p, exo) -> { if (!p.isPassenger()) p.startRiding(exo, true); });
+            }
+            if (++mobWait > 200) {
+                ObsoleteMod.LOGGER.error("[autotest] MOBILITY RUN {} FAIL: pilot never boarded", mobLabel);
+                mobLeft = 0;
+            }
+            return;
+        }
+        mc.player.setYRot(0.0F);
+        mc.player.yRotO = 0.0F;
+        mc.player.setXRot(0.0F);
+        if (mobKeys[1]) mc.player.setSprinting(true); // riding players do not pick sprint up from the key alone
+        if (mobStart == null) {
+            mobStart = v.position();
+            mobKeys(mc, mobKeys[0], mobKeys[1], mobKeys[2], mobKeys[3]);
+            return;
+        }
+        mobLeft--;
+        final String label = mobLabel;
+        if (mobLeft == 10) mobLate = v.position();
+        if (mobShotIn > 0 && --mobShotIn == 0) shot(mc, mobShotName);
+        if (mobLeft == MOB_N / 2) {
+            serverExoById(mc, (p, exo) -> {
+                MOB.put(label + "_dashflag", exo.isRollerDashing() ? 1.0 : 0.0);
+                MOB.put(label + "_crouch", exo.isMechCrouching() ? 1.0 : 0.0);
+            });
+            if (mobMid != null) mobMid.accept(mc);
+        }
+        if (mobLeft == 0) {
+            mobKeys(mc, false, false, false, false);
+            mc.player.setSprinting(false);
+            Vec3 e = v.position();
+            double dh = Math.hypot(e.x - mobStart.x, e.z - mobStart.z);
+            MOB.put(label, dh);
+            MOB.put(label + "_dy", e.y - mobStart.y);
+            double top = Math.hypot(e.x - mobLate.x, e.z - mobLate.z) / 10.0;
+            MOB.put(label + "_top", top);
+            ObsoleteMod.LOGGER.info("[autotest] MOBILITY RUN {}: horizontal {} blocks, dy {} in {} client ticks (avg {} b/t, last 10 ticks {} b/t)",
+                    label, String.format("%.2f", dh), String.format("%.2f", e.y - mobStart.y), MOB_N, String.format("%.3f", dh / MOB_N), String.format("%.3f", top));
+        }
+    }
+
+    private static double m(String key) {
+        return MOB.getOrDefault(key, Double.NaN);
+    }
+
+    private static void mobCheck(String name, boolean pass, String detail) {
+        if (pass) ObsoleteMod.LOGGER.info("[autotest] {} PASS: {}", name, detail);
+        else ObsoleteMod.LOGGER.error("[autotest] {} FAIL: {}", name, detail);
+    }
+
+    private static Step[] buildMobilitySteps() {
+        java.util.List<Step> steps = new java.util.ArrayList<>(java.util.List.of(SHOWCASE[0], SHOWCASE[1], SHOWCASE[2]));
+        // Runway: 7 wide, z -40 .. +140, and a 9 x 41 pool 14 deep at x+20
+        steps.add(new Step(70, mc -> serverLevel(mc, (p, level) -> {
+            int bx = (int) Math.floor(exoX), by = (int) exoY, bz = (int) Math.floor(exoZ);
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -40; dz <= 140; dz++) {
+                    level.setBlock(new BlockPos(bx + dx, by - 1, bz + dz), Blocks.SMOOTH_STONE.defaultBlockState(), 2);
+                    for (int dy = 0; dy <= 6; dy++) level.setBlock(new BlockPos(bx + dx, by + dy, bz + dz), Blocks.AIR.defaultBlockState(), 2);
+                }
+            }
+            int px = bx + 20, fl = poolFloor();
+            for (int dx = -5; dx <= 5; dx++) {
+                for (int dz = -21; dz <= 21; dz++) {
+                    for (int y = fl; y < by; y++) {
+                        boolean wall = Math.abs(dx) == 5 || Math.abs(dz) == 21 || y == fl;
+                        level.setBlock(new BlockPos(px + dx, y, bz + dz), wall ? Blocks.GLASS.defaultBlockState() : Blocks.WATER.defaultBlockState(), 2);
+                    }
+                }
+            }
+        })));
+        int t = 90;
+        java.util.function.Supplier<Vec3> runway = () -> new Vec3(exoX, exoY, exoZ - 35.0D);
+        // (a) ground distance: walk, sprint, roller dash (W + C with the roller unit)
+        t = mobRun(steps, t, "walk", runway, null, null, true, false, false, false, null);
+        t = mobRun(steps, t, "sprint", runway, null, null, true, true, false, false, null);
+        t = mobRun(steps, t, "crouchwalk_no_roller", runway, null, null, true, false, true, false, null);
+        t = mobRun(steps, t, "dash", runway, ModItems.MODULE_ROLLER_DASH.get(), null, true, false, true, false,
+                mobShot(CameraType.THIRD_PERSON_BACK, "mob_dash_stance_rear"));
+        steps.add(new Step(t, mc -> {
+            double walk = MOB.getOrDefault("walk", 0.0), sprint = MOB.getOrDefault("sprint", 0.0), dash = MOB.getOrDefault("dash", 0.0), cw = MOB.getOrDefault("crouchwalk_no_roller", 0.0);
+            mobCheck("ROLLER DASH SPEED", dash > sprint * 1.5 && m("dash_top") > m("sprint_top") * 1.8,
+                    String.format("walk %.2f, sprint %.2f, dash %.2f blocks in %d ticks (dash/sprint %.2fx); top speed walk %.3f, sprint %.3f, dash %.3f b/t (%.2fx sprint)",
+                            walk, sprint, dash, MOB_N, dash / sprint, m("walk_top"), m("sprint_top"), m("dash_top"), m("dash_top") / m("sprint_top")));
+            mobCheck("ROLLER DASH STATE", MOB.getOrDefault("dash_dashflag", 0.0) > 0.5, "server dash flag mid-run = " + m("dash_dashflag"));
+            mobCheck("C WITHOUT ROLLER UNCHANGED", cw < walk && MOB.getOrDefault("crouchwalk_no_roller_dashflag", 0.0) < 0.5, String.format("crouch-walk %.2f < walk %.2f, no dash", cw, walk));
+        }));
+        // dash, third-person front view mid-run
+        t = mobRun(steps, t + 2, "dash_front", runway, ModItems.MODULE_ROLLER_DASH.get(), null, true, false, true, false,
+                mobShot(CameraType.THIRD_PERSON_FRONT, "mob_dash_stance_front"));
+        // (b) C standing still with the roller unit still crouches and does not move
+        t = mobRun(steps, t, "c_still", runway, ModItems.MODULE_ROLLER_DASH.get(), null, false, false, true, false, null);
+                steps.add(new Step(t, mc -> mobCheck("C STANDING CROUCH", MOB.getOrDefault("c_still_crouch", 0.0) > 0.5
+                        && MOB.getOrDefault("c_still_dashflag", 1.0) < 0.5 && m("c_still") < 0.3,
+                String.format("crouching=%s dash=%s moved %.2f", m("c_still_crouch"), m("c_still_dashflag"), m("c_still")))));
+        // (c) underwater: seabed walk without the jet, then swim with it; rise with Space, dive with C
+        java.util.function.Function<Double, java.util.function.Supplier<Vec3>> sea =
+                up -> () -> new Vec3(Math.floor(exoX) + 20.5D, poolFloor() + 1.0D + up, exoZ - 18.0D);
+        t = mobRun(steps, t + 2, "sea_walk", sea.apply(0.0D), null, null, true, false, false, false, null);
+        t = mobRun(steps, t, "sea_jet", sea.apply(3.0D), null, ModItems.MODULE_HYDRO_JET.get(), true, false, false, false,
+                mobShot(CameraType.THIRD_PERSON_BACK, "mob_hydrojet_underwater_rear"));
+        t = mobRun(steps, t, "sea_rise_nojet", sea.apply(0.0D), null, null, false, false, false, true, null);
+        t = mobRun(steps, t, "sea_rise_jet", sea.apply(0.0D), null, ModItems.MODULE_HYDRO_JET.get(), false, false, false, true,
+                mobShot(CameraType.THIRD_PERSON_FRONT, "mob_hydrojet_underwater_front"));
+        t = mobRun(steps, t, "sea_dive_jet", sea.apply(8.0D), null, ModItems.MODULE_HYDRO_JET.get(), false, false, true, false, null);
+        t = mobRun(steps, t, "sea_hold_jet", sea.apply(6.0D), null, ModItems.MODULE_HYDRO_JET.get(), false, false, false, false, null);
+        steps.add(new Step(t, mc -> {
+            double walk = m("sea_walk"), jet = m("sea_jet");
+            mobCheck("HYDRO-JET SWIM SPEED", jet > walk * 1.3, String.format("seabed walk %.2f, hydro-jet %.2f blocks in %d ticks", walk, jet, MOB_N));
+            mobCheck("HYDRO-JET RISE", m("sea_rise_jet_dy") > 3.0 && m("sea_rise_jet_dy") > m("sea_rise_nojet_dy") + 2.0,
+                    String.format("Space: jet dy %.2f vs no jet dy %.2f", m("sea_rise_jet_dy"), m("sea_rise_nojet_dy")));
+            mobCheck("HYDRO-JET DIVE", m("sea_dive_jet_dy") < -3.0, String.format("C: dy %.2f", m("sea_dive_jet_dy")));
+            mobCheck("HYDRO-JET HOLD DEPTH", Math.abs(m("sea_hold_jet_dy")) < 1.0, String.format("no input: dy %.2f", m("sea_hold_jet_dy")));
+        }));
+        // (d) roller pod close-up: dismounted mech, pods forced into the deployed pose on the client
+        steps.add(new Step(t + 2, mc -> serverExoById(mc, (p, exo) -> {
+            p.stopRiding();
+            var inv = exo.getModularInventory();
+            for (int i = 0; i < inv.getSlots(); i++) inv.setStackInSlot(i, ItemStack.EMPTY);
+            inv.setStackInSlot(ExoframeArmorSlot.UTILITY.getIndex(), new ItemStack(ModItems.MODULE_ROLLER_DASH.get()));
+            inv.setStackInSlot(ExoframeArmorSlot.BACK.getIndex(), new ItemStack(ModItems.MODULE_HYDRO_JET.get()));
+            inv.setStackInSlot(ExoframeArmorSlot.LEGS.getIndex(), new ItemStack(ModItems.ARMOR_SAND_LEGS.get()));
+            exo.syncArmorMaskAndNotify();
+            exo.moveTo(exoX, exoY, exoZ, 0.0F, 0.0F);
+            exo.setYRot(0.0F);
+            exo.setYBodyRot(0.0F);
+            exo.setMechCrouching(false);
+        })));
+        for (int i = 3; i < 60; i++) {
+            final int k = i;
+            steps.add(new Step(t + i, mc -> {
+                if (mc.level.getEntity(exoframeId) instanceof ExoframeEntity e) {
+                    e.clientRollerDeploy = e.clientRollerDeployO = k < 30 ? 1.0F : 0.0F;
+                }
+            }));
+        }
+        steps.add(new Step(t + 8, mc -> {
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
+            mc.options.hideGui = true;
+            // spectator so the camera can sit at ankle height without colliding; heel pods are ~0.7 block behind the ankle (-Z)
+            serverLevel(mc, (p, l) -> {
+                p.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+                aimPlayerAt(p, exoX + 0.4, exoY + 0.2, exoZ - 0.6, 2.4, 140.0, -0.9);
+            });
+        }));
+        steps.add(new Step(t + 25, mc -> shot(mc, "mob_roller_closeup_deployed")));
+        steps.add(new Step(t + 45, mc -> shot(mc, "mob_roller_closeup_stowed")));
+        steps.add(new Step(t + 48, mc -> serverLevel(mc, (p, l) -> aimPlayerAt(p, exoX, exoY + 1.2 * ExoframeEntity.MODEL_SCALE, exoZ, 3.4 * ExoframeEntity.MODEL_SCALE, 145.0, 0.3 * ExoframeEntity.MODEL_SCALE))));
+        steps.add(new Step(t + 62, mc -> shot(mc, "mob_gear_rear34")));
+        // item icons in the hotbar
+        steps.add(new Step(t + 64, mc -> serverLevel(mc, (p, l) -> {
+            p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            p.getInventory().setItem(0, new ItemStack(ModItems.MODULE_ROLLER_DASH.get()));
+            p.getInventory().setItem(1, new ItemStack(ModItems.MODULE_HYDRO_JET.get()));
+            p.getInventory().selected = 0;
+        })));
+        steps.add(new Step(t + 66, mc -> mc.options.hideGui = false));
+        steps.add(new Step(t + 80, mc -> shot(mc, "mob_item_icons_hotbar")));
+        steps.add(new Step(t + 85, mc -> {
+            ObsoleteMod.LOGGER.info("[autotest] mobility scenario done");
+            mc.stop();
+        }));
+        return steps.toArray(new Step[0]);
+    }
 
     private static Step[] buildGameplaySteps() {
         java.util.List<Step> steps = new java.util.ArrayList<>();
@@ -916,7 +1287,13 @@ public final class ClientAutoTest {
                 new WeaponEntry("flamethrower", ModItems.EXOFRAME_FLAMETHROWER, ModItems.AMMO_NAPALM_CANISTER,
                         6.0D, 0.5D, 0.0F),
                 new WeaponEntry("vibro_blade", ModItems.EXOFRAME_VIBRO_BLADE, () -> Items.AIR,
-                        2.2D, 0.0D, 0.0F)
+                        2.2D, 0.0D, 0.0F),
+                new WeaponEntry("antitank_rifle", ModItems.EXOFRAME_ANTITANK_RIFLE, ModItems.AMMO_20MM,
+                        12.0D, 1.2D, 6.0F),
+                new WeaponEntry("pile_bunker", ModItems.EXOFRAME_PILE_BUNKER, ModItems.AMMO_SHOTGUN_SLUG,
+                        2.2D, 0.0D, 0.0F),
+                new WeaponEntry("smoke_launcher", ModItems.EXOFRAME_SMOKE_LAUNCHER, ModItems.AMMO_40MM_GRENADE,
+                        12.0D, 1.2D, 6.0F)
         };
 
         int wt = 470;
@@ -982,7 +1359,12 @@ public final class ClientAutoTest {
                 double tz = exoZ - entry.dist();
                 AABB checkZone = new AABB(tx - 3.5, ty - 2.0, tz - 3.5, tx + 3.5, ty + 4.0, tz + 3.5);
                 var targets = level.getEntitiesOfClass(Zombie.class, checkZone);
-                if (targets.isEmpty()) {
+                if (entry.name().equals("smoke_launcher")) { // smoke does no damage: check the cloud and the blinding
+                    boolean cloud = !level.getEntitiesOfClass(net.minecraft.world.entity.AreaEffectCloud.class, checkZone.inflate(2.0)).isEmpty();
+                    boolean blind = targets.stream().anyMatch(z -> z.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS));
+                    if (cloud && blind) ObsoleteMod.LOGGER.info("[autotest] WEAPON FIRE PASS: smoke_launcher laid smoke and blinded target");
+                    else ObsoleteMod.LOGGER.error("[autotest] WEAPON FIRE FAIL: smoke_launcher cloud={} blind={}", cloud, blind);
+                } else if (targets.isEmpty()) {
                     ObsoleteMod.LOGGER.info("[autotest] WEAPON FIRE PASS: {} eliminated downrange target!", entry.name());
                 } else {
                     boolean damaged = false;
@@ -1308,7 +1690,12 @@ public final class ClientAutoTest {
             }
         })));
         steps.add(new Step(wt + 195, mc -> serverExoById(mc, (p, exo) -> {
-            // Dry land first: the rod must refuse to fish without water nearby.
+            // Dry land first: the rod must refuse to fish without water nearby. The tarmac only covers y 99, so fill any
+            // natural water/aquifer under it inside the rod's search box (wherever the persistent test world centred us).
+            BlockPos.betweenClosedStream(exo.blockPosition().offset(-5, -4, -5), exo.blockPosition().offset(5, 1, 5))
+                    .filter(pos -> p.serverLevel().getFluidState(pos).is(net.minecraft.tags.FluidTags.WATER))
+                    .map(BlockPos::immutable).toList()
+                    .forEach(pos -> p.serverLevel().setBlockAndUpdate(pos, Blocks.STONE.defaultBlockState()));
             int before = countFish(p);
             exo.performFishing(p);
             if (countFish(p) != before) {
@@ -1318,7 +1705,8 @@ public final class ClientAutoTest {
             for (int dx = 0; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
                 p.serverLevel().setBlockAndUpdate(pond.offset(dx, 0, dz), Blocks.WATER.defaultBlockState());
             }
-            exo.performFishing(p);
+            // one cast rolls the vanilla fishing table (~15% junk/treasure), so allow a few casts
+            for (int cast = 0; cast < 5 && countFish(p) == before; cast++) exo.performFishing(p);
             int caught = countFish(p) - before;
             var drops = p.serverLevel().getEntitiesOfClass(ItemEntity.class, exo.getBoundingBox().inflate(6.0D),
                     e -> e.getItem().is(Items.COD) || e.getItem().is(Items.SALMON) || e.getItem().is(Items.TROPICAL_FISH) || e.getItem().is(Items.PUFFERFISH));
@@ -1830,13 +2218,22 @@ public final class ClientAutoTest {
         // ("Can't keep up!") client ticks ran ahead of it and steps fired before the previous one had played out.
         int serverTick = mc.getSingleplayerServer().getTickCount();
         if (startServerTick < 0) startServerTick = serverTick;
+        if (mobLeft > 0) {
+            mobTick(mc);
+            startServerTick = serverTick - Math.max(tick, 0);   // hold the step clock until the measured run ends
+            return;
+        }
         int previous = tick;
         tick = serverTick - startServerTick;
         Step[] activeSteps;
         if (NAME.equals("anim")) {
-            activeSteps = ANIM;
+            activeSteps = (animAll != null ? animAll : (animAll = buildAnimSteps()));
         } else if (NAME.equals("armor")) {
             activeSteps = (armor != null ? armor : (armor = buildArmorSteps()));
+        } else if (NAME.equals("flightgear")) {
+            activeSteps = (flightgear != null ? flightgear : (flightgear = buildFlightGearSteps()));
+        } else if (NAME.equals("mobility")) {
+            activeSteps = (mobility != null ? mobility : (mobility = buildMobilitySteps()));
         } else if (NAME.equals("gameplay") || NAME.equals("terrain")) {
             activeSteps = (gameplay != null ? gameplay : (gameplay = buildGameplaySteps()));
         } else {

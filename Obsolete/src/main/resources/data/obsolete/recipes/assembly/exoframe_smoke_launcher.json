@@ -1,0 +1,18 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "minecraft:dispenser"
+    },
+    {
+      "item": "minecraft:campfire"
+    }
+  ],
+  "result": {
+    "item": "obsolete:exoframe_smoke_launcher",
+    "count": 1
+  }
+}

@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Procedurally packs UVs and paints rich, realistic, high-contrast mechanical textures
-for all 17 Exoframe weapons across exoframe.geo.json and all 7 texture variants.
+"""Packs weapon UVs and paints every exoframe weapon cube into all 7 exoframe texture variants.
 
-Fixes User Issue #2:
-- Weapon textures were previously all mapped to single flat-gray coordinates [0, 320]
-- Remaps every cube to a unique non-overlapping UV rectangle in the free Y=736..855 band
-- Paints gunmetal steel, titanium heat-bluing, brass ammo belts, optical sapphire lenses,
-  woodgrain insulators, illuminated reticles, plasma blades, and hazard warning chevrons.
+Materials come from tools/weapon_materials.json (one per cube, written by tools/build_exoframe_geo.py), so the painter
+never guesses from cube indices. Each cube is painted face by face: worn gunmetal / blued barrels / wood grain /
+polymer stipple / brass / canvas, face shading, grime toward the bottom, rubbed-through edges, paint chips and a
+sprayed stencil on the biggest painted face. Run from the repo root (parent of Obsolete/).
 """
 
 import json
@@ -112,532 +110,295 @@ def encode_png(path, width, height, raw_rgba):
 
 # ==================== 2. SHELF UV PACKER ====================
 
+# Free texture bands for weapon cubes (nothing else in exoframe.geo.json maps here; checked against the atlas).
+WEAPON_REGIONS = [(0, 736, 1024, 288), (64, 416, 448, 224)]
+MATERIALS_PATH = "Obsolete/tools/weapon_materials.json"   # written by tools/build_exoframe_geo.py
+
+
 class ShelfPacker:
-    def __init__(self, start_x, start_y, max_width, max_height):
-        self.start_x = start_x
-        self.start_y = start_y
-        self.max_w = max_width
-        self.max_h = max_height
-        self.cur_x = start_x
-        self.cur_y = start_y
-        self.row_h = 0
+    """Shelf packer over several rectangles, filled in order, 1 px gutter between patches."""
+
+    def __init__(self, regions):
+        self.regions = list(regions)
+        self.r = 0
+        self._reset()
+
+    def _reset(self):
+        x, y, _, _ = self.regions[self.r]
+        self.cur_x, self.cur_y, self.row_h = x, y, 0
 
     def pack(self, w, h):
-        pw = w + 1
-        ph = h + 1
-        if self.cur_x + pw > self.start_x + self.max_w:
-            self.cur_x = self.start_x
-            self.cur_y += self.row_h + 1
-            self.row_h = 0
-        if self.cur_y + ph > self.start_y + self.max_h:
-            raise ValueError(f"Shelf out of space: cur_y={self.cur_y}, ph={ph}")
-        pos = (self.cur_x, self.cur_y)
-        self.cur_x += pw
-        self.row_h = max(self.row_h, ph)
-        return pos
+        while True:
+            rx, ry, rw, rh = self.regions[self.r]
+            if self.cur_x + w + 1 > rx + rw:
+                self.cur_x = rx
+                self.cur_y += self.row_h + 1
+                self.row_h = 0
+            if self.cur_y + h + 1 <= ry + rh and w + 1 <= rw:
+                pos = (self.cur_x, self.cur_y)
+                self.cur_x += w + 1
+                self.row_h = max(self.row_h, h)
+                return pos
+            self.r += 1
+            if self.r >= len(self.regions):
+                raise ValueError("weapon UV regions are full")
+            self._reset()
+
+    def used(self):
+        return self.r, self.cur_y + self.row_h
 
 
-# ==================== 3. WEAPON CUBE MATERIAL CLASSIFICATION ====================
-
-# Roles:
-# 'gunmetal', 'camo', 'steel', 'heat_blued', 'rail', 'optic_body', 'sapphire_lens',
-# 'emerald_lens', 'grip', 'rubber', 'magazine', 'ammo_box', 'brass_belt',
-# 'shotgun_shells', 'woodgrain', 'warhead', 'hazard_stripes', 'plasma_blade',
-# 'vibro_spine', 'vibro_hilt', 'shield_plate', 'shield_glass', 'stun_prongs',
-# 'chrome_shaft', 'graphite'
-
-def classify_cube(weapon_name, idx, size, origin):
-    sx, sy, sz = size
-    ox, oy, oz = origin
-
-    if weapon_name == "weapon_assault_rifle":
-        if idx == 0: return "gunmetal"           # receiver
-        if idx == 1: return "brass_belt"         # ejection port brass
-        if idx == 2: return "rail"               # top rail
-        if 3 <= idx <= 8: return "rail"          # rail teeth
-        if 9 <= idx <= 10: return "steel"        # sight mount posts
-        if idx == 11: return "optic_body"        # optic hood
-        if 12 <= idx <= 13: return "optic_body"  # dials
-        if idx == 14: return "sapphire_lens"     # optic reticle lens
-        if idx == 15: return "camo"              # handguard
-        if 16 <= idx <= 20: return "gunmetal"    # M-LOK slots
-        if idx == 21: return "rail"              # lower rail
-        if idx == 22: return "steel"             # barrel
-        if idx == 23: return "gunmetal"          # gas tube
-        if idx == 24: return "heat_blued"        # muzzle brake
-        if 25 <= idx <= 26: return "sapphire_lens" # front sight tritium
-        if 27 <= idx <= 30: return "magazine"    # PMAG
-        if idx == 31: return "rubber"            # mag base
-        if idx == 32: return "grip"              # pistol grip
-        if 33 <= idx <= 34: return "steel"       # trigger & guard
-        if idx == 35: return "steel"             # buffer tube
-        if idx == 36: return "rubber"            # buttpad
-        if idx == 37: return "camo"              # cheek comb
-
-    elif weapon_name == "weapon_sniper_amr":
-        if idx == 0: return "gunmetal"           # bullpup receiver
-        if idx == 1: return "rail"               # top rail
-        if idx == 2: return "optic_body"         # scope tube
-        if 3 <= idx <= 8: return "optic_body"    # scope bells
-        if idx == 9: return "sapphire_lens"      # coated lens
-        if idx == 10: return "steel"             # 20mm sniper barrel
-        if 11 <= idx <= 12: return "heat_blued"  # tank muzzle brake
-        if idx == 13: return "camo"              # barrel jacket
-        if idx == 14: return "steel"             # carry handle
-        if idx == 15: return "steel"             # bipod mount
-        if 16 <= idx <= 17: return "gunmetal"    # bipod legs
-        if idx == 18: return "grip"              # sniper grip
-        if idx == 19: return "rubber"            # cheek / stock pad
-
-    elif weapon_name == "weapon_machine_gun":
-        if idx == 0: return "gunmetal"           # receiver
-        if idx == 1: return "camo"               # shroud
-        if 2 <= idx <= 8: return "gunmetal"      # cooling ribs
-        if idx == 9: return "steel"              # barrel tip
-        if 10 <= idx <= 12: return "heat_blued"  # flash hider
-        if 13 <= idx <= 14: return "ammo_box"    # ammo can
-        if idx == 15: return "steel"             # feed throat
-        if 16 <= idx <= 19: return "brass_belt"  # linked ammo belt
-        if idx == 20: return "grip"              # spade grip
-        if 21 <= idx <= 22: return "steel"       # buffer & stock
-
-    elif weapon_name == "weapon_minigun_m134":
-        if 0 <= idx <= 2: return "gunmetal"      # rotor motor housing
-        if 3 <= idx <= 5: return "steel"         # front rotor plate
-        if 6 <= idx <= 11: return "heat_blued"   # 6 gatling barrels
-        if 12 <= idx <= 14: return "steel"       # clamp rings
-        if 15 <= idx <= 17: return "grip"        # carry & grips
-        if 18 <= idx <= 20: return "hazard_stripes" # motor feed shroud
-        return "gunmetal"
-
-    elif weapon_name == "weapon_rocket_launcher":
-        if idx < 24:
-            # 4 rocket launch tubes (ends have hazard stripes, inside has red warheads)
-            if sz < 1.0: return "warhead"
-            return "camo"
-        if 24 <= idx <= 26: return "hazard_stripes" # pod bracket / hazard rims
-        if 27 <= idx <= 29: return "emerald_lens"   # laser targeting optic
-        return "grip"
-
-    elif weapon_name == "weapon_rpg7_heavy":
-        if 0 <= idx <= 2: return "camo"          # launcher tube
-        if 3 <= idx <= 5: return "woodgrain"     # wooden heat shield
-        if 6 <= idx <= 8: return "heat_blued"    # rear venturi cone
-        if 9 <= idx <= 11: return "warhead"      # shaped charge bomb
-        if 12 <= idx <= 14: return "gunmetal"    # ogive nose
-        if idx == 15: return "steel"             # standoff probe
-        if 16 <= idx <= 17: return "grip"        # grips
-        if idx == 18: return "sapphire_lens"     # PGO-7 sight
-
-    elif weapon_name == "weapon_battle_rifle":
-        if idx in (0, 1): return "gunmetal"
-        if idx == 2: return "rail"
-        if idx in (3, 4): return "camo"
-        if idx == 5: return "steel"
-        if idx == 6: return "heat_blued"
-        if idx in (7, 8): return "sapphire_lens"
-        if idx == 9: return "magazine"
-        if idx == 10: return "grip"
-        if idx in (11, 12): return "camo"
-        return "gunmetal"
-
-    elif weapon_name == "weapon_autocannon_30mm":
-        if idx in (0, 1): return "gunmetal"
-        if idx == 2: return "steel"
-        if idx in (3, 4): return "heat_blued"
-        if idx == 5: return "steel"
-        if idx in (6, 7): return "camo"
-        return "steel"
-
-    elif weapon_name == "weapon_shotgun_breacher":
-        if idx in (0, 1): return "gunmetal"
-        if idx == 2: return "steel"
-        if idx == 3: return "shotgun_shells"
-        if idx == 4: return "grip"
-        if idx in (5, 6): return "camo"
-        return "gunmetal"
-
-    elif weapon_name == "weapon_grenade_launcher":
-        if idx in (0, 1, 2, 3): return "brass_belt" # revolving cylinder grenade bases
-        if idx == 4: return "steel"
-        if 5 <= idx <= 7: return "gunmetal"
-        if idx == 8: return "grip"
-        if idx == 9: return "camo"
-        return "optic_body"
-
-    elif weapon_name == "weapon_recoilless_rifle":
-        if 0 <= idx <= 2: return "camo"          # main tube
-        if 3 <= idx <= 5: return "heat_blued"    # venturi cone
-        if 6 <= idx <= 8: return "hazard_stripes"# muzzle ring hazard
-        if idx == 9: return "sapphire_lens"      # sight
-        return "grip"
-
-    elif weapon_name == "weapon_atgm_guided":
-        if 0 <= idx <= 1: return "camo"          # launch box
-        if idx == 2: return "hazard_stripes"     # front cap hazard
-        if 3 <= idx <= 5: return "sapphire_lens" # optical sensor
-        if 6 <= idx <= 8: return "emerald_lens"  # thermal sensor
-        return "grip"
-
-    elif weapon_name == "weapon_flamethrower":
-        if idx == 0: return "steel"              # body
-        if idx == 1: return "heat_blued"         # nozzle
-        if 2 <= idx <= 7: return "brass_belt"    # dual brass fuel tanks
-        if idx == 8: return "hazard_stripes"     # pilot torch flame guard
-        if idx == 9: return "camo"
-        return "grip"
-
-    elif weapon_name == "weapon_vibro_blade":
-        if idx == 0: return "vibro_hilt"         # hilt pommel
-        if idx == 1: return "vibro_hilt"         # crossguard / emitter housing
-        if idx == 2: return "steel"              # emitter ring
-        if idx == 3: return "vibro_spine"        # reinforced dark tungsten spine
-        if idx == 4: return "plasma_blade"       # glowing plasma cutting edge
-        if idx == 5: return "plasma_blade"       # plasma blade tip
-        if idx == 6: return "sapphire_lens"      # pulsing power core
-
-    elif weapon_name == "weapon_riot_shield":
-        if idx == 0: return "shield_plate"       # main face
-        if 1 <= idx <= 2: return "shield_plate"  # side deflector wings
-        if idx == 3: return "shield_glass"       # vision viewport
-        if 4 <= idx <= 5: return "hazard_stripes"# top/bottom hazard lips
-        return "grip"
-
-    elif weapon_name == "weapon_stun_baton":
-        if idx == 0: return "grip"               # handle
-        if idx == 1: return "steel"              # guard ring
-        if idx == 2: return "chrome_shaft"       # shaft
-        if idx == 3: return "stun_prongs"        # electrode head
-        return "stun_prongs"                     # discharge rings
-
-    elif weapon_name == "weapon_fishing_rod":
-        if idx == 0: return "grip"
-        if 1 <= idx <= 12: return "brass_belt"   # reel
-        if 13 <= idx <= 15: return "graphite"    # rod blanks
-        return "steel"                           # guides
-
-    return "gunmetal"
-
-
-# ==================== 4. PROCEDURAL TEXTURE SYNTHESIS ====================
+# ==================== 3. MATERIALS ====================
 
 def get_camo_palette(camo_type):
-    if camo_type == "woodland":
-        return ((52, 68, 44), (86, 62, 42), (115, 110, 80)) # green, brown, khaki
-    elif camo_type == "desert":
-        return ((168, 144, 110), (140, 116, 85), (185, 168, 135)) # sand, coyote, tan
-    elif camo_type == "urban":
-        return ((76, 84, 96), (48, 54, 62), (120, 130, 142)) # slate, dark navy, steel
-    elif camo_type == "arctic":
-        return ((210, 218, 224), (160, 170, 180), (60, 68, 75)) # snow white, ice gray, charcoal
-    elif camo_type == "tigerstripe":
-        return ((40, 42, 44), (58, 75, 48), (110, 95, 65)) # black, jungle green, khaki
-    elif camo_type == "hazard":
-        return ((235, 185, 25), (32, 34, 38), (245, 205, 45)) # safety yellow, dark charcoal, bright amber
-    else: # default
-        return ((62, 72, 54), (45, 52, 40), (78, 90, 68)) # tactical olive drab
+    return {
+        "woodland": ((58, 72, 46), (86, 64, 44), (40, 46, 34)),
+        "desert": ((170, 146, 108), (142, 116, 84), (188, 170, 136)),
+        "urban": ((84, 90, 98), (56, 60, 66), (120, 128, 136)),
+        "arctic": ((206, 212, 216), (158, 166, 172), (92, 98, 104)),
+        "tigerstripe": ((70, 78, 52), (40, 40, 36), (112, 98, 66)),
+        "hazard": ((214, 168, 32), (52, 52, 54), (230, 190, 52)),
+    }.get(camo_type, ((74, 82, 58), (60, 66, 48), (88, 96, 70)))   # factory olive drab
 
 
-def paint_cube_texture(raw, tex_w, tex_h, uv_x, uv_y, box_w, box_h, role, camo_type):
-    palette = get_camo_palette(camo_type)
-
-    def set_pixel(x, y, r, g, b, a=255):
-        if 0 <= x < tex_w and 0 <= y < tex_h:
-            idx = (y * tex_w + x) * 4
-            raw[idx] = max(0, min(255, int(r)))
-            raw[idx + 1] = max(0, min(255, int(g)))
-            raw[idx + 2] = max(0, min(255, int(b)))
-            raw[idx + 3] = max(0, min(255, int(a)))
-
-    for dy in range(box_h):
-        for dx in range(box_w):
-            px = uv_x + dx
-            py = uv_y + dy
-            # Edge shading (Ambient Occlusion)
-            is_edge = (dx == 0 or dx == box_w - 1 or dy == 0 or dy == box_h - 1)
-            is_top = (dy == 0)
-
-            # --- MATERIAL SHADERS ---
-            if role == "gunmetal":
-                # Dark parkerized matte steel with fine noise and bevel
-                base = 40 + ((dx * 7 + dy * 13) % 9) - 4
-                r, g, b = base, base + 3, base + 7
-                if is_top: r, g, b = r + 24, g + 26, b + 30
-                elif is_edge: r, g, b = r - 16, g - 16, b - 14
-
-            elif role == "camo":
-                # Procedural faction camouflage pattern
-                p_idx = ((dx // 3 + dy // 3) + ((dx * 11) ^ (dy * 7)) % 5) % 3
-                col = palette[p_idx]
-                r, g, b = col[0], col[1], col[2]
-                noise = ((dx * 5 + dy * 9) % 7) - 3
-                r, g, b = r + noise, g + noise, b + noise
-                if is_top: r, g, b = r + 20, g + 20, b + 20
-                elif is_edge: r, g, b = r - 22, g - 22, b - 22
-
-            elif role == "steel":
-                # Bright machined stainless / titanium steel
-                base = 135 + ((dx * 3 + dy * 11) % 11) - 5
-                r, g, b = base, base + 6, base + 12
-                if is_top: r, g, b = r + 35, g + 38, b + 42
-                elif is_edge: r, g, b = r - 30, g - 30, b - 28
-
-            elif role == "heat_blued":
-                # Titanium heat tempering gradient: gold -> magenta/purple -> deep indigo -> cyan
-                t = dx / max(1, box_w - 1)
-                if t < 0.25:
-                    # gunmetal steel
-                    r, g, b = 50, 54, 60
-                elif t < 0.50:
-                    # purple / magenta
-                    r, g, b = 130, 60, 140
-                elif t < 0.75:
-                    # deep indigo / blue
-                    r, g, b = 50, 80, 185
-                elif t < 0.90:
-                    # electric cyan
-                    r, g, b = 60, 175, 230
-                else:
-                    # straw gold at tip
-                    r, g, b = 220, 175, 60
-                if is_top: r, g, b = min(255, r + 25), min(255, g + 25), min(255, b + 25)
-                elif is_edge: r, g, b = max(0, r - 20), max(0, g - 20), max(0, b - 20)
-
-            elif role == "rail":
-                # Picatinny rail with alternating teeth slots
-                is_tooth = (dx % 3 < 2)
-                if is_tooth:
-                    r, g, b = 62, 66, 74
-                else:
-                    r, g, b = 24, 26, 30 # deep shadow notch
-                if is_top: r, g, b = r + 15, g + 16, b + 20
-
-            elif role == "optic_body":
-                # Matte black non-reflective optic chassis with brass dial ring
-                r, g, b = 28, 30, 34
-                if dx == box_w // 2 and dy % 2 == 0:
-                    r, g, b = 185, 150, 45 # knurled brass dial marking
-                if is_edge: r, g, b = 18, 20, 22
-
-            elif role == "sapphire_lens":
-                # Multi-coated optical glass with cyan glare streak & center red reticle dot
-                cx, cy = box_w / 2.0, box_h / 2.0
-                dist = math.sqrt((dx - cx) ** 2 + (dy - cy) ** 2)
-                if dist < 1.0:
-                    r, g, b = 255, 40, 40 # illuminated red FCS aiming dot!
-                elif abs(dx - dy) <= 1:
-                    r, g, b = 180, 245, 255 # specular reflection streak
-                else:
-                    r, g, b = 30, 140, 225 # deep sapphire lens body
-
-            elif role == "emerald_lens":
-                # Thermal / night-vision optical lens
-                cx, cy = box_w / 2.0, box_h / 2.0
-                dist = math.sqrt((dx - cx) ** 2 + (dy - cy) ** 2)
-                if dist < 1.0:
-                    r, g, b = 255, 240, 60 # amber reticle
-                elif abs(dx - dy) <= 1:
-                    r, g, b = 160, 255, 210 # glare streak
-                else:
-                    r, g, b = 25, 185, 95 # vibrant emerald optical coating
-
-            elif role == "grip":
-                # Stippled tactical rubber/polymer grip
-                stipple = ((dx * 7) ^ (dy * 13)) % 4
-                base = 24 + stipple * 4
-                r, g, b = base, base, base + 2
-                if is_edge: r, g, b = 14, 14, 16
-
-            elif role == "rubber":
-                # Chevron rubber buttpad
-                chevron = (dx + dy) % 3 == 0
-                base = 32 if chevron else 22
-                r, g, b = base, base, base
-
-            elif role == "magazine":
-                # PMAG polymer with brass cartridge round count window
-                is_window = (1 <= dy <= box_h - 2 and box_w // 3 <= dx <= box_w // 2)
-                if is_window:
-                    r, g, b = 220, 180, 45 # visible brass cartridge
-                else:
-                    r, g, b = 36, 38, 42 # dark ribbed polymer
-                    if dx % 2 == 0: r, g, b = r + 10, g + 10, b + 12
-
-            elif role == "ammo_box":
-                # Olive / coyote stamped metal ammo can with yellow warning triangle
-                col = palette[0]
-                r, g, b = col[0], col[1], col[2]
-                if box_w > 4 and box_h > 4:
-                    # yellow hazard stencil in center
-                    if dx == box_w // 2 and dy == box_h // 2:
-                        r, g, b = 245, 205, 30
-                if is_edge: r, g, b = r - 25, g - 25, b - 25
-
-            elif role == "brass_belt":
-                # Linked 12.7mm / 20mm brass cartridges with copper tips
-                is_tip = (dy < max(1, box_h // 4))
-                if is_tip:
-                    r, g, b = 185, 85, 45 # copper bullet tip
-                else:
-                    r, g, b = 225, 180, 45 # polished brass casing
-                    if is_top: r, g, b = 250, 220, 90
-                    elif is_edge: r, g, b = 175, 135, 30
-
-            elif role == "shotgun_shells":
-                # 12-gauge high-brass red tactical breacher shells
-                is_brass = (dy >= box_h - max(1, box_h // 3))
-                if is_brass:
-                    r, g, b = 225, 180, 45 # brass base
-                else:
-                    r, g, b = 210, 32, 32 # crimson plastic hull
-
-            elif role == "woodgrain":
-                # RPG-7 phenolic woodgrain laminate
-                grain = int(math.sin(dy * 1.2 + dx * 0.4) * 20)
-                r = 135 + grain
-                g = 72 + (grain // 2)
-                b = 32 + (grain // 3)
-                if is_edge: r, g, b = r - 20, g - 15, b - 10
-
-            elif role == "warhead":
-                # Demolition warhead: olive body with yellow hazard band
-                is_band = (box_h > 4 and dy == box_h // 2)
-                if is_band:
-                    r, g, b = 240, 200, 30 # yellow hazard stripe
-                else:
-                    r, g, b = 65, 76, 52 # military olive ordnance
-                if is_edge: r, g, b = r - 18, g - 18, b - 18
-
-            elif role == "hazard_stripes":
-                # 45-degree high-vis safety warning chevrons (Safety Yellow & Black)
-                stripe = ((dx + dy) // 3) % 2
-                if stripe == 0:
-                    r, g, b = 248, 202, 22 # vibrant safety yellow
-                else:
-                    r, g, b = 26, 28, 30 # matte black
-                if is_edge: r, g, b = max(0, r - 25), max(0, g - 25), max(0, b - 25)
-
-            elif role == "plasma_blade":
-                # Incandescent glowing high-frequency vibro plasma blade
-                # White-hot interior core with electric cyan outer aura
-                t = dy / max(1, box_h - 1)
-                core = math.sin(t * math.pi)
-                if core > 0.6:
-                    r, g, b = 235, 255, 255 # incandescent white-hot core
-                elif core > 0.2:
-                    r, g, b = 110, 235, 255 # brilliant cyan plasma
-                else:
-                    r, g, b = 40, 140, 245 # deep azure energy halo
-                if dx == 0:
-                    r, g, b = 255, 255, 255 # razor-sharp cutting edge highlight!
-
-            elif role == "vibro_spine":
-                # Dark reinforced tungsten-carbide spine
-                base = 32 + ((dx * 5 + dy * 7) % 7)
-                r, g, b = base, base + 2, base + 5
-                if is_top: r, g, b = 75, 85, 105
-                elif is_edge: r, g, b = 18, 20, 24
-
-            elif role == "vibro_hilt":
-                # Titanium chassis with cyan LED status light
-                r, g, b = 65, 70, 78
-                if dx == box_w // 2 and dy == box_h // 2:
-                    r, g, b = 40, 240, 255 # cyan power indicator LED
-                elif is_edge: r, g, b = 38, 40, 46
-
-            elif role == "shield_plate":
-                # Heavy ballistic shield armor face
-                col = palette[0]
-                r, g, b = col[0] - 8, col[1] - 8, col[2] - 8
-                # Heavy perimeter rivets
-                if (dx in (1, box_w - 2)) and (dy in (1, box_h - 2)):
-                    r, g, b = 180, 190, 205 # steel rivet
-                elif is_edge: r, g, b = r - 24, g - 24, b - 24
-
-            elif role == "shield_glass":
-                # Ballistic reinforced viewport with gasket frame
-                if is_edge:
-                    r, g, b = 25, 27, 30 # rubber gasket frame
-                else:
-                    r, g, b = 90, 160, 185 # cyan ballistic glass with wire mesh
-
-            elif role == "stun_prongs":
-                # High-voltage arc discharge electrodes
-                if (dx + dy) % 2 == 0:
-                    r, g, b = 70, 200, 255 # electric blue zap
-                else:
-                    r, g, b = 220, 245, 255 # white spark
-                if is_edge: r, g, b = 35, 110, 200
-
-            elif role == "chrome_shaft":
-                # Mirror-finish polished chrome steel
-                base = 190 + int(math.sin(dx * 1.5) * 45)
-                r, g, b = base, base + 2, base + 6
-
-            elif role == "graphite":
-                # Woven graphite composite rod blank
-                base = 45 + ((dx + dy) % 2) * 12
-                r, g, b = base, base, base
-
-            else:
-                r, g, b = 50, 54, 60
-
-            set_pixel(px, py, r, g, b, 255)
+STENCIL = {   # short stencil per weapon, painted on the biggest painted side face
+    "weapon_assault_rifle": "20", "weapon_sniper_amr": "20MM", "weapon_machine_gun": "12.7", "weapon_minigun_m134": "762",
+    "weapon_rocket_launcher": "HE", "weapon_rpg7_heavy": "PG7", "weapon_battle_rifle": "762", "weapon_autocannon_30mm": "30MM",
+    "weapon_shotgun_breacher": "8GA", "weapon_grenade_launcher": "40", "weapon_recoilless_rifle": "84", "weapon_atgm_guided": "AT4",
+    "weapon_flamethrower": "FLAM", "weapon_vibro_blade": "V2", "weapon_antitank_rifle": "20", "weapon_pile_bunker": "PB1",
+    "weapon_smoke_launcher": "SMK",
+}
+FONT = {  # 3x5 stencil glyphs, rows top->bottom
+    "0": ("111", "101", "101", "101", "111"), "1": ("010", "110", "010", "010", "111"), "2": ("111", "001", "111", "100", "111"),
+    "3": ("111", "001", "011", "001", "111"), "4": ("101", "101", "111", "001", "001"), "5": ("111", "100", "111", "001", "111"),
+    "6": ("111", "100", "111", "101", "111"), "7": ("111", "001", "010", "010", "010"), "8": ("111", "101", "111", "101", "111"),
+    "9": ("111", "101", "111", "001", "111"), ".": ("000", "000", "000", "000", "010"), "A": ("010", "101", "111", "101", "101"),
+    "E": ("111", "100", "110", "100", "111"), "F": ("111", "100", "110", "100", "100"), "G": ("111", "100", "101", "101", "111"),
+    "H": ("101", "101", "111", "101", "101"), "K": ("101", "110", "100", "110", "101"), "L": ("100", "100", "100", "100", "111"),
+    "M": ("101", "111", "111", "101", "101"), "P": ("111", "101", "111", "100", "100"), "S": ("111", "100", "111", "001", "111"),
+    "T": ("111", "010", "010", "010", "010"), "V": ("101", "101", "101", "101", "010"), "B": ("110", "101", "110", "101", "110"),
+}
+PAINTED = {"paint", "ammo_can", "fuel", "warhead"}
+WORN_EDGE = {"paint", "ammo_can", "fuel", "warhead", "gunmetal", "mag", "polymer", "wood", "optic", "blued"}
 
 
-# ==================== 5. MAIN GENERATION PIPELINE ====================
+def h(x, y, s=0):
+    """Deterministic pixel hash in 0..1."""
+    n = (x * 374761393 + y * 668265263 + s * 2147483647) & 0xFFFFFFFF
+    n = ((n ^ (n >> 13)) * 1274126177) & 0xFFFFFFFF
+    return ((n ^ (n >> 16)) & 0xFFFF) / 65535.0
+
+
+def base_color(mat, fx, fy, fw, fh, pal, seed):
+    """Material colour at face-local pixel (fx, fy) of an fw x fh face."""
+    n = h(fx, fy, seed) - 0.5
+    if mat == "gunmetal":
+        c = 54 + n * 10
+        return c, c + 3, c + 7
+    if mat == "blued":
+        c = 40 + n * 6 + (4 if fy % 3 == 0 else 0)
+        return c, c + 4, c + 14
+    if mat == "steel":
+        c = 128 + n * 14 + 10 * math.sin(fx * 0.9 + seed)
+        return c, c + 4, c + 9
+    if mat == "chrome":
+        c = 200 + 40 * math.sin(fx * 1.3) + n * 10
+        return c, c + 2, c + 6
+    if mat == "heat":
+        t = fx / max(1, fw - 1)
+        r, g, b = (70 + 70 * t, 62 + 30 * t, 70 - 20 * t) if t < 0.6 else (60, 66, 110)
+        soot = 28 if t > 0.85 else 0
+        return r + n * 10 - soot, g + n * 10 - soot, b + n * 10 - soot
+    if mat in ("paint", "ammo_can", "fuel", "warhead"):
+        if mat == "fuel":
+            col = (150, 38, 30)
+        elif mat == "warhead":
+            col = (78, 86, 58)
+        else:
+            blot = int(h(fx // 3, fy // 3, seed + 7) * 5)   # chunky camo blots
+            col = pal[0] if blot < 3 else pal[1 if blot == 3 else 2]
+            if mat == "ammo_can":
+                col = tuple(v - 12 for v in col)
+        r, g, b = col
+        if h(fx, fy, seed + 3) > 0.94:                      # paint chips down to bare steel
+            return 112, 112, 108
+        return r + n * 8, g + n * 8, b + n * 8
+    if mat == "mag":
+        c = 46 + n * 8 + (14 if fy % 3 == 0 else 0)
+        return c, c + 2, c + 5
+    if mat == "wood":
+        grain = 18 * math.sin(fy * 1.7 + 3 * math.sin(fx * 0.35 + seed))
+        knot = -30 if h(fx // 2, fy // 2, seed + 11) > 0.97 else 0
+        return 122 + grain + knot, 72 + grain * 0.6 + knot, 38 + grain * 0.3 + knot
+    if mat == "polymer":
+        c = 34 + (6 if h(fx, fy, seed) > 0.6 else 0)
+        return c, c, c + 2
+    if mat == "rubber":
+        c = 24 + (8 if (fx + fy) % 3 == 0 else 0)
+        return c, c, c
+    if mat == "fabric":
+        c = 8 if (fx + fy) % 2 == 0 else -6
+        return 92 + c + n * 8, 86 + c + n * 8, 62 + c + n * 6
+    if mat == "brass":
+        c = n * 16 + (24 if fy == 0 else 0)
+        return 206 + c, 164 + c, 64 + c * 0.5
+    if mat == "copper":
+        return 182 + n * 14, 102 + n * 10, 52 + n * 6
+    if mat == "rail":
+        return (66, 70, 78) if fx % 3 < 2 else (22, 24, 28)
+    if mat == "optic":
+        c = 28 + (10 if fx % 4 == 0 else 0)
+        return c, c + 2, c + 4
+    if mat in ("lens", "lens_g"):
+        cx, cy = fw / 2.0, fh / 2.0
+        if abs(fx - cx) < 0.8 and abs(fy - cy) < 0.8:
+            return (255, 50, 40) if mat == "lens" else (255, 230, 60)
+        if abs(fx - fy) <= 0:
+            return (190, 245, 255) if mat == "lens" else (170, 255, 210)
+        return (34, 110, 190) if mat == "lens" else (30, 150, 90)
+    if mat == "hazard":
+        return (240, 196, 24) if ((fx + fy) // 2) % 2 == 0 else (26, 28, 30)
+    if mat == "perforated":
+        if fx % 2 == 1 and fy % 2 == 1:
+            return 14, 14, 16
+        c = 58 + n * 10
+        return c, c + 3, c + 7
+    if mat == "shells":
+        return (200, 160, 60) if fy >= fh - max(1, fh // 3) else (176 + n * 20, 30, 28)
+    if mat == "smoke":
+        return (70, 140, 70) if fy == fh // 2 else (190 + n * 10, 192 + n * 10, 186 + n * 10)
+    if mat == "ember":
+        return (255, 170 + n * 60, 40)
+    if mat == "glow":
+        return (60, 230, 255) if fx % 4 else (200, 250, 255)
+    if mat == "blade_edge":
+        return (225, 230, 236) if fy == 0 else (178 + n * 12, 184 + n * 12, 192 + n * 12)
+    if mat == "shield_plate":
+        r, g, b = (v - 8 for v in pal[0])
+        if fx % 8 == 1 and fy % 8 == 1:
+            return 180, 190, 205
+        return r + n * 8, g + n * 8, b + n * 8
+    if mat == "shield_glass":
+        return (90, 160, 185) if (fx + fy) % 4 else (150, 200, 215)
+    if mat == "stun":
+        return (70, 200, 255) if (fx + fy) % 2 == 0 else (220, 245, 255)
+    if mat == "graphite":
+        c = 45 + ((fx + fy) % 2) * 12
+        return c, c, c
+    return 60, 62, 66
+
+
+def faces(u, v, sx, sy, sz):
+    """Bedrock box-UV face rects (x, y, w, h, kind)."""
+    return [(u + sz, v, sx, sz, "top"), (u + sz + sx, v, sx, sz, "bottom"),
+            (u, v + sz, sz, sy, "side"), (u + sz, v + sz, sx, sy, "front"),
+            (u + sz + sx, v + sz, sz, sy, "side"), (u + 2 * sz + sx, v + sz, sx, sy, "back")]
+
+
+SHADE = {"top": 20, "bottom": -26, "side": -6, "front": 0, "back": -10}
+
+
+def uv_dims(size):
+    """GeckoLib box UV uses floor(size) for the face layout (BakedModelFactory.buildQuads)."""
+    return tuple(int(math.floor(s + 1e-6)) for s in size)
+
+
+def patch_size(size):
+    """Texture patch reserved for a cube; thin (< 1 px) sides still get a 1 px strip."""
+    sx, sy, sz = (max(1, d) for d in uv_dims(size))
+    return 2 * (sx + sz), sz + sy
+
+
+def paint_cube(raw, tw, th, u, v, size, mat, pal, seed, stencil=None):
+    sx, sy, sz = uv_dims(size)
+
+    def put(x, y, c):
+        if 0 <= x < tw and 0 <= y < th:
+            i = (y * tw + x) * 4
+            raw[i:i + 4] = bytes((max(0, min(255, int(c[0]))), max(0, min(255, int(c[1]))), max(0, min(255, int(c[2]))), 255))
+
+    # fill the whole patch plus its gutter first: degenerate (0 px) faces sample the patch edge
+    pw, ph = patch_size(size)
+    for y in range(v - 1, v + ph + 1):
+        for x in range(u - 1, u + pw + 1):
+            put(x, y, base_color(mat, x - u, y - v, pw, ph, pal, seed))
+
+    for fi, (fx0, fy0, fw, fh, kind) in enumerate(faces(u, v, sx, sy, sz)):
+        if fw <= 0 or fh <= 0:
+            continue
+        for fy in range(fh):
+            for fx in range(fw):
+                r, g, b = base_color(mat, fx, fy, fw, fh, pal, seed + fi)
+                s = SHADE[kind]
+                if kind in ("side", "front", "back") and fh > 2:
+                    s -= 10 * fy / (fh - 1)                     # grime collects toward the bottom
+                if mat in WORN_EDGE and fw >= 3 and fh >= 3 and (fx in (0, fw - 1) or fy in (0, fh - 1)):
+                    if h(fx, fy, seed + 5) > 0.35:              # rubbed-through edges
+                        r, g, b = r * 0.5 + 60, g * 0.5 + 60, b * 0.5 + 62
+                put(fx0 + fx, fy0 + fy, (r + s, g + s, b + s))
+        if mat == "warhead" and kind in ("side", "front", "back") and fh >= 3:
+            for fx in range(fw):
+                put(fx0 + fx, fy0 + fh // 2, (232, 196, 40))
+        if mat == "ammo_can" and kind in ("side", "front") and fh >= 4:
+            for fx in range(fw):
+                put(fx0 + fx, fy0 + 1, (220, 184, 40))           # yellow HE band
+        if stencil and kind in ("side", "front") and mat in PAINTED:
+            text_w = 4 * len(stencil) - 1
+            if fw >= text_w + 2 and fh >= 7:
+                ox, oy = fx0 + (fw - text_w) // 2, fy0 + (fh - 5) // 2 + (1 if mat == "ammo_can" else 0)
+                ink = (226, 222, 196) if pal[0][0] < 160 else (40, 40, 38)
+                for k, ch in enumerate(stencil):
+                    for gy, row in enumerate(FONT.get(ch, FONT["0"])):
+                        for gx, bit in enumerate(row):
+                            if bit == "1" and h(gx + k, gy, seed) > 0.12:   # sprayed, slightly broken stencil
+                                put(ox + 4 * k + gx, oy + gy, ink)
+
+
+# ==================== 4. MAIN ====================
 
 def main():
     print(f"Loading geometry from {GEO_PATH}...")
     with open(GEO_PATH, "r", encoding="utf-8") as f:
         geo = json.load(f)
+    with open(MATERIALS_PATH, "r", encoding="utf-8") as f:
+        materials = json.load(f)
 
     bones = geo["minecraft:geometry"][0]["bones"]
-    weapon_bones = [b for b in bones if "weapon" in b.get("name", "") and len(b.get("cubes", [])) > 0]
+    weapon_bones = [b for b in bones if b["name"] in materials and b.get("cubes")]
+    missing = [b["name"] for b in bones if "weapon" in b["name"] and b.get("cubes") and b["name"] not in materials]
+    assert not missing, f"weapon bones without materials (rerun tools/build_exoframe_geo.py): {missing}"
     print(f"Found {len(weapon_bones)} weapon bones with active geometry cubes.")
 
-    # Shelf pack all weapon cubes in the free Y=736..855 band
-    packer = ShelfPacker(start_x=0, start_y=736, max_width=1024, max_height=288)
-
-    assignments = [] # (weapon_name, cube_index, (uv_x, uv_y), (box_w, box_h), role)
-
+    packer = ShelfPacker(WEAPON_REGIONS)
+    assignments = []   # (bone, idx, (u, v), size, material, stencil?)
     for b in weapon_bones:
-        wname = b["name"]
+        mats = materials[b["name"]]
+        assert len(mats) == len(b["cubes"]), f"{b['name']}: {len(mats)} materials for {len(b['cubes'])} cubes"
+        # the stencil goes on the painted cube with the biggest side face
+        painted = [i for i, m in enumerate(mats) if m in PAINTED]
+        st_idx = max(painted, key=lambda i: b["cubes"][i]["size"][1] * b["cubes"][i]["size"][2], default=None)
         for idx, cube in enumerate(b["cubes"]):
-            sz = cube["size"]
-            orig = cube["origin"]
-            w = int(2 * (sz[0] + sz[2]) + 0.999)
-            h = int(sz[1] + sz[2] + 0.999)
-            uv_pos = packer.pack(w, h)
-            role = classify_cube(wname, idx, sz, orig)
+            uv = packer.pack(*patch_size(cube["size"]))
+            cube["uv"] = [uv[0], uv[1]]
+            assignments.append((b["name"], idx, uv, cube["size"], mats[idx], STENCIL.get(b["name"]) if idx == st_idx else None))
 
-            # Assign new UV to cube in geo
-            cube["uv"] = [uv_pos[0], uv_pos[1]]
-            assignments.append((wname, idx, uv_pos, (w, h), role))
-
-    print(f"Packed {len(assignments)} weapon cubes. Packer reached Y={packer.cur_y + packer.row_h}.")
-
-    # Save updated geo.json
+    r, y = packer.used()
+    print(f"Packed {len(assignments)} weapon cubes (region {r}, y {y}).")
     with open(GEO_PATH, "w", encoding="utf-8") as f:
         json.dump(geo, f, indent=2)
-    print(f"Updated {GEO_PATH} with distinct non-overlapping weapon UVs.")
 
-    # Paint textures
     for fname, ctype in TEXTURES:
         tpath = os.path.join(TEX_DIR, fname)
         if not os.path.exists(tpath):
             print(f"Warning: {tpath} not found, skipping.")
             continue
-        print(f"Painting weapon textures into {fname} ({ctype} theme)...")
         tw, th, raw = decode_png(tpath)
-
-        for wname, idx, (ux, uy), (bw, bh), role in assignments:
-            paint_cube_texture(raw, tw, th, ux, uy, bw, bh, role, ctype)
-
+        pal = get_camo_palette(ctype)
+        for k, (wname, idx, (ux, uy), size, mat, stencil) in enumerate(assignments):
+            paint_cube(raw, tw, th, ux, uy, size, mat, pal, seed=k * 31 + idx, stencil=stencil)
         encode_png(tpath, tw, th, raw)
-        print(f"  Successfully wrote {tpath} ({tw}x{th})")
-
-    print("\nAll weapon UVs and textures generated successfully!")
+        print(f"  wrote {tpath} ({ctype})")
+    print("All weapon UVs and textures generated.")
 
 
 if __name__ == "__main__":

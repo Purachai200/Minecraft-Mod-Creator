@@ -206,6 +206,29 @@ anims[P + "walk"] = gait(1.0, 3.2, 2.4, 0.6, 0.5, 0.35, 10.0, 14.0, 2.5)
 anims[P + "sprint"] = gait(0.6, 4.6, 3.4, 0.45, 0.9, 0.6, 12.0, 30.0, 4.0)
 anims[P + "crouch_walk"] = gait(1.2, 2.4, 1.6, 0.62, 6.0, 0.25, 13.0, 8.0, 1.5)
 
+# Roller dash (VOTOMS skate): crouched to the same 6px seat drop as crouch (so the pilot/canopy lock still matches),
+# feet planted and staggered (left leads), no stepping, body leaned into the run with a slow carve sway.
+dash = clip(1.6)
+for i in range(9):
+    u = i / 8
+    t = u * 1.6
+    w = math.sin(2 * math.pi * u)
+    L = legs_at(-6.0, (GROUND_ANKLE_Y, REST_ANKLE_Z - 2.6), (GROUND_ANKLE_Y, REST_ANKLE_Z + 2.2))
+    key(dash, "pelvis", "position", t, [0, -6.0 - 0.15 * (0.5 + 0.5 * w), 0])
+    key(dash, "pelvis", "rotation", t, [0, -6, 2.5 * w])
+    for side in ("left", "right"):
+        th, k, f = L[side]
+        key(dash, f"{side}_thigh", "rotation", t, [th, 0, 0])
+        key(dash, f"{side}_shin", "rotation", t, [k, 0, 0])
+        key(dash, f"{side}_foot", "rotation", t, [f, 0, 0])
+    key(dash, "torso", "rotation", t, [18.0 + 0.8 * w, 6, -2.5 * w])
+    key(dash, "head", "rotation", t, [-12.0, -6, 0])
+    key(dash, "left_arm", "rotation", t, [-18 - 2 * w, 0, -10])
+    key(dash, "right_arm", "rotation", t, [12 + 2 * w, 0, 8])
+    key(dash, "left_forearm", "rotation", t, [-24, 0, 0])
+    key(dash, "right_forearm", "rotation", t, [-14, 0, 0])
+anims[P + "roller_dash"] = dash
+
 # Jump: load (crouch), push off, tuck in the air, reach for landing.
 jump = clip(0.6, loop=False)
 for t, py, al, ar in ((0.0, -3.0, (GROUND_ANKLE_Y, 2.6), (GROUND_ANKLE_Y, 2.6)),
@@ -262,5 +285,5 @@ for a in anims.values():
     for stale in ("left_calf", "right_calf"):
         a["bones"].pop(stale, None)
 
-json.dump({"format_version": "1.8.0", "animations": anims}, open(ANIM, "w"), indent=1)
+json.dump({"format_version": "1.8.0", "animations": anims}, open(ANIM, "w"), indent=2)
 print("animations:", ", ".join(k.split(".")[-1] for k in anims))

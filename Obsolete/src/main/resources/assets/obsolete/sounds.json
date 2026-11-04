@@ -249,5 +249,19 @@
       "obsolete:weapon_impact_metal_2",
       "obsolete:exoframe_servo_1"
     ]
+  },
+  "exoframe_roller_dash": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_roller_dash",
+    "sounds": [
+      "obsolete:exoframe_roller_dash"
+    ]
+  },
+  "exoframe_hydro_jet": {
+    "category": "player",
+    "subtitle": "subtitles.obsolete.exoframe_hydro_jet",
+    "sounds": [
+      "obsolete:exoframe_hydro_jet"
+    ]
   }
 }

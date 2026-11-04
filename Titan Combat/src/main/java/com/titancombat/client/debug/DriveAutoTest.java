@@ -290,6 +290,59 @@ final class DriveAutoTest {
         }));
         then(5, mc -> ClientAutoTest.aimCameraAt(mc, bx - 60, by + 2, bz + 25, 14, 15, 120));
         then(20, mc -> ClientAutoTest.shot(mc, "exo_on_chinook_sling"));
+
+        // ---- Exo dock is deliberate: holding the wrench, or looking away, Shift just gets the pilot out
+        Consumer<Minecraft> boardFreshExo = mc -> server(mc, (p, l) -> {
+            EntityType<?> exoType = BuiltInRegistries.ENTITY_TYPE.get(new ResourceLocation("obsolete", "exoframe"));
+            if (!BuiltInRegistries.ENTITY_TYPE.containsKey(new ResourceLocation("obsolete", "exoframe"))) return;
+            p.stopRiding();
+            var apc = spawn(l, "dock_apc", ModEntities.ARMORED_APC.get(), bx - 40, by + 1, bz + 25, 0.0F);
+            Entity exo = exoType.create(l);
+            exo.moveTo(bx - 40, by + 1, bz + 29, 180.0F, 0.0F);
+            l.addFreshEntity(exo);
+            IDS.put("exo2", exo.getId());
+            p.startRiding(exo, true);
+        });
+        then(10, boardFreshExo);
+        then(10, mc -> {
+            mc.player.setYRot(0.0F); // facing +Z, away from the APC at -Z
+            mc.player.setXRot(0.0F);
+            mc.options.keyShift.setDown(true);
+        });
+        then(6, mc -> mc.options.keyShift.setDown(false));
+        then(10, mc -> server(mc, (p, l) -> {
+            var exo = get(l, "exo2");
+            if (exo != null) check("no_dock_when_looking_away", exo.getVehicle() == null && p.getVehicle() == null, exo.getVehicle());
+            if (exo != null) exo.discard();
+        }));
+        then(10, boardFreshExo);
+        then(10, mc -> server(mc, (p, l) -> {
+            p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.ItemStack(com.titancombat.item.ModItems.VEHICLE_WRENCH.get()));
+        }));
+        then(5, mc -> {
+            mc.player.setYRot(180.0F); // looking straight at the APC
+            mc.player.setXRot(15.0F);
+            mc.options.keyShift.setDown(true);
+        });
+        then(6, mc -> mc.options.keyShift.setDown(false));
+        then(10, mc -> server(mc, (p, l) -> {
+            var exo = get(l, "exo2");
+            if (exo != null) check("no_dock_when_holding_wrench", exo.getVehicle() == null && p.getVehicle() == null, exo.getVehicle());
+            if (exo != null) exo.discard();
+        }));
+        // ---- Wrench on foot: Shift + right-click packs the vehicle into the inventory, never boards it
+        then(5, mc -> server(mc, (p, l) -> {
+            var apc = get(l, "dock_apc");
+            p.stopRiding();
+            p.getInventory().clearContent();
+            p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.ItemStack(com.titancombat.item.ModItems.VEHICLE_WRENCH.get()));
+            p.teleportTo(l, apc.getX(), apc.getY(), apc.getZ() + 3.0D, 180.0F, 10.0F);
+            p.setShiftKeyDown(true);
+            p.interactOn(apc, net.minecraft.world.InteractionHand.MAIN_HAND); // the same call a real right-click makes
+            p.setShiftKeyDown(false);
+            boolean packed = p.getInventory().contains(new net.minecraft.world.item.ItemStack(com.titancombat.item.ModItems.ARMORED_APC.get()));
+            check("wrench_packs_vehicle", packed && !apc.isAlive() && p.getVehicle() == null, "packed=" + packed + " alive=" + apc.isAlive() + " riding=" + p.getVehicle());
+        }));
         then(10, mc -> {
             TitanCombatMod.LOGGER.info("[autotest] Completed drive test suite");
             mc.stop();

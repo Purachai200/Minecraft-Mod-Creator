@@ -279,6 +279,12 @@ public final class ExoframeVariantRegistry {
                 List.of("backpack_radar"), Collections.emptyList(), false,
                 new SensorProfile("TACTICAL SEARCH RADAR", "PHASED-ARRAY ACTIVE PULSER", 0xFF00FF66, 0xFF00FF66));
 
+        // Mobility equipment: roller dash pods on the heels (UTILITY), hydro-jet pack on the back (BACK)
+        registerArmor(ModItems.MODULE_ROLLER_DASH.get(), ExoframeArmorSlot.UTILITY, "Mobility",
+                List.of("roller_left_unit", "roller_right_unit"), Collections.emptyList(), false, null);
+        registerArmor(ModItems.MODULE_HYDRO_JET.get(), ExoframeArmorSlot.BACK, "Mobility",
+                List.of("backpack_hydrojet"), Collections.emptyList(), false, null);
+
         registerSensorProfile(ModItems.MODULE_NIGHT_VISION_OPTIC.get(),
                 new SensorProfile("CERBERUS 360° DOME", "FLIR THERMAL PASS-THROUGH", 0xFF00FF66, 0xFF00FF66));
 
@@ -312,6 +318,9 @@ public final class ExoframeVariantRegistry {
         registerWeapon(ModItems.EXOFRAME_ATGM_GUIDED.get(), "weapon_atgm_guided", ExoframeArmIK.Hold.ATGM_GUIDED, false, false);
         registerWeapon(ModItems.EXOFRAME_FLAMETHROWER.get(), "weapon_flamethrower", ExoframeArmIK.Hold.FLAMETHROWER, false, false);
         registerWeapon(ModItems.EXOFRAME_VIBRO_BLADE.get(), "weapon_vibro_blade", ExoframeArmIK.Hold.VIBRO_BLADE, true, false);
+        registerWeapon(ModItems.EXOFRAME_ANTITANK_RIFLE.get(), "weapon_antitank_rifle", ExoframeArmIK.Hold.SNIPER, false, false);
+        registerWeapon(ModItems.EXOFRAME_PILE_BUNKER.get(), "weapon_pile_bunker", ExoframeArmIK.Hold.VIBRO_BLADE, true, false);
+        registerWeapon(ModItems.EXOFRAME_SMOKE_LAUNCHER.get(), "weapon_smoke_launcher", ExoframeArmIK.Hold.GRENADE_LAUNCHER, false, false);
 
         // Role Weapons & Equipment
         registerWeapon(ModItems.EXOFRAME_RIOT_SHIELD.get(), "weapon_riot_shield", ExoframeArmIK.Hold.RIFLE, false, true);

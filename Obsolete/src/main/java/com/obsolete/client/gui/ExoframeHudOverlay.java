@@ -219,6 +219,13 @@ public class ExoframeHudOverlay {
                 renderFlightBoosterWidget(graphics, font, rightX, currentRightY, exoframe, mc.player);
                 currentRightY -= 56;
             }
+            for (var kind : com.obsolete.item.ExoframeMobilityItem.Kind.values()) {
+                ItemStack mob = exoframe.getMobilityStack(kind);
+                if (!mob.isEmpty()) {
+                    renderMobilityWidget(graphics, font, rightX, currentRightY, exoframe, mob, kind);
+                    currentRightY -= 44;
+                }
+            }
             if (exoframe.hasCloakAbility() || exoframe.isCloaked()) {
                 renderCloakWidget(graphics, font, rightX, currentRightY, exoframe);
                 currentRightY -= 48;
@@ -589,6 +596,25 @@ public class ExoframeHudOverlay {
         g.fill(x, y + 36, x + barW, y + 36 + barH, 0xFF101B2B);
         int fill = Math.round(barW * ((float) curFE / maxFE));
         g.fill(x, y + 36, x + fill, y + 36 + barH, feCol);
+    }
+
+    // ==================== MOBILITY GEAR (ROLLER DASH / HYDRO-JET) ====================
+    private static void renderMobilityWidget(GuiGraphics g, Font font, int x, int y, ExoframeEntity exoframe, ItemStack stack,
+                                             com.obsolete.item.ExoframeMobilityItem.Kind kind) {
+        int w = 170;
+        g.fill(x - 4, y - 4, x + w, y + 36, 0xDD0E1520);
+        g.renderOutline(x - 4, y - 4, w + 4, 40, 0xFF00AAFF);
+        int cur = com.obsolete.item.ExoframeMobilityItem.getEnergy(stack);
+        float ratio = (float) cur / kind.maxEnergy;
+        boolean on = kind == com.obsolete.item.ExoframeMobilityItem.Kind.ROLLER_DASH ? exoframe.isRollerDashing() : exoframe.isHydroJetActive();
+        String status = kind == com.obsolete.item.ExoframeMobilityItem.Kind.ROLLER_DASH
+                ? (on ? "ROLLERS: DASH" : "ROLLERS: STOWED [C+W]")
+                : (on ? "HYDRO-JET: PROPULSION" : "HYDRO-JET: STANDBY");
+        g.drawString(font, status, x, y, cur < kind.drain ? 0xFFFF2222 : (on ? 0xFF00FFFF : 0xAAFFFFFF), false);
+        int feCol = ratio > 0.5F ? 0xFF00FF88 : (ratio > 0.2F ? 0xFFFFCC00 : 0xFFFF2222);
+        g.drawString(font, String.format("⚡ FE: %,d / %,d", cur, kind.maxEnergy), x, y + 12, feCol, false);
+        g.fill(x, y + 24, x + 158, y + 28, 0xFF101B2B);
+        g.fill(x, y + 24, x + Math.round(158 * ratio), y + 28, feCol);
     }
 
     // ==================== TACTICAL OPTICAL CAMOUFLAGE STATUS ====================

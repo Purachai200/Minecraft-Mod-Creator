@@ -264,6 +264,14 @@ public class ModItems {
             ITEMS.register("module_drone_lifter", () -> new ExoframeFlightBoosterItem(
                     new Item.Properties().stacksTo(1), ExoframeFlightBoosterItem.BoosterType.DRONE_LIFTER));
 
+    public static final RegistryObject<Item> MODULE_ROLLER_DASH =
+            ITEMS.register("module_roller_dash", () -> new ExoframeMobilityItem(
+                    new Item.Properties(), ExoframeMobilityItem.Kind.ROLLER_DASH));
+
+    public static final RegistryObject<Item> MODULE_HYDRO_JET =
+            ITEMS.register("module_hydro_jet", () -> new ExoframeMobilityItem(
+                    new Item.Properties(), ExoframeMobilityItem.Kind.HYDRO_JET));
+
     public static final RegistryObject<Item> MODULE_ACTIVE_CLOAK =
             ITEMS.register("module_active_cloak", () -> new Item(new Item.Properties().stacksTo(1)));
 
@@ -320,6 +328,16 @@ public class ModItems {
 
     public static final RegistryObject<Item> EXOFRAME_VIBRO_BLADE =
             ITEMS.register("exoframe_vibro_blade", () -> new ExoframeVibroBladeItem(new Item.Properties()));
+
+    // ==================== 9B2. FIELD WEAPONS (v1.5 rebuild) ====================
+    public static final RegistryObject<Item> EXOFRAME_ANTITANK_RIFLE =
+            ITEMS.register("exoframe_antitank_rifle", () -> new ExoframeAntiTankRifleItem(new Item.Properties()));
+
+    public static final RegistryObject<Item> EXOFRAME_PILE_BUNKER =
+            ITEMS.register("exoframe_pile_bunker", () -> new ExoframePileBunkerItem(new Item.Properties()));
+
+    public static final RegistryObject<Item> EXOFRAME_SMOKE_LAUNCHER =
+            ITEMS.register("exoframe_smoke_launcher", () -> new ExoframeSmokeLauncherItem(new Item.Properties()));
 
     // ==================== 9C. ROLE VARIANTS ITEMS ====================
     public static final RegistryObject<Item> ARMOR_POLICE_HEAD =

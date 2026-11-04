@@ -1,0 +1,21 @@
+{
+  "type": "obsolete:mech_assembly",
+  "ingredients": [
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "obsolete:reinforced_steel_plate"
+    },
+    {
+      "item": "minecraft:spyglass"
+    },
+    {
+      "item": "obsolete:servo_motor"
+    }
+  ],
+  "result": {
+    "item": "obsolete:exoframe_antitank_rifle",
+    "count": 1
+  }
+}
