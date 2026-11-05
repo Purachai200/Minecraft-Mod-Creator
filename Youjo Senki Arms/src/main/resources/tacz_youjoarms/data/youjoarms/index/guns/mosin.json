@@ -1,0 +1,7 @@
+{
+  "name": "youjoarms.gun.mosin.name",
+  "display": "youjoarms:mosin_display",
+  "data": "youjoarms:mosin_data",
+  "tooltip": "youjoarms.gun.mosin.desc",
+  "type": "sniper"
+}

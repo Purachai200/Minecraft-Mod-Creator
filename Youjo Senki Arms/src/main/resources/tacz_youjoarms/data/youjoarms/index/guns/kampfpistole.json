@@ -1,0 +1,7 @@
+{
+  "name": "youjoarms.gun.kampfpistole.name",
+  "display": "youjoarms:kampfpistole_display",
+  "data": "youjoarms:kampfpistole_data",
+  "tooltip": "youjoarms.gun.kampfpistole.desc",
+  "type": "rpg"
+}

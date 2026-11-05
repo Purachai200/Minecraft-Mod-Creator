@@ -1,0 +1,29 @@
+{
+  "tracer_color": "#00E5FF",
+  "model": "tacz:ammo/308",
+  "texture": "tacz:ammo/uv/308",
+  "slot": "youjoarms:ammo/slot/7_92x57_elenium",
+  "shell": {
+    "model": "tacz:shell/308_shell",
+    "texture": "tacz:shell/308_shell"
+  },
+  "transform": {
+    "scale": {
+      "thirdperson": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "ground": [
+        0.3,
+        0.3,
+        0.3
+      ],
+      "fixed": [
+        0.6,
+        0.6,
+        0.6
+      ]
+    }
+  }
+}

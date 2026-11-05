@@ -1,0 +1,126 @@
+{
+  "ammo": "youjoarms:13mm",
+  "bolt": "manual_action",
+  "ammo_amount": 1,
+  "extended_mag_ammo_amount": [
+    1,
+    1,
+    1
+  ],
+  "rpm": 25,
+  "bullet": {
+    "life": 2.0,
+    "bullet_amount": 1,
+    "damage": 65,
+    "tracer_count_interval": 0,
+    "extra_damage": {
+      "armor_ignore": 0.75,
+      "head_shot_multiplier": 2.5,
+      "damage_adjust": [
+        {
+          "distance": 120,
+          "damage": 65
+        },
+        {
+          "distance": 250,
+          "damage": 58
+        },
+        {
+          "distance": "infinite",
+          "damage": 50
+        }
+      ]
+    },
+    "speed": 350,
+    "gravity": 0.05,
+    "knockback": 1.2,
+    "friction": 0.01,
+    "ignite": false,
+    "pierce": 3
+  },
+  "reload": {
+    "type": "magazine",
+    "feed": {
+      "empty": 3.0
+    },
+    "cooldown": {
+      "empty": 3.6
+    }
+  },
+  "draw_time": 0.7,
+  "put_away_time": 0.6,
+  "aim_time": 0.35,
+  "sprint_time": 0.4,
+  "bolt_action_time": 1.8,
+  "weight": 17.0,
+  "movement_speed": {
+    "base": -0.15,
+    "aim": -0.7,
+    "reload": -0.4
+  },
+  "crawl_recoil_multiplier": 0.4,
+  "fire_mode": [
+    "semi"
+  ],
+  "recoil": {
+    "pitch": [
+      {
+        "time": 0,
+        "value": [
+          8.0,
+          8.0
+        ]
+      },
+      {
+        "time": 0.15,
+        "value": [
+          4.0,
+          4.0
+        ]
+      },
+      {
+        "time": 0.4,
+        "value": [
+          -1.0,
+          -1.0
+        ]
+      },
+      {
+        "time": 0.8,
+        "value": [
+          0,
+          0
+        ]
+      }
+    ],
+    "yaw": [
+      {
+        "time": 0,
+        "value": [
+          -1.0,
+          1.0
+        ]
+      },
+      {
+        "time": 0.3,
+        "value": [
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "inaccuracy": {
+    "stand": 4.5,
+    "move": 7.0,
+    "sneak": 2.0,
+    "lie": 0.2,
+    "aim": 0.05
+  },
+  "allow_attachment_types": [
+    "extended_mag",
+    "muzzle",
+    "scope"
+  ],
+  "exclusive_attachments": {}
+}

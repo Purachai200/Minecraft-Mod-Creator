@@ -1,0 +1,7 @@
+{
+  "name": "youjoarms.gun.lee_enfield.name",
+  "display": "youjoarms:lee_enfield_display",
+  "data": "youjoarms:lee_enfield_data",
+  "tooltip": "youjoarms.gun.lee_enfield.desc",
+  "type": "sniper"
+}

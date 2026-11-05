@@ -1,0 +1,7 @@
+{
+  "name": "youjoarms.gun.mp18.name",
+  "display": "youjoarms:mp18_display",
+  "data": "youjoarms:mp18_data",
+  "tooltip": "youjoarms.gun.mp18.desc",
+  "type": "submachine_gun"
+}

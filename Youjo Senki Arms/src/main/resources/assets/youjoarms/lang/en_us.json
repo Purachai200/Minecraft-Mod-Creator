@@ -1,0 +1,18 @@
+{
+  "youjoarms.gun.kar98k.name": "Karabiner 98k",
+  "youjoarms.gun.kar98k.desc": "Standard-issue Empire mage infantry bolt-action rifle chambered in 7.92x57mm Mauser.",
+  "youjoarms.gun.gewehr98.name": "Gewehr 98",
+  "youjoarms.gun.gewehr98.desc": "Long bolt-action service rifle.",
+  "youjoarms.gun.c96.name": "Mauser C96",
+  "youjoarms.gun.c96.desc": "Broomhandle semi-automatic pistol.",
+  "youjoarms.gun.mp18.name": "MP 18",
+  "youjoarms.gun.mp18.desc": "Early trench submachine gun.",
+  "youjoarms.gun.t_gewehr.name": "Mauser 1918 T-Gewehr",
+  "youjoarms.gun.t_gewehr.desc": "Massive anti-materiel rifle adapted for heavy long-range artillery formula bombardment.",
+  "youjoarms.ammo.7_92x57.name": "7.92×57mm Mauser",
+  "youjoarms.ammo.7_92x57_elenium.name": "7.92×57mm Elenium Infused",
+  "youjoarms.ammo.13mm.name": "13.2mm TuF Heavy Cartridge",
+  "key.youjoarms.category": "Youjo Senki Arms",
+  "key.youjoarms.cast": "Charge / Cast Formula",
+  "key.youjoarms.cycle_formula": "Cycle Formula"
+}

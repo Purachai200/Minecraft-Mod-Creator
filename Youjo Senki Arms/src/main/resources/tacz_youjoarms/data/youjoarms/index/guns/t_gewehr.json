@@ -1,0 +1,7 @@
+{
+  "name": "youjoarms.gun.t_gewehr.name",
+  "display": "youjoarms:t_gewehr_display",
+  "data": "youjoarms:t_gewehr_data",
+  "tooltip": "youjoarms.gun.t_gewehr.desc",
+  "type": "heavy_rifle"
+}
