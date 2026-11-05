@@ -1,6 +1,6 @@
-![Youjo Senki Arms](banner.png)
+![Arcane Infantry](banner.png)
 
-# Youjo Senki Arms
+# Arcane Infantry
 
 **Mage-infantry rifles and battle formulas for [TACZ](https://www.curseforge.com/minecraft/mc-mods/timeless-and-classics-zero).**
 
@@ -60,7 +60,7 @@ The guns accept attachments through TACZ's shared attachment tags, so **scopes, 
 | **V** | Cycle formulas |
 | Fire | Release a fully charged formula |
 
-Both keys can be rebound under *Controls → Youjo Senki Arms*.
+Both keys can be rebound under *Controls → Arcane Infantry*.
 
 ---
 

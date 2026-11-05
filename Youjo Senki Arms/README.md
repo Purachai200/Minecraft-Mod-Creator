@@ -1,4 +1,4 @@
-# Youjo Senki Arms (`youjoarms`)
+# Arcane Infantry (`youjoarms`)
 
 A standalone Forge 1.20.1 mod add-on for **TACZ (Timeless and Classics Zero)** that introduces WWI/WWII-era firearms with **mage-infantry formula casting** (inspired by anime aerial mage combat): glowing magic circles at the muzzle, colored streak tracers, and spell-infused munitions.
 

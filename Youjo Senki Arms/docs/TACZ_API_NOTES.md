@@ -1,6 +1,6 @@
 # TACZ API & Gun Pack Architecture Notes
 
-Documenting findings from inspecting `tacz-1.20.1-1.1.6-hotfix.jar` to guide `Youjo Senki Arms` (`youjoarms`).
+Documenting findings from inspecting `tacz-1.20.1-1.1.6-hotfix.jar` to guide `Arcane Infantry` (`youjoarms`).
 
 ---
 

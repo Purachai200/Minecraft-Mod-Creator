@@ -70,7 +70,7 @@ def logo():
     shadow.putalpha(gun.split()[3].filter(ImageFilter.GaussianBlur(6)))
     img.alpha_composite(shadow, ((400 - gun.width) // 2 + 4, (400 - gun.height) // 2 + 8))
     img.alpha_composite(gun, ((400 - gun.width) // 2, (400 - gun.height) // 2))
-    glow_text(img, (200, 352), "YOUJO ARMS", ImageFont.truetype(TITLE, 46), GOLD)
+    glow_text(img, (200, 352), "ARCANE INFANTRY", ImageFont.truetype(TITLE, 34), GOLD)
     return img.convert("RGB")
 
 
@@ -81,7 +81,7 @@ def banner():
     img.alpha_composite(tinted(SEAL, 420, GOLD, 0.35), (w - 640, 30))
     gun = gun_art("kar98k", 820, 300)
     img.alpha_composite(gun, (w - 860, 360 - gun.height))
-    glow_text(img, (90, 170), "YOUJO SENKI ARMS", ImageFont.truetype(TITLE, 92), GOLD, anchor="lm")
+    glow_text(img, (90, 170), "ARCANE INFANTRY", ImageFont.truetype(TITLE, 92), GOLD, anchor="lm")
     glow_text(img, (94, 262), "Mage-infantry rifles & battle formulas for TACZ", ImageFont.truetype(BODY, 40), (220, 230, 240), anchor="lm")
     glow_text(img, (94, 330), "13 WWI-era firearms  ·  7 stacked-circle formulas  ·  works with any TACZ attachment pack",
               ImageFont.truetype(BODY, 28), CYAN, anchor="lm", blur=4)
