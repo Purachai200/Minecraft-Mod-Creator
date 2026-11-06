@@ -4,6 +4,28 @@ All notable changes to the **Titan Combat** mod will be documented in this file.
 
 ---
 
+## [2.9.0] - 2026-11-06 (Frames, Arsenal & Config)
+### New mechs
+- **MP-07 Bulwark**: heavy mass-production frame built like a walking armoured vehicle (sloped glacis, sensor turret, smoke dischargers, power pack). Own deployment beacon.
+- **MP-05 Exo Frame**: mobile-suit inner frame that wears modular armour in 8 styles (Gundam / Titanfall inspired), tinted by the chosen armour theme, with fixed-colour trim (V-fins, vents, soles), skirt and foot armour.
+- **Titan Exo**: the inner frame wearing the real Titanfall titans as armour - Ion, Legion, Ronin, Northstar, Scorch, Monarch and Tone - mix and match per slot.
+- **MP-01 Trooper** rebuilt: head merged into an armoured cab with a visor slit, level MP-01 pauldrons, roll cage and exhaust stacks, plain worn olive paint.
+
+### Weapons & equipment
+- New weapon modules for every mech: **Arc Cannon**, **Heavy Scatter Cannon** (9 pellets), **Inferno Flamethrower** (short range, sets targets alight), **Grenade Launcher**, each with its own ammo.
+- New **MOD** accessory slot in the titan bay: Servo Overdrive (+35% speed), Reinforced Plating (-25% damage), Shield Capacitor (+50% shield), Nanite Repair (2 hull/s), Targeting Computer (+20% damage).
+- **Cargo Hold**: the bay's +27 button opens 27 extra storage slots; drill and chainsaw harvests spill into it.
+- Redesigned **jump-jet pack** (reactor spine, twin nacelles, winglets).
+
+### Config
+- New server config `titancombat-server.toml` (per world, synced to players): global speed / health / damage multipliers, every mech's health, shield, speed and melee, every weapon's damage, magazine, reload and fire rate, and every MOD module's strength. Mechs are 25% faster by default.
+
+### Vehicle fixes
+- C-130: model gaps closed; players can stand in the cargo bay, on the roof and on the wings and are carried in flight.
+- Chinook / C-130: the pilot seat tilts with the fuselage, so the pilot's head no longer pokes through the roof.
+- Ocean Carrier: no longer disappears when looking around from the deck; walking across deck seams no longer catches.
+- LCAC: holds a steady height over water and no longer spins out (turn rate capped).
+
 ## [2.8.1] - 2026-11-03 (Movement & Cargo Fixes)
 - LCAC now rides its air cushion above the water surface, so it drives straight up onto the beach instead of stalling against the shoreline.
 - Obsolete Exoframe support: with Obsolete 1.4.0+, Shift-dismounting your Exoframe within 8 blocks of any transport clamps it onto that vehicle (sling for helicopters, deck for trucks and ships).
