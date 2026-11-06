@@ -44,6 +44,8 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
             new ResourceLocation(TitanCombatMod.MODID, "textures/item/titan_armor_chest.png");
     private static final ResourceLocation GHOST_ARMS =
             new ResourceLocation(TitanCombatMod.MODID, "textures/item/titan_armor_arms.png");
+    private static final ResourceLocation GHOST_UTILITY =
+            new ResourceLocation(TitanCombatMod.MODID, "textures/item/servo_overdrive_module.png");
     private static final ResourceLocation GHOST_LEGS =
             new ResourceLocation(TitanCombatMod.MODID, "textures/item/titan_armor_legs.png");
 
@@ -85,6 +87,19 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
         this.imageWidth = W;
         this.imageHeight = H;
         this.inventoryLabelY = 131;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        // Cargo hold: 27 more slots, opened as a chest
+        this.addRenderableWidget(net.minecraft.client.gui.components.Button.builder(
+                Component.translatable("gui.titancombat.bay.hold_button"), b -> {
+                    BaseTitanEntity titan = this.menu.getTitan();
+                    if (titan != null) {
+                        com.titancombat.network.ModNetworking.sendToServer(new com.titancombat.network.OpenTitanInventoryC2SPacket(titan.getId(), true));
+                    }
+                }).bounds(this.leftPos + CARGO_X1 - 20, this.topPos + CARGO_Y0 + 2, 19, 11).build()); // right of the CARGO label
     }
 
     @Override
@@ -191,6 +206,7 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
             else if (i == TitanMenu.FLIGHT_SLOT) accent = CYAN;
             else if (i == TitanMenu.AMMO_SLOT_1 || i == TitanMenu.AMMO_SLOT_2) accent = CYAN;
             else if (i >= TitanMenu.ARMOR_HEAD_SLOT && i <= TitanMenu.ARMOR_LEGS_SLOT) accent = CYAN;
+            else if (i == TitanMenu.UTILITY_SLOT) accent = GREEN;
             else if (i < TitanMenu.CONTAINER_SIZE) accent = DIM;
             else if (i >= TitanMenu.CONTAINER_SIZE + 27) accent = CYAN; // hotbar
             else accent = 0x3E6A78;
@@ -230,6 +246,10 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
         Slot armsSlot = this.menu.slots.get(TitanMenu.ARMOR_ARMS_SLOT);
         if (!armsSlot.hasItem()) {
             tex(g, GHOST_ARMS, x + armsSlot.x, y + armsSlot.y, 16, 16, 0, 0, 16, 16, 16, 16, 0x9FB8C0, 0.28F);
+        }
+        Slot utilitySlot = this.menu.slots.get(TitanMenu.UTILITY_SLOT);
+        if (!utilitySlot.hasItem()) {
+            tex(g, GHOST_UTILITY, x + utilitySlot.x, y + utilitySlot.y, 16, 16, 0, 0, 16, 16, 16, 16, 0x9FB8C0, 0.28F);
         }
         Slot legsSlot = this.menu.slots.get(TitanMenu.ARMOR_LEGS_SLOT);
         if (!legsSlot.hasItem()) {
@@ -367,6 +387,7 @@ public class TitanScreen extends AbstractContainerScreen<TitanMenu> {
 
         // cargo + pilot
         g.drawString(this.font, "ARMOR", 14, 126, 0xFF00E5FF, false);
+        g.drawString(this.font, "MOD", TitanMenu.UTILITY_X, 126, 0xFF00E676, false);
         g.drawString(this.font, lblCargo, CARGO_X0 + 5, CARGO_Y0 + 4, 0xFFAFC4CC, false);
         g.drawString(this.font, lblPilot, TitanMenu.INV_X, this.inventoryLabelY, 0xFF7FB8C8, false);
     }

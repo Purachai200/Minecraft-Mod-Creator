@@ -87,11 +87,9 @@ public class TitanWeaponSwapLayer<T extends BaseTitanEntity> extends GeoRenderLa
 
         // The Trooper's weapon bone holds tools and custom weapons; draw only the mounted one.
         if (weapon != null) {
-            donorModel.getBone("drill").ifPresent(b -> b.setHidden(weapon != TitanWeapon.MINING_DRILL));
-            donorModel.getBone("chainsaw").ifPresent(b -> b.setHidden(weapon != TitanWeapon.CHAINSAW));
-            donorModel.getBone("rifle").ifPresent(b -> b.setHidden(weapon != TitanWeapon.HEAVY_ASSAULT_RIFLE));
-            donorModel.getBone("machine_gun").ifPresent(b -> b.setHidden(weapon != TitanWeapon.ROTARY_MACHINE_GUN));
-            donorModel.getBone("rocket_launcher").ifPresent(b -> b.setHidden(weapon != TitanWeapon.ROCKET_POD));
+            for (TitanWeapon w : TitanWeapon.values()) {
+                if (w.getModelBone() != null) donorModel.getBone(w.getModelBone()).ifPresent(b -> b.setHidden(weapon != w));
+            }
 
             donorModel.getBone("stowed_rifle").ifPresent(b -> b.setHidden(weapon != TitanWeapon.HEAVY_ASSAULT_RIFLE));
             donorModel.getBone("stowed_machine_gun").ifPresent(b -> b.setHidden(weapon != TitanWeapon.ROTARY_MACHINE_GUN));

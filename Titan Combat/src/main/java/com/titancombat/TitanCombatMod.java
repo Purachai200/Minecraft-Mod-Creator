@@ -27,6 +27,7 @@ public class TitanCombatMod {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
         GeckoLib.initialize();
+        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(net.minecraftforge.fml.config.ModConfig.Type.SERVER, TitanConfig.SPEC);
 
         ModBlocks.register(modEventBus);
         ModBlockEntities.register(modEventBus);
@@ -59,6 +60,9 @@ public class TitanCombatMod {
         event.put(ModEntities.TROOPER_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.TROOPER).build());
         event.put(ModEntities.SCOUT_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.SCOUT).build());
         event.put(ModEntities.SHADE_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.SHADE).build());
+        event.put(ModEntities.BULWARK_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.BULWARK).build());
+        event.put(ModEntities.EXO_FRAME_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.EXO_FRAME).build());
+        event.put(ModEntities.TITAN_EXO_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.TITAN_EXO).build());
         event.put(ModEntities.STRIKER_FRAME_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.STRIKER_FRAME).build());
         event.put(ModEntities.VANGUARD_FRAME_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.VANGUARD_FRAME).build());
         event.put(ModEntities.COLOSSUS_FRAME_TITAN.get(), BaseTitanEntity.createTitanAttributes(TitanClass.COLOSSUS_FRAME).build());

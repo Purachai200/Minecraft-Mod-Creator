@@ -200,6 +200,10 @@ final class DriveAutoTest {
             com.titancombat.client.KeyInputHandler.KEY_DESCEND.setDown(false);
             mc.options.keyDown.setDown(false);
             Entity v = vehicle(mc);
+            if (v == null) { // the pilot has been seen dropping out on the approach; report it instead of ending the suite
+                check("c130_lands", false, "pilot no longer aboard");
+                return;
+            }
             check("c130_lands", v.onGround() && Math.abs(v.getY() - (by + 1)) < 1.0D && v.isAlive(), String.format("y=%.1f ground=%.0f x=%.0f", v.getY(), by + 1, v.getX() - bx));
         });
 

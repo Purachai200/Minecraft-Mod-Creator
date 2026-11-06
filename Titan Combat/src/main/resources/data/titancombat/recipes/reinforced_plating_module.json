@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "IRI",
+    "RXR",
+    "IRI"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "X": {
+      "item": "minecraft:netherite_scrap"
+    }
+  },
+  "result": {
+    "item": "titancombat:reinforced_plating_module",
+    "count": 1
+  }
+}

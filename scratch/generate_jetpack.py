@@ -115,27 +115,37 @@ def mirror(cube):
     return (bone, (-ox - size[0], oy, oz), size, key)
 
 
+# Titanfall-style jump kit: reactor spine between two armoured thruster nacelles with swept winglets,
+# stabiliser fins and big vectoring bells (nozzle bones are what the layer gimbals).
 LEFT = [
-    ("docking_mount", (4, -2, 2), (5, 13, 5), "tank"),
-    ("docking_mount", (3, 1, 1), (7, 1, 7), "band"),
-    ("docking_mount", (3, 7, 1), (7, 1, 7), "band"),
-    ("docking_mount", (5, 11, 3), (3, 1, 3), "dome"),
-    ("docking_mount", (6, 12, 4), (1, 1, 1), "orange"),
-    ("docking_mount", (4, -4, 2), (5, 2, 5), "collar"),
-    ("docking_mount", (9, 3, 3), (2, 4, 3), "rcs"),
-    ("docking_mount", (11, 4, 4), (1, 2, 1), "orange"),
-    ("nozzle_left", (5, -6, 3), (3, 2, 3), "throat"),
-    ("nozzle_left", (4, -8, 2), (5, 2, 5), "bell"),
-    ("nozzle_left", (3, -10, 1), (7, 2, 7), "bell"),
+    ("docking_mount", (5, -1, 2), (6, 12, 6), "tank"),          # thruster nacelle
+    ("docking_mount", (4, 2, 1), (8, 1, 8), "band"),
+    ("docking_mount", (4, 8, 1), (8, 1, 8), "band"),
+    ("docking_mount", (6, 11, 3), (4, 2, 4), "dome"),           # nacelle cap
+    ("docking_mount", (11, 0, 3), (1, 10, 4), "rcs"),           # outer armour skin
+    ("docking_mount", (12, 6, 3), (5, 1, 4), "dome"),           # swept winglet
+    ("docking_mount", (16, 4, 3), (1, 3, 4), "orange"),         # winglet tip
+    ("docking_mount", (8, 13, 4), (1, 4, 3), "gunmetal"),       # stabiliser fin
+    ("docking_mount", (6, 5, 8), (4, 2, 1), "glow"),            # intake light
+    ("docking_mount", (12, 1, 4), (2, 2, 2), "rcs"),            # RCS jet
+    ("docking_mount", (14, 1, 5), (1, 1, 1), "orange"),
+    ("docking_mount", (5, -3, 2), (6, 2, 6), "collar"),
+    ("nozzle_left", (6, -5, 3), (4, 2, 4), "throat"),
+    ("nozzle_left", (5, -7, 2), (6, 2, 6), "bell"),
+    ("nozzle_left", (4, -9, 1), (8, 2, 8), "bell"),
 ]
 CENTRE = [
-    ("docking_mount", (-7, -5, 0), (14, 15, 2), "harness"),
-    ("docking_mount", (-4, -3, 2), (8, 12, 4), "core"),
-    ("docking_mount", (-3, 9, 2), (6, 2, 3), "cap"),
-    ("docking_mount", (-1, -5, 2), (2, 2, 2), "collar"),
-    ("docking_mount", (-4, 5, 2), (8, 1, 1), "orange"),   # fuel crossfeed line
-    ("docking_mount", (-1, 11, 3), (1, 2, 1), "gunmetal"),
-    ("docking_mount", (-1, 13, 3), (1, 1, 1), "red"),
+    ("docking_mount", (-8, -5, 0), (16, 16, 2), "harness"),
+    ("docking_mount", (-4, -2, 2), (8, 13, 5), "core"),         # reactor spine
+    ("docking_mount", (-3, 11, 2), (6, 2, 4), "cap"),
+    ("docking_mount", (-2, 0, 7), (4, 8, 1), "glow"),           # reactor vent glow
+    ("docking_mount", (-4, 2, 7), (8, 1, 1), "gunmetal"),       # cooling fins
+    ("docking_mount", (-4, 5, 7), (8, 1, 1), "gunmetal"),
+    ("docking_mount", (-4, 8, 7), (8, 1, 1), "gunmetal"),
+    ("docking_mount", (-5, 9, 3), (10, 2, 2), "band"),          # fuel crossfeed
+    ("docking_mount", (-1, -5, 2), (2, 3, 2), "collar"),
+    ("docking_mount", (-1, 13, 3), (1, 3, 1), "gunmetal"),      # antenna
+    ("docking_mount", (-1, 16, 3), (1, 1, 1), "red"),
 ]
 CUBES = CENTRE + LEFT + [mirror(c) for c in LEFT]
 
@@ -143,7 +153,7 @@ PAINTERS = {
     "tank": tank(ARMOR), "band": plate(GUNMETAL, seams=False, rivets=False), "dome": plate(ARMOR, seams=False, rivets=False),
     "collar": plate(GUNMETAL, seams=False), "rcs": plate(GUNMETAL), "throat": plate(STEEL, seams=False, rivets=False),
     "bell": bell(), "harness": plate(GUNMETAL), "core": core(), "cap": plate(GUNMETAL),
-    "orange": solid(ORANGE), "gunmetal": solid(GUNMETAL), "red": solid(RED),
+    "orange": solid(ORANGE), "gunmetal": solid(GUNMETAL), "red": solid(RED), "glow": solid((90, 230, 255)),
 }
 
 # --- box-UV shelf packing (cubes with the same size + painter share a region) --
@@ -184,7 +194,7 @@ for _, _, size, key in CUBES:
 
 # --- write geo ---------------------------------------------------------------
 pivots = {"root": None, "docking_mount": "root", "nozzle_left": "docking_mount", "nozzle_right": "docking_mount"}
-bone_pivot = {"root": [0, 0, 0], "docking_mount": [0, 0, 0], "nozzle_left": [6.5, -4, 4.5], "nozzle_right": [-6.5, -4, 4.5]}
+bone_pivot = {"root": [0, 0, 0], "docking_mount": [0, 0, 0], "nozzle_left": [8, -4, 5], "nozzle_right": [-8, -4, 5]}
 bones = []
 for name, parent in pivots.items():
     b = {"name": name, "pivot": bone_pivot[name]}
@@ -197,7 +207,7 @@ for name, parent in pivots.items():
 
 geo = {"format_version": "1.12.0", "minecraft:geometry": [{
     "description": {"identifier": "geometry.flight_module_rocket_jetpack", "texture_width": W, "texture_height": H,
-                    "visible_bounds_width": 4, "visible_bounds_height": 4, "visible_bounds_offset": [0, 1, 0]},
+                    "visible_bounds_width": 5, "visible_bounds_height": 5, "visible_bounds_offset": [0, 1, 0]},
     "bones": bones}]}
 with open(f"{ROOT}/geo/flight/rocket_jetpack.geo.json", "w") as f:
     json.dump(geo, f, indent=2)

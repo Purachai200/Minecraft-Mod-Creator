@@ -58,8 +58,8 @@ public class TitanDropBeaconItem extends Item {
                 TitanClass[] values = TitanClass.values();
                 int nextIndex = (current.ordinal() + 1) % values.length;
                 TitanClass next = values[nextIndex];
-                // The Trooper, Scout, Shade and Modular Frames have their own dedicated beacons
-                while (next == TitanClass.TROOPER || next == TitanClass.SCOUT || next == TitanClass.SHADE
+                // The Trooper, Scout, Shade, Bulwark and Modular Frames have their own dedicated beacons
+                while (next == TitanClass.TROOPER || next == TitanClass.SCOUT || next == TitanClass.SHADE || next == TitanClass.BULWARK || next == TitanClass.EXO_FRAME || next == TitanClass.TITAN_EXO
                         || next == TitanClass.STRIKER_FRAME || next == TitanClass.VANGUARD_FRAME || next == TitanClass.COLOSSUS_FRAME
                         || next == TitanClass.TERRAIN_FRAME || next == TitanClass.CYCLOPS_FRAME || next == TitanClass.SPIDER_FRAME) {
                     next = values[(next.ordinal() + 1) % values.length];
@@ -93,6 +93,9 @@ public class TitanDropBeaconItem extends Item {
                 case TROOPER -> ModEntities.TROOPER_TITAN.get();
                 case SCOUT -> ModEntities.SCOUT_TITAN.get();
                 case SHADE -> ModEntities.SHADE_TITAN.get();
+                case BULWARK -> ModEntities.BULWARK_TITAN.get();
+                case EXO_FRAME -> ModEntities.EXO_FRAME_TITAN.get();
+                case TITAN_EXO -> ModEntities.TITAN_EXO_TITAN.get();
                 case STRIKER_FRAME -> ModEntities.STRIKER_FRAME_TITAN.get();
                 case VANGUARD_FRAME -> ModEntities.VANGUARD_FRAME_TITAN.get();
                 case COLOSSUS_FRAME -> ModEntities.COLOSSUS_FRAME_TITAN.get();

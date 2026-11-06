@@ -96,6 +96,9 @@ def build_trooper_cockpit():
     
     drill_cubes = [transform_cube(c) for c in tb['drill']['cubes']]
     saw_cubes = [transform_cube(c) for c in tb['chainsaw']['cubes']]
+    rifle_cubes = [transform_cube(c) for c in tb['rifle']['cubes']]
+    mg_cubes = [transform_cube(c) for c in tb['machine_gun']['cubes']]
+    rocket_cubes = [transform_cube(c) for c in tb['rocket_launcher']['cubes']]
     
     patches = material_patches('build_trooper_assets')
     
@@ -136,6 +139,34 @@ def build_trooper_cockpit():
                 'rotation': [0, 0, 0],
                 'cubes': saw_cubes
             })
+            # Add rifle sub-bone
+            new_bones.append({
+                'name': 'rifle',
+                'parent': 'weapon',
+                'pivot': P1,
+                'rotation': [0, 0, 0],
+                'cubes': rifle_cubes
+            })
+            # Add machine gun sub-bone
+            new_bones.append({
+                'name': 'machine_gun',
+                'parent': 'weapon',
+                'pivot': P1,
+                'rotation': [0, 0, 0],
+                'cubes': mg_cubes
+            })
+            # Add rocket launcher sub-bone
+            new_bones.append({
+                'name': 'rocket_launcher',
+                'parent': 'weapon',
+                'pivot': P1,
+                'rotation': [0, 0, 0],
+                'cubes': rocket_cubes
+            })
+            # Heavy weapons pack: one sub-bone each, named like the third-person bones
+            for extra in ('arc_cannon', 'scatter_cannon', 'inferno_flamethrower', 'grenade_launcher'):
+                new_bones.append({'name': extra, 'parent': 'weapon', 'pivot': P1, 'rotation': [0, 0, 0],
+                                  'cubes': [transform_cube(c) for c in tb[extra]['cubes']]})
     
     geo = {
         'format_version': '1.12.0',
@@ -158,7 +189,7 @@ def build_trooper_cockpit():
     print(f'Wrote {out_path} ({len(new_bones)} bones)')
 
 def build_light_cockpit(titan='scout'):
-    """Scout (Light SMG in hand) or Shade (no factory gun) cockpit arms on the Ion rig."""
+    """Scout (Light SMG in hand), Shade or Bulwark (no factory gun) cockpit arms on the Ion rig."""
     base_path = 'Titan Combat/src/main/resources/assets/titancombat/geo/cockpit/ion_titan_1st.geo.json'
     with open(base_path) as f:
         ion_1st = json.load(f)
@@ -216,3 +247,5 @@ if __name__ == '__main__':
     build_trooper_cockpit()
     build_light_cockpit('scout')
     build_light_cockpit('shade')
+    build_light_cockpit('bulwark')
+    build_light_cockpit('exo_frame')

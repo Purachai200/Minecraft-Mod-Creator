@@ -19,8 +19,19 @@ public class ModItems {
     // Tools & Equipment
     public static final RegistryObject<Item> TITAN_DROP_BEACON = ITEMS.register("titan_drop_beacon",
             () -> new TitanDropBeaconItem(new Item.Properties().stacksTo(16).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> SERVO_OVERDRIVE_MODULE = accessory("servo_overdrive_module", TitanAccessoryItem.Type.OVERDRIVE);
+    public static final RegistryObject<Item> REINFORCED_PLATING_MODULE = accessory("reinforced_plating_module", TitanAccessoryItem.Type.PLATING);
+    public static final RegistryObject<Item> SHIELD_CAPACITOR_MODULE = accessory("shield_capacitor_module", TitanAccessoryItem.Type.CAPACITOR);
+    public static final RegistryObject<Item> NANITE_REPAIR_MODULE = accessory("nanite_repair_module", TitanAccessoryItem.Type.NANITE);
+    public static final RegistryObject<Item> TARGETING_COMPUTER_MODULE = accessory("targeting_computer_module", TitanAccessoryItem.Type.TARGETING);
+
+    private static RegistryObject<Item> accessory(String id, TitanAccessoryItem.Type type) {
+        return ITEMS.register(id, () -> new TitanAccessoryItem(type, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+    }
     public static final RegistryObject<Item> TROOPER_BEACON = ITEMS.register("trooper_beacon",
             () -> new TrooperBeaconItem(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
+    public static final RegistryObject<Item> BULWARK_BEACON = ITEMS.register("bulwark_beacon",
+            () -> new TitanFrameBeaconItem(com.titancombat.entity.TitanClass.BULWARK, new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
 
     public static final RegistryObject<Item> PAINT_SPRAY_CAN = ITEMS.register("paint_spray_can",
             () -> new PaintSprayCanItem(new Item.Properties().stacksTo(1).durability(64).rarity(Rarity.RARE)));
@@ -143,6 +154,10 @@ public class ModItems {
     // Dedicated Frame Beacons for quick deployment
     public static final RegistryObject<Item> TITAN_FRAME_BEACON = ITEMS.register("titan_frame_beacon",
             () -> new TitanFrameBeaconItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> EXO_FRAME_BEACON = ITEMS.register("exo_frame_beacon",
+            () -> new TitanFrameBeaconItem(com.titancombat.entity.TitanClass.EXO_FRAME, new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
+    public static final RegistryObject<Item> TITAN_EXO_BEACON = ITEMS.register("titan_exo_beacon",
+            () -> new TitanFrameBeaconItem(com.titancombat.entity.TitanClass.TITAN_EXO, new Item.Properties().stacksTo(16).rarity(Rarity.EPIC)));
     public static final RegistryObject<Item> STRIKER_FRAME_BEACON = ITEMS.register("striker_frame_beacon",
             () -> new TitanFrameBeaconItem(com.titancombat.entity.TitanClass.STRIKER_FRAME, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     public static final RegistryObject<Item> VANGUARD_FRAME_BEACON = ITEMS.register("vanguard_frame_beacon",

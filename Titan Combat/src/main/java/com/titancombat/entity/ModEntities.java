@@ -50,10 +50,19 @@ public class ModEntities {
     public static final RegistryObject<EntityType<ScoutTitanEntity>> SCOUT_TITAN =
             ENTITY_TYPES.register("scout_titan", () -> EntityType.Builder.of(ScoutTitanEntity::new, MobCategory.MISC)
                     .sized(TitanClass.SCOUT.getWidth(), TitanClass.SCOUT.getHeight()).clientTrackingRange(16).updateInterval(2).build("scout_titan"));
+    public static final RegistryObject<EntityType<BulwarkTitanEntity>> BULWARK_TITAN =
+            ENTITY_TYPES.register("bulwark_titan", () -> EntityType.Builder.of(BulwarkTitanEntity::new, MobCategory.MISC)
+                    .sized(TitanClass.BULWARK.getWidth(), TitanClass.BULWARK.getHeight()).clientTrackingRange(16).updateInterval(2).build("bulwark_titan"));
     public static final RegistryObject<EntityType<ShadeTitanEntity>> SHADE_TITAN =
             ENTITY_TYPES.register("shade_titan", () -> EntityType.Builder.of(ShadeTitanEntity::new, MobCategory.MISC)
                     .sized(TitanClass.SHADE.getWidth(), TitanClass.SHADE.getHeight()).clientTrackingRange(16).updateInterval(2).build("shade_titan"));
 
+    public static final RegistryObject<EntityType<ExoTitanFrameEntity>> EXO_FRAME_TITAN =
+            ENTITY_TYPES.register("exo_frame_titan", () -> EntityType.Builder.of(ExoTitanFrameEntity::new, MobCategory.MISC)
+                    .sized(TitanClass.EXO_FRAME.getWidth(), TitanClass.EXO_FRAME.getHeight()).clientTrackingRange(16).updateInterval(2).build("exo_frame_titan"));
+    public static final RegistryObject<EntityType<TitanExoFrameEntity>> TITAN_EXO_TITAN =
+            ENTITY_TYPES.register("titan_exo_titan", () -> EntityType.Builder.of(TitanExoFrameEntity::new, MobCategory.MISC)
+                    .sized(TitanClass.TITAN_EXO.getWidth(), TitanClass.TITAN_EXO.getHeight()).clientTrackingRange(16).updateInterval(2).build("titan_exo_titan"));
     public static final RegistryObject<EntityType<StrikerTitanFrameEntity>> STRIKER_FRAME_TITAN =
             ENTITY_TYPES.register("striker_frame_titan", () -> EntityType.Builder.of(StrikerTitanFrameEntity::new, MobCategory.MISC)
                     .sized(TitanClass.STRIKER_FRAME.getWidth(), TitanClass.STRIKER_FRAME.getHeight()).clientTrackingRange(16).updateInterval(2).build("striker_frame_titan"));

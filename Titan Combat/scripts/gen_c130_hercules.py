@@ -115,6 +115,7 @@ def build():
     fus += [cbox(0, 30, -225, 3, 3, 2, DARK)]                             # radome tip
 
     # --- cargo bay (hollow), walls 4 px, ceiling at CEIL
+    fus += shell(-132, BAY_Z0, HW, 6, TOP, w=4, floor=False, c=10)    # closes the slot behind the flight-deck bulkhead
     for z in range(BAY_Z0, BAY_Z1, 16):
         fus += shell(z, z + 16, HW, 6, TOP, w=4, floor=False, c=10)
     fus += [box(-HW + 4, 6, BAY_Z0, HW - 4, FLOOR, BAY_Z1, BELLY, up=BAY)]  # floor slab
@@ -148,9 +149,10 @@ def build():
     for z0 in zs[:-1]:
         z1 = z0 + 8
         zm = (z0 + z1) / 2
-        yb = aft_bottom(zm)
-        yt = TOP if zm < 150 else lerp(TOP, 84, (zm - 150) / 76)
-        hw = HW if zm < 110 else lerp(HW, 8, (zm - 110) / 116)
+        # each slice takes the fullest outline over its length, so neighbours overlap instead of leaving stair gaps
+        yb = aft_bottom(z0) - 1
+        yt = TOP if z0 < 150 else lerp(TOP, 84, (z0 - 150) / 76)
+        hw = HW if z0 < 110 else lerp(HW, 8, (z0 - 110) / 116)
         if zm < DOOR_HINGE[1]:
             fus += shell(z0, z1, hw, yb, yt, w=4, floor=False, c=min(10, hw / 2))
         else:
@@ -186,7 +188,7 @@ def build():
         # external fuel tanks between nacelles
         tx = s * 106
         wings += [cbox(tx, TOP - 8, -10, 10, 10, 70), cbox(tx, TOP - 8, -48, 6, 6, 8, HULL), cbox(tx, TOP - 8, 28, 5, 5, 8),
-                  cbox(tx, TOP - 2, -10, 3, 4, 40, DARK)]
+                  cbox(tx, TOP - 2.5, -10, 3, 7, 40, DARK)]   # pylon reaches the wing
     # nacelles
     def nacelle(x, s):
         n = []

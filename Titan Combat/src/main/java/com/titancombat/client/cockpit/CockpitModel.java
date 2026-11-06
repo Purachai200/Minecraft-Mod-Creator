@@ -21,7 +21,7 @@ public class CockpitModel extends GeoModel<CockpitPart> {
     public static TitanClass getCockpitRig(TitanClass titanClass) {
         if (titanClass == null) return TitanClass.TROOPER;
         return switch (titanClass) {
-            case MONARCH, ION, LEGION, SCORCH, RONIN, NORTHSTAR, TONE, TROOPER, SCOUT, SHADE -> titanClass;
+            case MONARCH, ION, LEGION, SCORCH, RONIN, NORTHSTAR, TONE, TROOPER, SCOUT, SHADE, BULWARK, EXO_FRAME -> titanClass;
             default -> TitanClass.TROOPER;
         };
     }
@@ -65,18 +65,11 @@ public class CockpitModel extends GeoModel<CockpitPart> {
         if (gun != null) gun.setHidden(!hasWep);
 
         // Trooper chassis has tools and custom weapons under the weapon bone
-        var drill = getAnimationProcessor().getBone("drill");
-        var saw = getAnimationProcessor().getBone("chainsaw");
-        var rifle = getAnimationProcessor().getBone("rifle");
-        var mg = getAnimationProcessor().getBone("machine_gun");
-        var rocket = getAnimationProcessor().getBone("rocket_launcher");
-        if (drill != null || saw != null || rifle != null || mg != null || rocket != null) {
-            com.titancombat.entity.TitanWeapon wep = titan != null ? titan.getActiveWeapon() : null;
-            if (drill != null) drill.setHidden(!hasWep || wep != com.titancombat.entity.TitanWeapon.MINING_DRILL);
-            if (saw != null) saw.setHidden(!hasWep || wep != com.titancombat.entity.TitanWeapon.CHAINSAW);
-            if (rifle != null) rifle.setHidden(!hasWep || wep != com.titancombat.entity.TitanWeapon.HEAVY_ASSAULT_RIFLE);
-            if (mg != null) mg.setHidden(!hasWep || wep != com.titancombat.entity.TitanWeapon.ROTARY_MACHINE_GUN);
-            if (rocket != null) rocket.setHidden(!hasWep || wep != com.titancombat.entity.TitanWeapon.ROCKET_POD);
+        com.titancombat.entity.TitanWeapon wep = titan != null ? titan.getActiveWeapon() : null;
+        for (com.titancombat.entity.TitanWeapon w : com.titancombat.entity.TitanWeapon.values()) {
+            if (w.getModelBone() == null) continue;
+            var bone = getAnimationProcessor().getBone(w.getModelBone());
+            if (bone != null) bone.setHidden(!hasWep || wep != w);
         }
 
         // Hide shoulder laser bones on non-Ion rigs if present

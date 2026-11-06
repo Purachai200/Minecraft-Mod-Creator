@@ -43,6 +43,9 @@ public class ClientSetup {
         event.registerEntityRenderer(ModEntities.TROOPER_TITAN.get(), TitanRenderer::new);
         event.registerEntityRenderer(ModEntities.SCOUT_TITAN.get(), TitanRenderer::new);
         event.registerEntityRenderer(ModEntities.SHADE_TITAN.get(), TitanRenderer::new);
+        event.registerEntityRenderer(ModEntities.BULWARK_TITAN.get(), TitanRenderer::new);
+        event.registerEntityRenderer(ModEntities.EXO_FRAME_TITAN.get(), TitanRenderer::new);
+        event.registerEntityRenderer(ModEntities.TITAN_EXO_TITAN.get(), TitanRenderer::new);
         event.registerEntityRenderer(ModEntities.STRIKER_FRAME_TITAN.get(), TitanRenderer::new);
         event.registerEntityRenderer(ModEntities.VANGUARD_FRAME_TITAN.get(), TitanRenderer::new);
         event.registerEntityRenderer(ModEntities.COLOSSUS_FRAME_TITAN.get(), TitanRenderer::new);

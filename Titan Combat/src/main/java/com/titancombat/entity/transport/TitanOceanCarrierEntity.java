@@ -75,23 +75,11 @@ public class TitanOceanCarrierEntity extends BaseTransportVehicleEntity {
         return slotIndex == 0 ? BAY_BOW_OFFSET : BAY_AFT_OFFSET;
     }
 
-    /** Tiles the flight deck with square colliders (one beam wide) plus one for the island. */
+    /** Tiles the flight deck with square colliders (one beam wide) plus a column for the island. */
     private void spawnDeckColliders() {
-        var type = com.titancombat.entity.ModEntities.DECK_COLLIDER.get();
-        float beam = (float) DECK_BEAM;
-        int tiles = (int) Math.ceil((DECK_Z_MAX - DECK_Z_MIN) / DECK_BEAM);
-        double step = (DECK_Z_MAX - DECK_Z_MIN - DECK_BEAM) / Math.max(1, tiles - 1);
-        for (int i = 0; i < tiles; i++) {
-            float z = (float) (DECK_Z_MIN + DECK_BEAM / 2 + i * step);
-            // 1-block-thick slab whose top is the deck surface
-            this.level().addFreshEntity(DeckColliderEntity.create(type, this, beam, 1.0F, 0.0F, (float) DECK_TOP_Y - 1.0F, z));
-        }
-        int islandTiles = (int) Math.ceil((ISLAND_Z_MAX - ISLAND_Z_MIN) / ISLAND_SIZE);
-        double islandStep = (ISLAND_Z_MAX - ISLAND_Z_MIN - ISLAND_SIZE) / Math.max(1, islandTiles - 1);
-        for (int i = 0; i < islandTiles; i++) {
-            this.level().addFreshEntity(DeckColliderEntity.create(type, this, (float) ISLAND_SIZE, (float) ISLAND_HEIGHT,
-                    (float) ISLAND_X, (float) DECK_TOP_Y, (float) (ISLAND_Z_MIN + ISLAND_SIZE / 2 + i * islandStep)));
-        }
+        // 1-block-thick slab whose top is the deck surface
+        DeckColliderEntity.spawnRow(this, (float) DECK_BEAM, 1.0F, 0.0F, (float) DECK_TOP_Y - 1.0F, DECK_Z_MIN, DECK_Z_MAX);
+        DeckColliderEntity.spawnRow(this, (float) ISLAND_SIZE, (float) ISLAND_HEIGHT, (float) ISLAND_X, (float) DECK_TOP_Y, ISLAND_Z_MIN, ISLAND_Z_MAX);
     }
 
     @Override

@@ -16,7 +16,8 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 public class TitanMenu extends AbstractContainerMenu {
-    public static final int CONTAINER_SIZE = 18;
+    /** Slots this bay screen shows (the titan's inventory also holds the cargo hold after them). */
+    public static final int CONTAINER_SIZE = 19;
     public static final int BATTERY_SLOT = 0;
     public static final int AMMO_SLOT_1 = 1;
     public static final int AMMO_SLOT_2 = 2;
@@ -31,6 +32,12 @@ public class TitanMenu extends AbstractContainerMenu {
     public static final int ARMOR_CHEST_SLOT = 15;
     public static final int ARMOR_ARMS_SLOT = 16;
     public static final int ARMOR_LEGS_SLOT = 17;
+    /** Accessory slot: Servo Overdrive Module (speed). */
+    public static final int UTILITY_SLOT = 18;
+    /** Cargo hold: 27 more storage slots, opened as a chest from the bay screen (TitanCargoHold). */
+    public static final int HOLD_START = 19;
+    public static final int HOLD_SIZE = 27;
+    public static final int TOTAL_SIZE = HOLD_START + HOLD_SIZE;
 
     // Slot layout (GUI-local pixels, item area top-left) - must match TitanScreen's 300x222 panel
     public static final int BATTERY_X = 140;
@@ -54,6 +61,8 @@ public class TitanMenu extends AbstractContainerMenu {
     public static final int ARMOR_ARMS_Y = 177;
     public static final int ARMOR_LEGS_X = 22;
     public static final int ARMOR_LEGS_Y = 197;
+    public static final int UTILITY_X = 48;
+    public static final int UTILITY_Y = 137;
 
     private final BaseTitanEntity titan;
     private final Container container;
@@ -76,7 +85,7 @@ public class TitanMenu extends AbstractContainerMenu {
     public TitanMenu(int containerId, Inventory playerInventory, BaseTitanEntity titan) {
         super(ModMenuTypes.TITAN_MENU.get(), containerId);
         this.titan = titan;
-        this.container = titan != null ? titan.getTitanInventory() : new SimpleContainer(CONTAINER_SIZE);
+        this.container = titan != null ? titan.getTitanInventory() : new SimpleContainer(TOTAL_SIZE);
 
         checkContainerSize(this.container, CONTAINER_SIZE);
         this.container.startOpen(playerInventory.player);
@@ -218,6 +227,19 @@ public class TitanMenu extends AbstractContainerMenu {
             }
         });
 
+        // Slot 18: accessory (speed module)
+        this.addSlot(new Slot(this.container, UTILITY_SLOT, UTILITY_X, UTILITY_Y) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return isAccessory(stack);
+            }
+
+            @Override
+            public int getMaxStackSize() {
+                return 1;
+            }
+        });
+
         // Player Main Inventory (3 rows of 9)
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
@@ -236,6 +258,10 @@ public class TitanMenu extends AbstractContainerMenu {
                 || stack.is(com.titancombat.item.ModItems.HOWITZER_SHELLS.get())
                 || stack.is(com.titancombat.item.ModItems.HOWITZER_SMOKE_SHELLS.get())
                 || stack.is(com.titancombat.item.ModItems.AMMO_ROCKET_SALVO.get());
+    }
+
+    public static boolean isAccessory(ItemStack stack) {
+        return stack.getItem() instanceof com.titancombat.item.TitanAccessoryItem;
     }
 
     /** Back equipment slot: flight module, howitzer, rocket launcher pod, or core modules. */
@@ -303,6 +329,12 @@ public class TitanMenu extends AbstractContainerMenu {
                         case LEGS -> ARMOR_LEGS_SLOT;
                     };
                     if (!this.moveItemStackTo(slotStack, targetSlot, targetSlot + 1, false)) {
+                        if (!this.moveItemStackTo(slotStack, CARGO_START, CARGO_END + 1, false)) {
+                            return ItemStack.EMPTY;
+                        }
+                    }
+                } else if (isAccessory(slotStack)) {
+                    if (!this.moveItemStackTo(slotStack, UTILITY_SLOT, UTILITY_SLOT + 1, false)) {
                         if (!this.moveItemStackTo(slotStack, CARGO_START, CARGO_END + 1, false)) {
                             return ItemStack.EMPTY;
                         }

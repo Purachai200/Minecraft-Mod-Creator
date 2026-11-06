@@ -79,7 +79,7 @@ public class TitanFrameBeaconItem extends TitanDropBeaconItem {
         tooltip.add(Component.literal("Deploys: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(selectedTitan(stack).getDisplayName() + " (" + selectedTitan(stack).getRole() + ")").withStyle(ChatFormatting.GOLD)));
         tooltip.add(Component.literal("Right-click ground: ").withStyle(ChatFormatting.GREEN)
-                .append(Component.literal("Deploy Modular Titan Frame").withStyle(ChatFormatting.WHITE)));
+                .append(Component.literal("Deploy " + selectedTitan(stack).getDisplayName()).withStyle(ChatFormatting.WHITE)));
         if (this.fixedClass == null) {
             tooltip.add(Component.literal("Shift + Right-Click in air: ").withStyle(ChatFormatting.DARK_AQUA)
                     .append(Component.literal("Switch Frame Type (6 Variants)").withStyle(ChatFormatting.YELLOW)));

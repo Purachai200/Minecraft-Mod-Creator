@@ -52,6 +52,8 @@ public class TitanFlightModuleLayer<T extends BaseTitanEntity> extends GeoRender
             case TROOPER -> new MountConfig(1.10D, 0.39D, 1.80F, 0.0F);
             case SCOUT -> new MountConfig(1.10D, 0.11D, 1.80F, 0.0F);
             case SHADE -> new MountConfig(1.10D, 0.00D, 1.80F, 0.0F);
+            case BULWARK -> new MountConfig(1.10D, 0.39D, 1.80F, 0.0F);
+            case EXO_FRAME, TITAN_EXO -> new MountConfig(1.10D, 0.39D, 1.80F, 0.0F);
             case STRIKER_FRAME -> new MountConfig(1.05D, 0.15D, 1.75F, 0.0F);
             case VANGUARD_FRAME -> new MountConfig(1.10D, 0.35D, 1.80F, 0.0F);
             case COLOSSUS_FRAME -> new MountConfig(1.15D, 0.70D, 2.00F, 0.0F);
@@ -75,6 +77,8 @@ public class TitanFlightModuleLayer<T extends BaseTitanEntity> extends GeoRender
             case TROOPER -> new MountConfig(0.46D, 0.39D, 1.45F, 0.0F);   // behind the exhaust stacks
             case SCOUT -> new MountConfig(0.20D, 0.11D, 1.45F, 0.0F);
             case SHADE -> new MountConfig(0.33D, 0.00D, 1.45F, 0.0F);    // over the cape
+            case BULWARK -> new MountConfig(0.55D, 0.39D, 1.45F, 0.0F);  // behind the power pack
+            case EXO_FRAME, TITAN_EXO -> new MountConfig(0.46D, 0.39D, 1.45F, 0.0F);  // behind the fuel cells
             case STRIKER_FRAME -> new MountConfig(0.30D, 0.15D, 1.40F, 0.0F);
             case VANGUARD_FRAME -> new MountConfig(0.45D, 0.35D, 1.45F, 0.0F);
             case COLOSSUS_FRAME -> new MountConfig(0.55D, 0.70D, 1.60F, 0.0F);

@@ -51,6 +51,16 @@ public class DeckColliderEntity extends Entity {
         return e;
     }
 
+    /** Lays a row of square tiles (side {@code size}) along the parent's local Z from z0 to z1, overlapping as needed. */
+    public static void spawnRow(Entity parent, float size, float height, float x, float yBottom, double z0, double z1) {
+        EntityType<DeckColliderEntity> type = com.titancombat.entity.ModEntities.DECK_COLLIDER.get();
+        int tiles = (int) Math.ceil((z1 - z0) / size);
+        double step = (z1 - z0 - size) / Math.max(1, tiles - 1);
+        for (int i = 0; i < tiles; i++) {
+            parent.level().addFreshEntity(create(type, parent, size, height, x, yBottom, (float) (z0 + size / 2 + i * step)));
+        }
+    }
+
     @Override
     protected void defineSynchedData() {
         this.entityData.define(PARENT, -1);
@@ -103,10 +113,33 @@ public class DeckColliderEntity extends Entity {
 
     private java.util.List<Entity> ridersOnTop(Entity parent) {
         AABB top = this.getBoundingBox();
-        AABB zone = new AABB(top.minX, top.maxY - 0.3D, top.minZ, top.maxX, top.maxY + 0.6D, top.maxZ);
+        // 2-block margin: this box trails the hull by a tick, and a seam rider may belong to this tile while just past its edge
+        AABB zone = new AABB(top.minX - 2.0D, top.maxY - 0.3D, top.minZ - 2.0D, top.maxX + 2.0D, top.maxY + 0.6D, top.maxZ + 2.0D);
         return this.level().getEntities(this, zone, e -> !(e instanceof DeckColliderEntity) && e != parent && !e.isPassenger()
-                && e.getX() >= top.minX && e.getX() <= top.maxX && e.getZ() >= top.minZ && e.getZ() <= top.maxZ
-                && e.getY() >= top.maxY - 0.3D);
+                && e.getY() >= top.maxY - 0.3D && claims(parent, e));
+    }
+
+    /** Tiles overlap, so a rider belongs only to the nearest tile at its height (in the hull's frame, so every tile agrees); otherwise it is carried twice per tick. */
+    private boolean claims(Entity parent, Entity e) {
+        float yaw = -parent.yRotO * Mth.DEG_TO_RAD; // world -> parent's local frame, as of last tick like the carry itself
+        double rx = e.getX() - parent.xo, rz = e.getZ() - parent.zo;
+        double lx = rx * Math.cos(yaw) - rz * Math.sin(yaw), lz = rx * Math.sin(yaw) + rz * Math.cos(yaw);
+        double mine = localDistSqr(lx, lz);
+        for (DeckColliderEntity t : this.level().getEntitiesOfClass(DeckColliderEntity.class, e.getBoundingBox().inflate(3.0D),
+                t -> t != this && t.getParent() == parent && Math.abs(t.top() - top()) < 0.01F)) {
+            double d = t.localDistSqr(lx, lz);
+            if (d < mine || (d == mine && t.getId() < this.getId())) return false;
+        }
+        return true;
+    }
+
+    private float top() {
+        return this.entityData.get(LY) + this.entityData.get(HEIGHT);
+    }
+
+    private double localDistSqr(double lx, double lz) {
+        double dx = lx - this.entityData.get(LX), dz = lz - this.entityData.get(LZ);
+        return dx * dx + dz * dz;
     }
 
     /** Anything standing on this tile moves and turns with the ship. Players are moved on their own client (it owns their position). */

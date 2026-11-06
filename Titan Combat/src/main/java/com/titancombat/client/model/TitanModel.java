@@ -89,6 +89,33 @@ public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
                 setHidden("armor_right_arm_" + aid, !frame.hasArmsArmor() || armsArch != arch);
                 setHidden("armor_left_leg_" + aid, !frame.hasLegsArmor() || legsArch != arch);
                 setHidden("armor_right_leg_" + aid, !frame.hasLegsArmor() || legsArch != arch);
+                setHidden("armor_left_forearm_" + aid, !frame.hasArmsArmor() || armsArch != arch);
+                setHidden("armor_right_forearm_" + aid, !frame.hasArmsArmor() || armsArch != arch);
+                setHidden("armor_left_shin_" + aid, !frame.hasLegsArmor() || legsArch != arch);
+                setHidden("armor_right_shin_" + aid, !frame.hasLegsArmor() || legsArch != arch);
+                setHidden("armor_left_foot_" + aid, !frame.hasLegsArmor() || legsArch != arch);
+                setHidden("armor_right_foot_" + aid, !frame.hasLegsArmor() || legsArch != arch);
+                setHidden("armor_skirt_" + aid, !frame.hasLegsArmor() || legsArch != arch);
+            }
+            if (titan instanceof com.titancombat.entity.TitanExoFrameEntity) {
+                for (var bone : getAnimationProcessor().getRegisteredBones()) {
+                    String n = bone.getName();
+                    if (n.startsWith("frame_")) {
+                        // inner-frame parts (frame_head, frame_chest*) tuck away under a worn titan shell
+                        String slot = n.split("_")[1];
+                        bone.setHidden(slot.equals("head") ? frame.hasHeadArmor() : slot.equals("chest") && frame.hasChestArmor());
+                        continue;
+                    }
+                    if (!n.startsWith("tfarmor_")) continue;
+                    String[] parts = n.split("_", 4); // tfarmor, slot, archetype, exo bone
+                    boolean show = switch (parts[1]) {
+                        case "head" -> frame.hasHeadArmor() && headArch.getId().equals(parts[2]);
+                        case "chest" -> frame.hasChestArmor() && chestArch.getId().equals(parts[2]);
+                        case "arms" -> frame.hasArmsArmor() && armsArch.getId().equals(parts[2]);
+                        default -> frame.hasLegsArmor() && legsArch.getId().equals(parts[2]);
+                    };
+                    bone.setHidden(!show);
+                }
             }
         }
         boolean isTrooperOrFrame = titan.getTitanClass() == TitanClass.TROOPER
@@ -96,17 +123,13 @@ public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
         if (isTrooperOrFrame) {
             // Weapon bones: show only the currently mounted one
             com.titancombat.entity.TitanWeapon wep = titan.getActiveWeapon();
-            boolean saw = wep == com.titancombat.entity.TitanWeapon.CHAINSAW;
-            boolean drill = wep == com.titancombat.entity.TitanWeapon.MINING_DRILL;
             boolean rifle = wep == com.titancombat.entity.TitanWeapon.HEAVY_ASSAULT_RIFLE;
             boolean mg = wep == com.titancombat.entity.TitanWeapon.ROTARY_MACHINE_GUN;
             boolean rocket = wep == com.titancombat.entity.TitanWeapon.ROCKET_POD;
 
-            setHidden("drill", !drill || stowed || swapped || unarmed);
-            setHidden("chainsaw", !saw || stowed || swapped || unarmed);
-            setHidden("rifle", !rifle || stowed || swapped || unarmed);
-            setHidden("machine_gun", !mg || stowed || swapped || unarmed);
-            setHidden("rocket_launcher", !rocket || stowed || swapped || unarmed);
+            for (com.titancombat.entity.TitanWeapon w : com.titancombat.entity.TitanWeapon.values()) {
+                if (w.getModelBone() != null) setHidden(w.getModelBone(), wep != w || stowed || swapped || unarmed);
+            }
 
             setHidden("stowed_rifle", !stowed || swapped || unarmed || !rifle);
             setHidden("stowed_machine_gun", !stowed || swapped || unarmed || !mg);

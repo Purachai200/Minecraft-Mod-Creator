@@ -23,6 +23,7 @@ public class TitanBulletEntity extends ThrowableProjectile {
     private float bulletDamage = 35.0F;
     private float explosionPower = 0.0F;
     private int igniteSeconds = 0;
+    private int maxLifeTicks = 80;
     private int lifeTicks = 0;
     private boolean hasPlayedFlyby = false;
 
@@ -41,6 +42,13 @@ public class TitanBulletEntity extends ThrowableProjectile {
         this.explosionPower = weapon.getExplosionPower();
         this.igniteSeconds = weapon.getIgniteSeconds();
         if (this.igniteSeconds > 0) this.setSecondsOnFire(this.igniteSeconds);
+        if (weapon.getMaxFlightTicks() > 0) this.maxLifeTicks = weapon.getMaxFlightTicks();
+        return this;
+    }
+
+    /** Targeting Computer and similar bonuses scale the round after withWeapon set it. */
+    public TitanBulletEntity withDamageMultiplier(float multiplier) {
+        this.bulletDamage *= multiplier;
         return this;
     }
 
@@ -72,7 +80,7 @@ public class TitanBulletEntity extends ThrowableProjectile {
     public void tick() {
         super.tick();
         lifeTicks++;
-        if (lifeTicks > 80) { // ~400 blocks range
+        if (lifeTicks > maxLifeTicks) { // ~400 blocks range unless the weapon burns out sooner
             this.discard();
             return;
         }

@@ -358,21 +358,6 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
 
-        // 2b. Load cargo (Shift + Right-Click empty hand): the nearest unmounted Titan / Exoframe within 10 blocks
-        if (held.isEmpty() && player.isShiftKeyDown()) {
-            if (!this.level().isClientSide) {
-                List<LivingEntity> nearby = this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(10.0D),
-                        e -> !e.isPassenger() && com.titancombat.util.CrossModCargoHelper.isCargoEligible(e));
-                nearby.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(this)));
-                if (nearby.isEmpty()) {
-                    player.sendSystemMessage(Component.literal("§7[LOGISTICS] No Titan or Exoframe within 10 blocks to load."));
-                } else {
-                    lockCargoToDeck(nearby.get(0), player);
-                }
-            }
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
-        }
-
         // 3. Board as Driver (Right-Click empty hand)
         if (held.isEmpty() && !player.isPassenger()) {
             if (!this.level().isClientSide) {
@@ -634,61 +619,94 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         return this.getPassengers().size() < (1 + getCargoCapacity());
     }
 
-    @Override
-    protected void positionRider(Entity passenger, Entity.MoveFunction moveFunction) {
-        if (!this.hasPassenger(passenger)) return;
+    /** Fuselage tilt the model draws from the hull's motion, in radians: + pitch = nose down, + roll = right side up. */
+    public float getHullPitch() {
+        return 0.0F;
+    }
 
-        Vec3 localOffset;
+    public float getHullRoll() {
+        return 0.0F;
+    }
+
+    /** Height in blocks of the bone the hull tilts about. */
+    protected double getHullPivotY() {
+        return 0.0D;
+    }
+
+    /** Nose-down pitch of an aircraft flying forward (client motion; 0 on the server). */
+    protected final float flightPitch() {
+        return Mth.clamp(this.visSpeed * 0.16F, -0.10F, 0.18F);
+    }
+
+    /** Bank into a turn. */
+    protected final float flightRoll() {
+        return -1.8F * Mth.clamp(this.visYawRate * Mth.DEG_TO_RAD * this.visSpeed * 6.0F, -0.08F, 0.08F);
+    }
+
+    @Override
+    public net.minecraft.world.phys.AABB getBoundingBoxForCulling() {
+        // Hulls are far bigger than their hitbox (the carrier is ~40 blocks long on an 8-block box): cull by the model's reach
+        return this.getBoundingBox().inflate(20.0D, 6.0D, 20.0D);
+    }
+
+    /** Seat (local frame: +X left, +Y up, +Z forward) for this passenger. */
+    private Vec3 seatOffset(Entity passenger) {
         if (passenger instanceof Player player) {
-            if (this.getPassengers().indexOf(player) == 0) {
-                // Primary Driver Seat
-                localOffset = getDriverSeatOffset();
-            } else {
-                // Secondary / Troop Passenger Seats (Osprey, APC, etc.)
-                int troopIdx = 0;
-                for (Entity p : this.getPassengers()) {
-                    if (p == player) break;
-                    if (p instanceof Player) troopIdx++;
-                }
-                troopIdx = Math.max(0, troopIdx - 1);
-                if (this instanceof TitanV22OspreyEntity osprey) {
-                    localOffset = osprey.getPassengerTroopOffset(troopIdx);
-                } else if (this instanceof TitanArmoredApcEntity apc) {
-                    localOffset = apc.getTroopSeatOffset(troopIdx);
-                } else {
-                    localOffset = getDriverSeatOffset();
-                }
+            if (this.getPassengers().indexOf(player) == 0) return getDriverSeatOffset(); // Primary Driver Seat
+            // Secondary / Troop Passenger Seats (Osprey, APC, etc.)
+            int troopIdx = 0;
+            for (Entity p : this.getPassengers()) {
+                if (p == player) break;
+                if (p instanceof Player) troopIdx++;
             }
-        } else if (com.titancombat.util.CrossModCargoHelper.isCargoEligible(passenger)) {
+            troopIdx = Math.max(0, troopIdx - 1);
+            if (this instanceof TitanV22OspreyEntity osprey) return osprey.getPassengerTroopOffset(troopIdx);
+            if (this instanceof TitanArmoredApcEntity apc) return apc.getTroopSeatOffset(troopIdx);
+            return getDriverSeatOffset();
+        }
+        if (com.titancombat.util.CrossModCargoHelper.isCargoEligible(passenger)) {
             // Rear Cargo Bed: anchor positions for heavy mechs
             int cargoIndex = 0;
             for (Entity p : this.getPassengers()) {
                 if (p == passenger) break;
                 if (com.titancombat.util.CrossModCargoHelper.isCargoEligible(p)) cargoIndex++;
             }
-            localOffset = getTitanCargoOffset(cargoIndex);
+            Vec3 localOffset = getTitanCargoOffset(cargoIndex);
             if (slingsCargo()) {
                 // Hang the load just under the belly whatever its height, so small Exoframes don't dangle 5 blocks down
                 localOffset = new Vec3(localOffset.x, -passenger.getBbHeight() - 0.6D, localOffset.z);
             }
-        } else {
-            localOffset = Vec3.ZERO;
+            return localOffset;
         }
+        return Vec3.ZERO;
+    }
 
+    /** Where a passenger sits in the world: its seat, tilted with the fuselage so it never pokes out of the roof, turned to the heading. */
+    public Vec3 seatWorldPos(Entity passenger) {
+        Vec3 o = seatOffset(passenger);
+        float pitch = getHullPitch(), roll = getHullRoll();
+        if (pitch != 0.0F || roll != 0.0F) {
+            double h = o.y - getHullPivotY();
+            double cp = Math.cos(pitch), sp = Math.sin(pitch);
+            double y = h * cp - o.z * sp, z = o.z * cp + h * sp;
+            double cr = Math.cos(roll), sr = Math.sin(roll);
+            o = new Vec3(o.x * cr + y * sr, getHullPivotY() + y * cr - o.x * sr, z);
+        }
         // Standard Minecraft entity local-to-world rotation:
         // localOffset: +X = Left, +Y = Up, +Z = Forward (model +X is also left: GeckoLib mirrors X)
+        // Forward unit vector = (-sin(yaw), cos(yaw)), Left unit vector = (cos(yaw), sin(yaw))
         float yawRad = this.getYRot() * ((float) Math.PI / 180.0F);
         double cos = Math.cos(yawRad);
         double sin = Math.sin(yawRad);
+        return new Vec3(this.getX() + (o.x * cos - o.z * sin), this.getY() + o.y, this.getZ() + (o.x * sin + o.z * cos));
+    }
 
-        // Transform local (X=right, Y=height, Z=forward) to world coordinates:
-        // Forward unit vector = (-sin(yaw), cos(yaw))
-        // Left unit vector    = (cos(yaw), sin(yaw))
-        double worldX = this.getX() + (localOffset.x * cos - localOffset.z * sin);
-        double worldY = this.getY() + localOffset.y;
-        double worldZ = this.getZ() + (localOffset.x * sin + localOffset.z * cos);
+    @Override
+    protected void positionRider(Entity passenger, Entity.MoveFunction moveFunction) {
+        if (!this.hasPassenger(passenger)) return;
 
-        moveFunction.accept(passenger, worldX, worldY, worldZ);
+        Vec3 seat = seatWorldPos(passenger);
+        moveFunction.accept(passenger, seat.x, seat.y, seat.z);
 
         if (passenger instanceof Player player) {
             // Turn the driver/passenger's view with the hull but leave mouse-look free (full 360 freedom for TACZ guns!)

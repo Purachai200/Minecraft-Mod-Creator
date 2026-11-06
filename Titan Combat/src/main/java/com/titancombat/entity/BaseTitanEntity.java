@@ -83,6 +83,9 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
             SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
     public static final EntityDataAccessor<Integer> DATA_RELOAD_TICKS =
             SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.INT);
+    /** A Servo Overdrive Module sits in the accessory slot (synced: the pilot's client runs the movement). */
+    public static final EntityDataAccessor<Boolean> DATA_OVERDRIVE =
+            SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Boolean> DATA_WEAPON_LOWERED =
             SynchedEntityData.defineId(BaseTitanEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Boolean> DATA_IS_SITTING =
@@ -140,7 +143,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     public static boolean clientSprintHeld = false;
     public static boolean clientJumpHeld = false;
 
-    protected final SimpleContainer titanInventory = new SimpleContainer(TitanMenu.CONTAINER_SIZE);
+    protected final SimpleContainer titanInventory = new SimpleContainer(TitanMenu.TOTAL_SIZE);
 
     protected int firingCooldown = 0;
     protected int fireAnimTimer = 0;
@@ -221,6 +224,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         this.entityData.define(DATA_MAGAZINE, 0);
         this.entityData.define(DATA_RELOAD_TICKS, 0);
         this.entityData.define(DATA_WEAPON_LOWERED, false);
+        this.entityData.define(DATA_OVERDRIVE, false);
         this.entityData.define(DATA_SALUTE_TICKS, 0);
         this.entityData.define(DATA_ARTILLERY_TARGET, java.util.Optional.empty());
         this.entityData.define(DATA_ARTILLERY_LAYING, 0);
@@ -624,13 +628,13 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         boolean hasFlight = flight != TitanFlightModule.NONE;
 
         boolean sprinting = clientSprintHeld && forward > 0.5F;
-        double topSpeed = sprinting ? c.getRunSpeed() : c.getWalkSpeed();
+        double topSpeed = (sprinting ? c.getRunSpeed() : c.getWalkSpeed()) * getSpeedBoost();
         if (hasFlight && !grounded) {
             topSpeed *= flight.getForwardMultiplier();
         }
         // Reverse and side-stepping are slower, like a real heavy frame.
         double fwdSpeed = this.smoothedForward * topSpeed * (this.smoothedForward < 0 ? 0.55D : 1.0D);
-        double sideSpeed = this.smoothedStrafe * c.getWalkSpeed() * 0.7D;
+        double sideSpeed = this.smoothedStrafe * c.getWalkSpeed() * getSpeedBoost() * 0.7D;
 
         float yawRad = this.getYRot() * ((float) Math.PI / 180.0F);
         double sin = Math.sin(yawRad), cos = Math.cos(yawRad);
@@ -704,6 +708,9 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     public boolean hurt(DamageSource source, float amount) {
         if (!this.level().isClientSide) {
             amount = applyArmorPlating(source, amount);
+            if (getAccessory() == com.titancombat.item.TitanAccessoryItem.Type.PLATING) {
+                amount *= 1.0F - (float) com.titancombat.TitanConfig.platingReduction();
+            }
             if (amount <= 0.0F) {
                 playRicochet(source);
                 return false;
@@ -1051,8 +1058,8 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         }
 
         TitanClass c = getTitanClass();
-        double walk = c.getWalkSpeed() * 20.0D;
-        double run = c.getRunSpeed() * 20.0D;
+        double walk = c.getWalkSpeed() * getSpeedBoost() * 20.0D;
+        double run = c.getRunSpeed() * getSpeedBoost() * 20.0D;
         double runThreshold = (walk + run) * 0.5D;
         double moveThreshold = this.gait == Gait.IDLE ? 0.9D : 0.5D; // hysteresis
 
@@ -1067,9 +1074,9 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
 
     /** Playback rate for locomotion clips; fixed per gait so a step always matches one stride. */
     public double getLocomotionPlayback() {
-        return switch (this.gait) {
-            case WALK -> getTitanClass().getWalkPlayback();
-            case RUN -> getTitanClass().getRunPlayback();
+        return switch (this.gait) {  // overdrive steps faster rather than sliding the feet
+            case WALK -> getTitanClass().getWalkPlayback() * getSpeedBoost();
+            case RUN -> getTitanClass().getRunPlayback() * getSpeedBoost();
             default -> 1.0D;
         };
     }
@@ -1128,6 +1135,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
             }
             tickWeaponSystems();
             tickFlightSystems();
+            if (this.tickCount % 20 == 1) applyConfigStats();
             tickHowitzer();
             tickEjectSequence();
             // Pilot boarded a parked titan: the hatch seals, then the chassis rises on its own.
@@ -1877,8 +1885,45 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         return module.getItem() instanceof com.titancombat.item.TitanWeaponItem w ? w.getWeapon() : null;
     }
 
+    /** Brings health, shield, speed and melee attributes in line with the server config (it can be edited live). */
+    private void applyConfigStats() {
+        TitanClass c = getTitanClass();
+        var hp = this.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+        if (hp != null && hp.getBaseValue() != c.getMaxHealth()) {
+            boolean full = this.getHealth() >= this.getMaxHealth();
+            hp.setBaseValue(c.getMaxHealth());
+            this.setHealth(full ? this.getMaxHealth() : Math.min(this.getHealth(), this.getMaxHealth()));
+        }
+        float maxShield = c.getMaxShield() * (getAccessory() == com.titancombat.item.TitanAccessoryItem.Type.CAPACITOR
+                ? 1.0F + (float) com.titancombat.TitanConfig.capacitorBonus() : 1.0F);
+        if (this.entityData.get(DATA_MAX_SHIELD) != maxShield) {
+            this.entityData.set(DATA_MAX_SHIELD, maxShield);
+            setShield(Math.min(getShield(), maxShield));
+        }
+        if (getAccessory() == com.titancombat.item.TitanAccessoryItem.Type.NANITE && this.getHealth() < this.getMaxHealth() && this.isAlive()) {
+            this.heal((float) com.titancombat.TitanConfig.naniteRepair()); // applyConfigStats runs once a second
+        }
+        var speed = this.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+        if (speed != null) speed.setBaseValue(c.getMoveSpeed());
+        var melee = this.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        if (melee != null) melee.setBaseValue(c.getAttackDamage());
+    }
+
+    /** Module in the MOD accessory slot, or null (server side: the inventory is not synced). */
+    @org.jetbrains.annotations.Nullable
+    public com.titancombat.item.TitanAccessoryItem.Type getAccessory() {
+        return this.titanInventory.getItem(TitanMenu.UTILITY_SLOT).getItem() instanceof com.titancombat.item.TitanAccessoryItem a ? a.getType() : null;
+    }
+
+    /** Speed factor from the accessory slot: 1 + the config's overdrive bonus with a Servo Overdrive Module, else 1. */
+    public double getSpeedBoost() {
+        return this.entityData.get(DATA_OVERDRIVE) ? 1.0D + com.titancombat.TitanConfig.overdriveBonus() : 1.0D;
+    }
+
     /** Server tick: weapon swaps, reload completion, lowering the gun when the trigger is released. */
     private void tickWeaponSystems() {
+        boolean overdrive = getAccessory() == com.titancombat.item.TitanAccessoryItem.Type.OVERDRIVE;
+        if (overdrive != this.entityData.get(DATA_OVERDRIVE)) this.entityData.set(DATA_OVERDRIVE, overdrive);
         TitanWeapon installed = installedWeapon();
         if (installed != getActiveWeapon()) {
             // New weapon module: it arrives unloaded and has to be readied.
@@ -2195,14 +2240,16 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         Vec3 ejectPos = spawnPos.subtract(aim.scale(0.8D)).add(right.scale(0.4D)).add(0.0D, 0.1D, 0.0D);
 
         for (int i = 0; i < weapon.getPellets(); i++) {
-            TitanBulletEntity round = new TitanBulletEntity(this.level(), pilot, weapon.getDamage()).withWeapon(weapon);
+            TitanBulletEntity round = new TitanBulletEntity(this.level(), pilot, weapon.getDamage()).withWeapon(weapon)
+                    .withDamageMultiplier(getAccessory() == com.titancombat.item.TitanAccessoryItem.Type.TARGETING ? 1.0F + (float) com.titancombat.TitanConfig.targetingBonus() : 1.0F);
             round.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
             round.shoot(aim.x, aim.y, aim.z, weapon.getProjectileSpeed(), weapon.getSpread());
             this.level().addFreshEntity(round);
         }
 
         // Fling spent casing for ballistic weapons
-        if (weapon != TitanWeapon.SPLITTER_RIFLE && weapon != TitanWeapon.PLASMA_RAILGUN && weapon != TitanWeapon.THERMITE_LAUNCHER && weapon != TitanWeapon.ROCKET_POD) {
+        if (weapon != TitanWeapon.SPLITTER_RIFLE && weapon != TitanWeapon.PLASMA_RAILGUN && weapon != TitanWeapon.THERMITE_LAUNCHER && weapon != TitanWeapon.ROCKET_POD
+                && weapon != TitanWeapon.ARC_CANNON && weapon != TitanWeapon.INFERNO_FLAMETHROWER) {
             TitanCasingEntity casing = new TitanCasingEntity(this.level(), ejectPos, forward, right);
             this.level().addFreshEntity(casing);
         }
@@ -2320,11 +2367,14 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         }
     }
 
-    /** Attempts to insert item into titan cargo slots (3..11), returns uninserted leftovers. */
+    /** Inserts into the cargo slots (3..11), then the cargo hold; returns what did not fit. */
     public ItemStack insertIntoCargo(ItemStack stack) {
         if (stack.isEmpty()) return ItemStack.EMPTY;
         ItemStack toInsert = stack.copy();
-        for (int i = TitanMenu.CARGO_START; i <= TitanMenu.CARGO_END; i++) {
+        int[] slots = java.util.stream.IntStream.concat(
+                java.util.stream.IntStream.rangeClosed(TitanMenu.CARGO_START, TitanMenu.CARGO_END),
+                java.util.stream.IntStream.range(TitanMenu.HOLD_START, TitanMenu.TOTAL_SIZE)).toArray();
+        for (int i : slots) {
             ItemStack existing = this.titanInventory.getItem(i);
             if (!existing.isEmpty() && ItemStack.isSameItemSameTags(existing, toInsert)) {
                 int max = Math.min(existing.getMaxStackSize(), this.titanInventory.getMaxStackSize());
@@ -2337,7 +2387,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
                 }
             }
         }
-        for (int i = TitanMenu.CARGO_START; i <= TitanMenu.CARGO_END; i++) {
+        for (int i : slots) {
             if (this.titanInventory.getItem(i).isEmpty()) {
                 this.titanInventory.setItem(i, toInsert.copy());
                 return ItemStack.EMPTY;

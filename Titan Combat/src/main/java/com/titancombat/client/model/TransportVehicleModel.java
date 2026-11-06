@@ -105,8 +105,8 @@ public class TransportVehicleModel<T extends BaseTransportVehicleEntity> extends
         } else if (vehicle instanceof com.titancombat.entity.transport.TitanChinookTransporterEntity
                 || vehicle instanceof com.titancombat.entity.transport.TitanC130HerculesEntity) {
             getBone("fuselage").ifPresent(b -> {
-                b.setRotX(-Mth.clamp(speed * 0.16F, -0.10F, 0.18F)); // nose dips forward in flight
-                b.setRotZ(-roll * 1.8F);
+                b.setRotX(-vehicle.getHullPitch()); // nose dips forward in flight; the pilot's seat tilts the same way
+                b.setRotZ(vehicle.getHullRoll());
             });
         } else if (vehicle instanceof com.titancombat.entity.transport.TitanOceanCarrierEntity
                 || vehicle instanceof com.titancombat.entity.transport.TitanLcacHovercraftEntity) {

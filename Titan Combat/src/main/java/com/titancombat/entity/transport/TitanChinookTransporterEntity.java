@@ -55,6 +55,21 @@ public class TitanChinookTransporterEntity extends BaseTransportVehicleEntity {
     }
 
     @Override
+    public float getHullPitch() {
+        return flightPitch();
+    }
+
+    @Override
+    public float getHullRoll() {
+        return flightRoll();
+    }
+
+    @Override
+    protected double getHullPivotY() {
+        return 1.5D; // "fuselage" bone pivot
+    }
+
+    @Override
     protected Vec3 getDriverSeatOffset() {
         return PILOT_OFFSET;
     }

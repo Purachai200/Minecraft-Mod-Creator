@@ -32,12 +32,19 @@ public class TitanC130HerculesEntity extends BaseTransportVehicleEntity {
     private static final Vec3 BAY_OFFSET = new Vec3(0.0D, 0.875D, 1.75D);
     /** Ramp lip, where airdropped cargo leaves the aircraft. */
     private static final Vec3 RAMP_EXIT = new Vec3(0.0D, -1.5D, -9.0D);
+    /** Walkable shell (local +Z forward, model px / 16 from scripts/gen_c130_hercules.py): bay floor top 14 px over z -124..68,
+     *  fuselage crown 92 px, wing box 105 px over z +-36, wing panels stepping down from 101 px to 99 px out to x +-236. */
+    private static final double BAY_Z_MIN = -4.25D, BAY_Z_MAX = 7.75D;
+    private static final float FLOOR_TOP = 0.875F, CROWN_TOP = 5.75F, WING_BOX_TOP = 6.5625F;
+    /** Wing panel tiles (centre x, size, top), mirrored to both sides. */
+    private static final float[][] WING_TILES = {{4.75F, 4.25F, 6.3125F}, {9.1F, 4.0F, 6.25F}, {12.9F, 3.6F, 6.1875F}};
     private static final float STALL_SPEED = 0.7F;
     private static final float MAX_SPEED = 1.6F;
 
     /** Loads still under canopy; slowed every tick until they touch down. */
     private final List<Entity> chutes = new ArrayList<>();
     private int rampTimer = 0;
+    private boolean collidersSpawned = false;
 
     public TitanC130HerculesEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -61,6 +68,21 @@ public class TitanC130HerculesEntity extends BaseTransportVehicleEntity {
     }
 
     @Override
+    public float getHullPitch() {
+        return flightPitch();
+    }
+
+    @Override
+    public float getHullRoll() {
+        return flightRoll();
+    }
+
+    @Override
+    protected double getHullPivotY() {
+        return 2.5D; // "fuselage" bone pivot
+    }
+
+    @Override
     protected Vec3 getDriverSeatOffset() {
         return PILOT_OFFSET;
     }
@@ -76,15 +98,12 @@ public class TitanC130HerculesEntity extends BaseTransportVehicleEntity {
         return new Vec3(this.getX() + o.x * cos - o.z * sin, this.getY() + o.y, this.getZ() + o.x * sin + o.z * cos);
     }
 
-    /** In the air: ramp down and the load drops out the back under a chute. On the ground: drive it off the ramp. */
+    /** Ramp down and the load leaves over the lip: under a chute in the air, rolled off onto the ground otherwise. */
     @Override
     public void releaseMountedTitans(Player pilot) {
         setRampOpen(true);
         this.rampTimer = 80;
-        if (this.onGround()) {
-            super.releaseMountedTitans(pilot);
-            return;
-        }
+        boolean airdrop = !this.onGround();
         for (Entity p : List.copyOf(this.getPassengers())) {
             if (!com.titancombat.util.CrossModCargoHelper.isCargoEligible(p)) continue;
             p.stopRiding();
@@ -94,19 +113,34 @@ public class TitanC130HerculesEntity extends BaseTransportVehicleEntity {
             } else {
                 com.titancombat.util.CrossModCargoHelper.setExoframeTransportLock(p, false);
             }
+            // Clear of the fuselage, whose bay floor is solid
             Vec3 exit = local(RAMP_EXIT);
-            p.moveTo(exit.x, exit.y - p.getBbHeight(), exit.z, this.getYRot(), 0.0F);
-            p.setDeltaMovement(this.getDeltaMovement().scale(0.5D));
-            this.chutes.add(p);
-            if (pilot != null) pilot.sendSystemMessage(Component.literal("§e[AIRDROP] Load away - drogue chute deployed!"));
+            p.moveTo(exit.x, airdrop ? exit.y - p.getBbHeight() : this.getY(), exit.z, this.getYRot(), 0.0F);
+            p.setDeltaMovement(airdrop ? this.getDeltaMovement().scale(0.5D) : Vec3.ZERO);
+            if (airdrop) this.chutes.add(p);
+            if (pilot != null) pilot.sendSystemMessage(Component.literal(airdrop ? "§e[AIRDROP] Load away - drogue chute deployed!" : "§e[LOGISTICS RELEASE] Load rolled off the ramp."));
         }
-        this.level().playSound(null, this.blockPosition(), SoundEvents.ELYTRA_FLYING, SoundSource.NEUTRAL, 1.5F, 0.6F);
+        this.level().playSound(null, this.blockPosition(), airdrop ? SoundEvents.ELYTRA_FLYING : SoundEvents.PISTON_CONTRACT, SoundSource.NEUTRAL, 1.5F, 0.6F);
         setHasCargo(false);
     }
 
     @Override
     public void tick() {
         super.tick();
+        if (!this.level().isClientSide && !this.collidersSpawned) {
+            this.collidersSpawned = true;
+            // Walkable where the model is: cargo bay floor, fuselage roof fore and aft of the wing, wing box and both wings.
+            // Every tile carries whoever stands on it.
+            DeckColliderEntity.spawnRow(this, 3.5F, 1.0F, 0.0F, FLOOR_TOP - 1.0F, BAY_Z_MIN, BAY_Z_MAX);
+            DeckColliderEntity.spawnRow(this, 4.0F, 0.5F, 0.0F, CROWN_TOP - 0.5F, 2.25D, 10.6D);    // roof over the flight deck and forward bay
+            DeckColliderEntity.spawnRow(this, 4.0F, 0.5F, 0.0F, CROWN_TOP - 0.5F, -9.4D, -3.75D);   // roof aft of the wing fairing
+            DeckColliderEntity.spawnRow(this, 4.5F, 0.5F, 0.0F, WING_BOX_TOP - 0.5F, -2.25D, 2.25D);
+            for (float[] w : WING_TILES) {
+                for (int side = -1; side <= 1; side += 2) {
+                    DeckColliderEntity.spawnRow(this, w[1], 0.5F, side * w[0], w[2] - 0.5F, -w[1] / 2.0D, w[1] / 2.0D);
+                }
+            }
+        }
         if (this.rampTimer > 0 && --this.rampTimer == 0 && !this.level().isClientSide) setRampOpen(false);
 
         // Parachute: cap the fall speed and drift until the load lands (server owns the dropped entities)

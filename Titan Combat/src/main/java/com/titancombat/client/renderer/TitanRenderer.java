@@ -135,11 +135,28 @@ public class TitanRenderer<T extends BaseTitanEntity> extends GeoEntityRenderer<
                 .endVertex();
     }
 
+    private static com.titancombat.entity.TitanArmorTheme armorTheme(com.titancombat.entity.TitanFrameEntity frame, String bone) {
+        if (bone.startsWith("armor_head")) return frame.getHeadTheme();
+        if (bone.startsWith("armor_chest")) return frame.getChestTheme();
+        if (bone.contains("_arm_") || bone.contains("_forearm_")) return frame.getArmsTheme();
+        return frame.getLegsTheme();
+    }
+
     @Override
     public void renderRecursively(PoseStack poseStack, T animatable, GeoBone bone, RenderType renderType, MultiBufferSource bufferSource,
                                   VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay,
                                   float red, float green, float blue, float alpha) {
         if (this.animateOnly) return;
+        if (animatable instanceof com.titancombat.entity.ExoTitanFrameEntity && bone.getName().endsWith("_trim")) {
+            red = green = blue = 1.0F; // accents (V-fins, vents, soles) keep their own colours under the tinted plates
+        } else if (animatable instanceof com.titancombat.entity.ExoTitanFrameEntity exo && bone.getName().startsWith("armor_")) {
+            // Exo Frame armour is painted neutral: wear the theme colour, eased toward white so texture detail survives.
+            // Skirt and feet go with the legs (the fallback below).
+            int c = armorTheme(exo, bone.getName()).getPrimaryColor();
+            red *= (((c >> 16) & 0xFF) / 255.0F) * 0.8F + 0.2F;
+            green *= (((c >> 8) & 0xFF) / 255.0F) * 0.8F + 0.2F;
+            blue *= ((c & 0xFF) / 255.0F) * 0.8F + 0.2F;
+        }
         super.renderRecursively(poseStack, animatable, bone, renderType, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, red, green, blue, alpha);
     }
 }

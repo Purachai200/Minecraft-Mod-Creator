@@ -62,11 +62,18 @@ public class TitanLcacHovercraftEntity extends BaseTransportVehicleEntity {
         return CARGO_SLOTS[Math.min(slotIndex, CARGO_SLOTS.length - 1)];
     }
 
-    /** Vertical speed that holds the hull HOVER blocks above the water surface (null = not over water). */
+    /** Vertical speed that eases the hull to HOVER blocks above the water surface (null = no water under it). */
     private Double cushionLift() {
-        double depth = this.getFluidHeight(FluidTags.WATER); // how deep the hull sits in water
-        if (depth <= 0.0D) return null;
-        return Mth.clamp((depth + HOVER) * 0.5D, 0.0D, 0.4D);
+        // Steer to the surface itself, not "in water or not": that flips every tick and bounces the hull
+        net.minecraft.core.BlockPos.MutableBlockPos p = net.minecraft.core.BlockPos.containing(this.getX(), this.getY() + 2.0D, this.getZ()).mutable();
+        for (int i = 0; i < 5; i++, p.move(net.minecraft.core.Direction.DOWN)) {
+            var fluid = this.level().getFluidState(p);
+            if (fluid.is(FluidTags.WATER)) {
+                double surface = p.getY() + fluid.getHeight(this.level(), p);
+                return Mth.clamp((surface + HOVER - this.getY()) * 0.3D, -0.3D, 0.4D);
+            }
+        }
+        return null;
     }
 
     @Override
@@ -85,7 +92,7 @@ public class TitanLcacHovercraftEntity extends BaseTransportVehicleEntity {
     protected void travelTransport(LivingEntity driver, Vec3 travelVector) {
         updateThrottle(driver, 1.0F, 0.35F, 0.025F, 0.04F, 0.008F);
         // Rudders in the prop wash: some authority even at rest
-        float turnRate = 1.6F + 2.0F * Math.min(1.0F, Math.abs(this.currentSpeed));
+        float turnRate = 0.8F + 1.2F * Math.min(1.0F, Math.abs(this.currentSpeed)); // at most 40 deg/s, like the other hulls
         this.yawDelta = -driver.xxa * turnRate * (this.currentSpeed < -0.02F ? -1.0F : 1.0F);
         Double lift = cushionLift();
         double vert = lift != null ? lift : gravityMotion();

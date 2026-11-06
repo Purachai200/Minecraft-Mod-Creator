@@ -26,6 +26,15 @@ public enum TitanClass {
     // Mass-produced cloaked infiltrator, also on the Trooper skeleton; Defense key toggles the cloak.
     SHADE("shade", "Shade", "Cloaked Infiltrator Frame", 200.0D, 70.0F, 0.34D, 18.0D, 2.4F, 4.6F,
             4.8F, 6.2F, 5.70F, 0.50F, 4.10F, 1.40F),
+    // Heavy mass-production frame on the Trooper skeleton: an armoured vehicle that walks (MP-07 Bulwark).
+    BULWARK("bulwark", "Bulwark", "Heavy Mass-Production Frame", 300.0D, 90.0F, 0.27D, 24.0D, 2.6F, 4.6F,
+            4.8F, 6.2F, 5.70F, 0.50F, 4.10F, 1.40F),
+    // Mass-production exoskeleton (MP-05): a bare strut frame that wears the modular armour sets.
+    EXO_FRAME("exo_frame", "Exo Frame", "Mass-Production Exoskeleton", 260.0D, 70.0F, 0.33D, 22.0D, 2.5F, 4.6F,
+            4.8F, 6.2F, 5.70F, 0.50F, 4.10F, 1.40F),
+    // The MP-05 inner frame wearing the real titans as armour (each archetype is one titan's shell).
+    TITAN_EXO("titan_exo", "Titan Exo", "Titan-Armour Exoskeleton", 280.0D, 80.0F, 0.33D, 24.0D, 2.5F, 4.6F,
+            4.8F, 6.2F, 5.70F, 0.50F, 4.10F, 1.40F),
     // Modular Titan Frames: starting bare, accepting modular armor attachments
     STRIKER_FRAME("striker_frame", "Striker Frame", "Agile Modular Frame", 220.0D, 60.0F, 0.38D, 22.0D, 2.4F, 4.6F,
             4.8F, 7.2F, 5.70F, 0.50F, 4.10F, 1.40F),
@@ -85,6 +94,9 @@ public enum TitanClass {
             case ION, TONE, MONARCH, TROOPER -> 1.0F;
             case SCOUT -> 0.7F;
             case SHADE -> 0.85F;
+            case BULWARK -> 1.2F;
+            case EXO_FRAME -> 0.85F;
+            case TITAN_EXO -> 1.0F;
             case STRIKER_FRAME -> 0.75F;
             case VANGUARD_FRAME -> 1.0F;
             case COLOSSUS_FRAME, SCORCH, LEGION -> 1.45F;
@@ -102,19 +114,32 @@ public enum TitanClass {
         return role;
     }
 
+    /** Live values from the server config (TitanConfig); the getBase* values are the built-in defaults. */
     public double getMaxHealth() {
-        return maxHealth;
+        return com.titancombat.TitanConfig.maxHealth(this);
     }
 
     public float getMaxShield() {
-        return maxShield;
+        return com.titancombat.TitanConfig.maxShield(this);
     }
 
     public double getMoveSpeed() {
-        return moveSpeed;
+        return com.titancombat.TitanConfig.moveSpeed(this) * com.titancombat.TitanConfig.speedMultiplier();
     }
 
     public double getAttackDamage() {
+        return com.titancombat.TitanConfig.meleeDamage(this);
+    }
+
+    public double getBaseMaxHealth() {
+        return maxHealth;
+    }
+
+    public double getBaseMoveSpeed() {
+        return moveSpeed;
+    }
+
+    public double getBaseAttackDamage() {
         return attackDamage;
     }
 
@@ -160,6 +185,8 @@ public enum TitanClass {
             case TROOPER -> new double[]{0.60D, 4.71D, 1.69D};
             case SCOUT -> new double[]{0.60D, 4.45D, 1.41D};
             case SHADE -> new double[]{0.60D, 4.58D, 1.30D};
+            case BULWARK -> new double[]{0.60D, 4.71D, 1.80D};
+            case EXO_FRAME, TITAN_EXO -> new double[]{0.60D, 4.71D, 1.69D};
             case STRIKER_FRAME -> new double[]{0.55D, 4.60D, 1.50D};
             case VANGUARD_FRAME -> new double[]{0.60D, 4.75D, 1.70D};
             case COLOSSUS_FRAME -> new double[]{0.70D, 4.80D, 2.20D};
@@ -171,7 +198,7 @@ public enum TitanClass {
 
     /** Walking speed relative to Ion, used to scale movement per chassis. */
     public float getAgility() {
-        return (float) (moveSpeed / 0.32D);
+        return (float) (getMoveSpeed() / 0.32D);
     }
 
     // Desired ground speeds (blocks/second) for an Ion-class chassis; others scale by agility.
@@ -213,12 +240,12 @@ public enum TitanClass {
             case LEGION -> running ? 0.53F : 0.62F;
             case MONARCH -> running ? 0.13F : 0.25F;
             case NORTHSTAR -> running ? 0.26F : 0.10F;
-            case TROOPER, SCOUT, SHADE, STRIKER_FRAME, VANGUARD_FRAME, COLOSSUS_FRAME, TERRAIN_FRAME, CYCLOPS_FRAME, SPIDER_FRAME -> running ? 0.25F : 0.30F;
+            case TROOPER, SCOUT, SHADE, BULWARK, EXO_FRAME, TITAN_EXO, STRIKER_FRAME, VANGUARD_FRAME, COLOSSUS_FRAME, TERRAIN_FRAME, CYCLOPS_FRAME, SPIDER_FRAME -> running ? 0.25F : 0.30F;
         };
     }
 
     private static float clampPlayback(float playback) {
-        return Math.max(0.85F, Math.min(1.5F, playback));
+        return Math.max(0.85F, Math.min(2.0F, playback)); // up to 2x so the config speed-up isn't clipped
     }
 
     public static TitanClass byId(String id) {

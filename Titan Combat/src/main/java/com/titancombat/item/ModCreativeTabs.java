@@ -22,6 +22,14 @@ public class ModCreativeTabs {
                         // Deployers & Transponders
                         output.accept(ModItems.TITAN_DROP_BEACON.get());
                         output.accept(ModItems.TROOPER_BEACON.get());
+                        output.accept(ModItems.BULWARK_BEACON.get());
+                        output.accept(ModItems.EXO_FRAME_BEACON.get());
+                        output.accept(ModItems.TITAN_EXO_BEACON.get());
+                        output.accept(ModItems.SERVO_OVERDRIVE_MODULE.get());
+                        output.accept(ModItems.REINFORCED_PLATING_MODULE.get());
+                        output.accept(ModItems.SHIELD_CAPACITOR_MODULE.get());
+                        output.accept(ModItems.NANITE_REPAIR_MODULE.get());
+                        output.accept(ModItems.TARGETING_COMPUTER_MODULE.get());
                         output.accept(ModItems.TITAN_FRAME_BEACON.get());
                         output.accept(ModItems.STRIKER_FRAME_BEACON.get());
                         output.accept(ModItems.VANGUARD_FRAME_BEACON.get());
