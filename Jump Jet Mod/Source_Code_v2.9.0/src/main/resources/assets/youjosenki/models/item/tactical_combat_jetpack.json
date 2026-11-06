@@ -1,7 +1,0 @@
-{
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "youjosenki:item/flight_unit_base",
-    "layer1": "youjosenki:item/flight_unit_overlay"
-  }
-}
