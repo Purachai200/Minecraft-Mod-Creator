@@ -129,6 +129,13 @@
       "prep": 0.1
     }
   },
-  "allow_attachment_types": [],
-  "exclusive_attachments": {}
+  "allow_attachment_types": [
+    "extended_mag"
+  ],
+  "exclusive_attachments": {},
+  "extended_mag_ammo_amount": [
+    1,
+    1,
+    1
+  ]
 }

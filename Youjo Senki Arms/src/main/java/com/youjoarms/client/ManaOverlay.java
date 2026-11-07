@@ -67,6 +67,14 @@ public class ManaOverlay {
             String manaText = mana + " / " + maxMana + " MP";
             gui.drawString(font, manaText, x + (barWidth - font.width(manaText)) / 2, y - 8, 0x90E0EF, true);
 
+            // Mana Cell charge, shown while a cell sits in the gun
+            int tier = com.youjoarms.mana.GunMana.cellTier(heldItem);
+            if (tier > 0) {
+                int ch = com.youjoarms.mana.GunMana.charge(heldItem);
+                String cellText = "Cell " + new String[]{"I", "II", "III", "IV", "V"}[tier - 1] + "  " + ch + "/" + com.youjoarms.mana.GunMana.CHARGE_CAPACITY;
+                gui.drawString(font, cellText, x + barWidth + 6, y - 1, ch > 0 ? 0xFFD700 : 0xFF5555, true);
+            }
+
             // Formula name, then one pip per magic circle; pips light up as the circles stack while charging
             FormulaType formula = cap.getSelectedFormula();
             String formulaText = formula.getDisplayName();

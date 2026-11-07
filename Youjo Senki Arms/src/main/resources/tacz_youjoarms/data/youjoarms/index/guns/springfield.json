@@ -1,0 +1,7 @@
+{
+  "name": "youjoarms.gun.springfield.name",
+  "display": "youjoarms:springfield_display",
+  "data": "youjoarms:springfield_data",
+  "tooltip": "youjoarms.gun.springfield.desc",
+  "type": "sniper"
+}

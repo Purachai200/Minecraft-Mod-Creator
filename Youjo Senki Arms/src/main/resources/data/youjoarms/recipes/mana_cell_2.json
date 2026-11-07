@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GLG",
+    "LCL",
+    "GLG"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "L": {
+      "item": "minecraft:lapis_lazuli"
+    },
+    "C": {
+      "type": "forge:partial_nbt",
+      "item": "tacz:attachment",
+      "nbt": "{AttachmentId:\"youjoarms:mana_cell_1\"}"
+    }
+  },
+  "result": {
+    "item": "tacz:attachment",
+    "nbt": "{AttachmentId:\"youjoarms:mana_cell_2\"}"
+  }
+}

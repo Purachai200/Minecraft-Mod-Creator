@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "NEN",
+    "ECE",
+    "NEN"
+  ],
+  "key": {
+    "N": {
+      "item": "minecraft:netherite_ingot"
+    },
+    "E": {
+      "item": "minecraft:ender_pearl"
+    },
+    "C": {
+      "type": "forge:partial_nbt",
+      "item": "tacz:attachment",
+      "nbt": "{AttachmentId:\"youjoarms:mana_cell_3\"}"
+    }
+  },
+  "result": {
+    "item": "tacz:attachment",
+    "nbt": "{AttachmentId:\"youjoarms:mana_cell_4\"}"
+  }
+}

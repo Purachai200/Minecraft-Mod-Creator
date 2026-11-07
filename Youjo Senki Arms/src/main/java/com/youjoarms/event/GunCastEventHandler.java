@@ -77,6 +77,21 @@ public class GunCastEventHandler {
         Player player = event.player;
 
         player.getCapability(PlayerMageProvider.MAGE_DATA).ifPresent(cap -> {
+            cap.applyProfile(com.youjoarms.mana.GunMana.of(player.getMainHandItem()));
+            // Recharge the held gun's Mana Cell: sneak with Amethyst Shards in the off hand, one shard a second
+            if (!player.level().isClientSide && player.isShiftKeyDown() && player.tickCount % 20 == 0) {
+                ItemStack held = player.getMainHandItem();
+                int tier = com.youjoarms.mana.GunMana.cellTier(held);
+                ItemStack off = player.getOffhandItem();
+                if (tier > 0 && off.is(net.minecraft.world.item.Items.AMETHYST_SHARD)
+                        && com.youjoarms.mana.GunMana.charge(held) < com.youjoarms.mana.GunMana.CHARGE_CAPACITY) {
+                    off.shrink(1);
+                    com.youjoarms.mana.GunMana.setCharge(held, com.youjoarms.mana.GunMana.charge(held) + com.youjoarms.mana.GunMana.chargePerShard(tier));
+                    ((ServerLevel) player.level()).sendParticles(ParticleTypes.GLOW, player.getX(), player.getEyeY() - 0.3, player.getZ(), 6, 0.3, 0.3, 0.3, 0.02);
+                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                            SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.8f, 1.2f);
+                }
+            }
             // Tick charging
             if (cap.isCharging()) {
                 cap.tickCharge();
@@ -88,7 +103,7 @@ public class GunCastEventHandler {
 
             // Mana regen (once per second on server)
             if (!player.level().isClientSide && player.tickCount % 20 == 0) {
-                int regen = YoujoArmsConfig.COMMON.manaRegenPerSecond.get();
+                int regen = cap.getRegenPerSecond();
                 if (regen > 0 && cap.getMana() < cap.getMaxMana()) {
                     cap.regen(regen);
                     syncToPlayer((ServerPlayer) player, cap);
@@ -115,7 +130,7 @@ public class GunCastEventHandler {
                 return;
             }
 
-            int cost = formula.getManaCost();
+            int cost = Math.max(1, (int) Math.round(formula.getManaCost() * cap.getCostMultiplier()));
             if (!cap.consumeMana(cost)) {
                 // Not enough mana
                 player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
@@ -123,6 +138,9 @@ public class GunCastEventHandler {
                 return;
             }
 
+            if (com.youjoarms.mana.GunMana.cellTier(gunStack) > 0) {
+                com.youjoarms.mana.GunMana.setCharge(gunStack, com.youjoarms.mana.GunMana.charge(gunStack) - 1);
+            }
             // Cast successful!
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.EVOKER_CAST_SPELL, SoundSource.PLAYERS, 1.0f, 1.5f);

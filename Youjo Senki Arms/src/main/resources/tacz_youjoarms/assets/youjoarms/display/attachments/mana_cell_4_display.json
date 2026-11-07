@@ -1,0 +1,7 @@
+{
+  "slot": "youjoarms:attachment/slot/mana_cell_4",
+  "sounds": {
+    "install": "tacz:attachments/extended_mag_install",
+    "uninstall": "tacz:attachments/extended_mag_uninstall"
+  }
+}

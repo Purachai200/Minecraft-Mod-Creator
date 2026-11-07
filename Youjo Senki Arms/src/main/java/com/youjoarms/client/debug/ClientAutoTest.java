@@ -36,8 +36,8 @@ public final class ClientAutoTest {
     private static final Logger LOG = LoggerFactory.getLogger("youjoarms-autotest");
     private static final String NAME = System.getProperty("youjoarms.autotest", "");
     private static final String[] GUNS = {"kar98k", "gewehr98", "t_gewehr", "c96", "mp18", "luger_p08", "mosin", "lebel",
-            "lee_enfield", "mg08_15", "mg08", "m1897", "kampfpistole"};
-    private static final int[] AMMO = {5, 5, 1, 10, 32, 8, 5, 8, 10, 100, 250, 5, 1};
+            "lee_enfield", "mg08_15", "mg08", "m1897", "kampfpistole", "m1911", "springfield", "thompson", "bar_m1918"};
+    private static final int[] AMMO = {5, 5, 1, 10, 32, 8, 5, 8, 10, 100, 250, 5, 1, 7, 5, 20, 20};
 
     private record Step(int at, Consumer<Minecraft> action) {}
 
@@ -94,7 +94,8 @@ public final class ClientAutoTest {
         // attachments from TACZ's own pack (stand-ins for any add-on's, which join the same tags)
         String[][] fits = {{"kar98k", "SCOPE", "tacz:scope_standard_8x"}, {"mosin", "SCOPE", "tacz:scope_elcan_4x"},
                 {"lee_enfield", "MUZZLE", "tacz:muzzle_silencer_ursus"}, {"mg08_15", "SCOPE", "tacz:sight_552"},
-                {"c96", "MUZZLE", "tacz:muzzle_silencer_ptilopsis"}};
+                {"c96", "MUZZLE", "tacz:muzzle_silencer_ptilopsis"},
+                {"kar98k", "EXTENDED_MAG", "youjoarms:mana_cell_3"}, {"mg08", "EXTENDED_MAG", "youjoarms:mana_cell_5"}};
         for (String[] fit : fits) {
             s.add(new Step(t, mc -> {
                 mc.player.getInventory().selected = 0;
@@ -111,6 +112,16 @@ public final class ClientAutoTest {
             s.add(new Step(t + 30, mc -> shot(mc, "att_" + fit[0] + "_1_hip")));
             s.add(new Step(t + 32, mc -> IClientPlayerGunOperator.fromLocalPlayer(mc.player).aim(true)));
             s.add(new Step(t + 52, mc -> shot(mc, "att_" + fit[0] + "_2_aim")));
+            s.add(new Step(t + 40, mc -> {
+                var held = mc.player.getMainHandItem();
+                var prof = com.youjoarms.mana.GunMana.of(held);
+                LOG.info("[autotest] mana {} {} tier={} max={} regen={} cost x{}", fit[0], fit[2], com.youjoarms.mana.GunMana.cellTier(held),
+                        prof == null ? -1 : prof.maxMana(), prof == null ? -1 : prof.regenPerSecond(), prof == null ? 0 : prof.costMultiplier());
+                var flat = held.copy();
+                com.youjoarms.mana.GunMana.setCharge(flat, 0);
+                var fp = com.youjoarms.mana.GunMana.of(flat);
+                LOG.info("[autotest] mana flat cell -> max={} (base), charge/shard tier{}={}", fp == null ? -1 : fp.maxMana(), com.youjoarms.mana.GunMana.cellTier(held), com.youjoarms.mana.GunMana.chargePerShard(com.youjoarms.mana.GunMana.cellTier(held)));
+            }));
             s.add(new Step(t + 53, mc -> LOG.info("[autotest] att {} shoot result {}", fit[0], IClientPlayerGunOperator.fromLocalPlayer(mc.player).shoot())));
             s.add(new Step(t + 56, mc -> IClientPlayerGunOperator.fromLocalPlayer(mc.player).aim(false)));
             t += 70;

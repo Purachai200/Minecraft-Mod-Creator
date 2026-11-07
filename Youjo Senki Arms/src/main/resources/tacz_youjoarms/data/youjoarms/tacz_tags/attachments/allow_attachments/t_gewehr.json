@@ -3,5 +3,10 @@
   "#tacz:scope_sight",
   "#tacz:scope_lowsight",
   "#tacz:amr_muzzle_silencer",
-  "#tacz:ammo_mod"
+  "#tacz:ammo_mod",
+  "youjoarms:mana_cell_1",
+  "youjoarms:mana_cell_2",
+  "youjoarms:mana_cell_3",
+  "youjoarms:mana_cell_4",
+  "youjoarms:mana_cell_5"
 ]

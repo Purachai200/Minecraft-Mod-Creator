@@ -12,7 +12,9 @@ A standalone Forge 1.20.1 mod add-on for **TACZ (Timeless and Classics Zero)** t
 - **Mauser C96**: Broomhandle semi-automatic pistol.
 - **MP 18**: Early trench submachine gun.
 - **Mauser 1918 T-Gewehr**: Massive 13.2mm anti-materiel rifle adapted for heavy long-range artillery formula bombardment.
-- **Munitions**:
+- **New**: Colt M1911 (.45 ACP), Springfield M1903 (.30-06), Thompson M1928 (.45 ACP), Browning M1918 BAR (.30-06).
+- **Ammo**: every gun now uses TACZ's own ammo (`tacz:308`, `762x54`, `50bmg`, `9mm`, `45acp`, `30_06`, `12g`, `40mm`), so any ammo from TACZ or other mods that supplies those types works. The old `youjoarms:*` ammo items remain but no gun uses them.
+- **Munitions (legacy items)**:
   - `7.92×57mm Mauser` (Standard yellow tracer)
   - `7.92×57mm Elenium-Infused` (Cyan streak tracer, higher penetration)
   - `13.2mm TuF Heavy Cartridge` (Artillery / heavy ammo)

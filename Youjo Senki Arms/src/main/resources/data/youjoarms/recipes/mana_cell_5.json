@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "ECE",
+    "NNN"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:nether_star"
+    },
+    "E": {
+      "item": "minecraft:echo_shard"
+    },
+    "N": {
+      "item": "minecraft:netherite_ingot"
+    },
+    "C": {
+      "type": "forge:partial_nbt",
+      "item": "tacz:attachment",
+      "nbt": "{AttachmentId:\"youjoarms:mana_cell_4\"}"
+    }
+  },
+  "result": {
+    "item": "tacz:attachment",
+    "nbt": "{AttachmentId:\"youjoarms:mana_cell_5\"}"
+  }
+}

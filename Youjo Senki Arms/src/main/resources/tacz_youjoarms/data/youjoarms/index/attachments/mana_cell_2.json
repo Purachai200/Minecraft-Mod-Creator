@@ -1,0 +1,7 @@
+{
+  "name": "youjoarms.attachment.mana_cell_2.name",
+  "display": "youjoarms:mana_cell_2_display",
+  "data": "youjoarms:mana_cell_2_data",
+  "type": "extended_mag",
+  "sort": 22
+}

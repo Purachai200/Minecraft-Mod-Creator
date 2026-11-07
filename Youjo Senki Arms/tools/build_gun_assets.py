@@ -29,16 +29,40 @@ def box(x0, x1, y0, y1, z0, z1, m, rot=None, piv=None, decal=None):
     return c
 
 
+def _strips(r):
+    """Strips needed for a regular 2n-gon: 1 = plain square bar, else 4 -> 8-gon, 6 -> 12-gon, 8 -> 16-gon."""
+    return 1 if r < 0.22 else 4 if r < 0.5 else 6 if r < 1.1 else 8
+
+
 def rod(y, r, z0, z1, m, x=0.0, decal=None):
-    """Octagonal rod along Z: an axis box plus the same box turned 45 degrees."""
-    a = r * 0.924
-    return [box(x - a, x + a, y - a, y + a, z0, z1, m, decal=decal),
-            box(x - a, x + a, y - a, y + a, z0, z1, m, rot=[0, 0, 45], piv=[x, y, (z0 + z1) / 2], decal=decal)]
+    """Round bar along Z. A regular 2n-gon is the union of n flat strips turned 180/n degrees apart (a union of
+    squares would be a spiky star). Each strip's long inside faces are hidden, so they cost no texture."""
+    n = _strips(r)
+    if n == 1:
+        a = r * 0.9
+        return [box(x - a, x + a, y - a, y + a, z0, z1, m, decal=decal)]
+    a = r * math.cos(math.pi / (2 * n))
+    t = 2 * a * math.tan(math.pi / (2 * n))
+    out = []
+    for k in range(n):
+        c = box(x - a, x + a, y - t / 2, y + t / 2, z0, z1, m,
+                rot=[0, 0, k * 180.0 / n] if k else None, piv=[x, y, (z0 + z1) / 2])
+        c["hide"] = ("up", "down")
+        out.append(c)
+    return out
 
 
 def yrod(x, z, r, y0, y1, m):
-    a = r * 0.924
-    return [box(x - a, x + a, y0, y1, z - a, z + a, m), box(x - a, x + a, y0, y1, z - a, z + a, m, rot=[0, 45, 0], piv=[x, 0, z])]
+    """Round post along Y (same regular-polygon construction, strips turned about Y)."""
+    n = max(4, _strips(r))
+    a = r * math.cos(math.pi / (2 * n))
+    t = 2 * a * math.tan(math.pi / (2 * n))
+    out = []
+    for k in range(n):
+        c = box(x - a, x + a, y0, y1, z - t / 2, z + t / 2, m, rot=[0, k * 180.0 / n, 0] if k else None, piv=[x, 0, z])
+        c["hide"] = ("north", "south")
+        out.append(c)
+    return out
 
 
 def slab(z0, y0, z1, y1, t, w, m, top=True, x=0.0, trim=False):
@@ -51,11 +75,38 @@ def slab(z0, y0, z1, y1, t, w, m, top=True, x=0.0, trim=False):
     return box(x - w / 2, x + w / 2, ya, yb, z0, z0 + L, m, rot=[ang, 0, 0], piv=[x, y0, z0])
 
 
+def smooth(pts, step=1.4):
+    """Subdivide a stock outline (z, top, bottom, width) with Hermite curves so combs, wrists and butts flow instead
+    of being straight wedges. Values are clamped to their segment's range, so flat runs stay flat."""
+    if len(pts) < 3 or pts[-1][0] - pts[0][0] < 6:
+        return pts
+    out = [tuple(pts[0])]
+    last = len(pts) - 1
+    for k in range(last):
+        p0, p1, p2, p3 = pts[max(0, k - 1)], pts[k], pts[k + 1], pts[min(last, k + 2)]
+        L = p2[0] - p1[0]
+        n = max(1, round(L / step))
+        for q in range(1, n + 1):
+            t = q / n
+            h00, h10, h01, h11 = 2 * t**3 - 3 * t**2 + 1, t**3 - 2 * t**2 + t, -2 * t**3 + 3 * t**2, t**3 - t**2
+            row = [p1[0] + L * t]
+            for c in (1, 2, 3):
+                m1 = (p2[c] - p0[c]) / max(1e-6, p2[0] - p0[0]) * L
+                m2 = (p3[c] - p1[c]) / max(1e-6, p3[0] - p1[0]) * L
+                v = h00 * p1[c] + h10 * m1 + h01 * p2[c] + h11 * m2
+                lo, hi = min(p1[c], p2[c]), max(p1[c], p2[c])
+                pad = 0.12 * (hi - lo) + 0.01
+                row.append(max(lo - pad, min(hi + pad, v)))
+            out.append(tuple(row))
+    return out
+
+
 def profile(pts, m, x=0.0, bevel=0.14):
     """Wooden stock from control points (z, top, bottom, width). Each segment is a full-width body inset by
     {bevel} top and bottom plus a narrower full-height body, so the cross-section has chamfered (rounded-looking)
     edges; sloped runs get the same two-part skins."""
     out = []
+    pts = smooth(pts)
     last = len(pts) - 2
     e = bevel
     for k, ((z0, t0, b0, w0), (z1, t1, b1, w1)) in enumerate(zip(pts, pts[1:])):
@@ -121,6 +172,21 @@ def shotshell(lo, hi):
 
 
 # ---------------------------------------------------------------- guns
+
+def bolt_rifle_extras(B, z0=0.0, z1=6.6, bolt_z=8.2, floor_z=(8.4, 11.6)):
+    """Metalwork every bolt rifle shares: raised receiver rings, bolt-stop lever, trigger-guard bow with screws,
+    magazine floor plate and release, rear tang screw, cocking-piece slot."""
+    out = rod(B, 0.80, z0 + 0.1, z0 + 0.45, "steel") + rod(B, 0.80, z1 - 0.45, z1 - 0.1, "steel")   # receiver rings
+    out.append(box(0.70, 0.98, B - 0.5, B - 0.05, z0 + 2.0, z0 + 3.9, "steel"))                      # bolt-stop lever
+    out.append(box(0.72, 0.78, B - 0.6, B - 0.1, z0 + 2.2, z0 + 3.0, "dark"))
+    out.append(box(-0.30, 0.30, 3.62, 3.78, floor_z[0], floor_z[1], "steel", decal="panel"))        # floor plate
+    out.append(box(-0.16, 0.16, 3.55, 3.85, floor_z[0] - 0.3, floor_z[0] + 0.3, "bright"))           # release button
+    for sx in (-1, 1):                                                                              # guard screws
+        out.append(box(sx * 0.46, sx * 0.50, 4.7, 5.2, 1.8, 2.4, "steel", decal="screw"))
+        out.append(box(sx * 0.46, sx * 0.50, 4.7, 5.2, floor_z[1] - 1.0, floor_z[1] - 0.4, "steel", decal="screw"))
+    out.append(box(-0.2, 0.2, B + 0.3, B + 0.52, bolt_z + 1.4, bolt_z + 2.4, "steel"))               # tang
+    return out
+
 
 def mauser_rifle(muzzle, gew=False, bent=None):
     """Kar98k (gew=False) or Gewehr 98 on the m700 rig. Bore y=7.25, sight line y=8.406 (m700 iron_view)."""
@@ -220,51 +286,72 @@ def mauser_rifle(muzzle, gew=False, bent=None):
         bolt += rod(B + 0.04, 0.40, hz0 - 0.15, hz1 + 0.15, "bright", x=-2.25)
     striker = [box(-0.12, 0.12, 6.45, 6.75, 9.9, 10.9, "steel")]
 
+    body += bolt_rifle_extras(B)
     return {"main_body": body, "rotate": bolt, "striker": striker}
 
 
 def t_gewehr():
-    """Mauser 1918 T-Gewehr on the m700 rig: huge single-shot bolt action with pistol grip and folded bipod."""
+    """Mauser 1918 T-Gewehr on the m700 rig: huge single-shot 13.2 mm with a ported muzzle brake, finned heavy barrel,
+    ribbed receiver, folding bipod on a clamp, pistol grip and a padded cheek-rest stock."""
     B, S, muzzle = 7.25, 8.406, -46.0
     body = []
-    body += rod(B, 0.46, muzzle, -14, "steel")
+    body += rod(B, 0.46, muzzle + 3.0, -14, "steel")
     body += rod(B, 0.58, -14, 0.0, "steel")
-    body += rod(B, 0.22, muzzle - 0.05, muzzle + 0.1, "dark")
-    body += rod(B, 0.56, muzzle + 0.3, muzzle + 1.8, "steel")
-    body.append(box(-0.08, 0.08, B + 0.4, S, muzzle + 0.8, muzzle + 1.2, "steel"))
+    for z in (-38.0, -31.0, -24.0, -17.5):                                   # barrel collars
+        body += rod(B, 0.56, z, z + 0.5, "steel")
+    body += rod(B, 0.62, muzzle, muzzle + 3.0, "steel")                      # ported muzzle brake
+    body += rod(B, 0.30, muzzle - 0.05, muzzle + 0.1, "dark")
+    for k in range(3):
+        body.append(box(-0.68, 0.68, B - 0.14, B + 0.14, muzzle + 0.5 + k * 0.8, muzzle + 0.9 + k * 0.8, "dark"))
+        body.append(box(-0.14, 0.14, B - 0.68, B + 0.68, muzzle + 0.5 + k * 0.8, muzzle + 0.9 + k * 0.8, "dark"))
+    body += rod(B, 0.56, muzzle + 3.0, muzzle + 3.5, "steel")
+    body.append(box(-0.5, 0.5, B + 0.4, B + 0.7, muzzle + 3.8, muzzle + 5.2, "steel"))   # front sight foot
+    body.append(box(-0.08, 0.08, B + 0.7, S, muzzle + 4.2, muzzle + 4.6, "steel"))
     for sx in (-1, 1):
-        body.append(box(sx * 0.32, sx * 0.44, B + 0.4, S + 0.32, muzzle + 0.6, muzzle + 1.4, "steel"))
-    # rear sight on the barrel
-    body.append(box(-0.5, 0.5, B + 0.5, 8.0, -9.0, -6.0, "steel"))
+        body.append(box(sx * 0.32, sx * 0.44, B + 0.7, S + 0.32, muzzle + 4.0, muzzle + 4.8, "steel"))
+    # rear sight on the barrel: base, ladder leaf, notch ears
+    body.append(box(-0.5, 0.5, B + 0.5, 8.0, -9.5, -6.0, "steel", decal="panel"))
+    body.append(slab(-9.2, 8.5, -6.3, 8.0, 0.2, 0.7, "steel"))
     for sx in (-1, 1):
         body.append(box(sx * 0.10, sx * 0.40, 8.0, S + 0.22, -8.4, -8.0, "steel"))
     body.append(box(-0.40, 0.40, 8.0, S, -8.4, -8.0, "steel"))
-    # receiver with rune bands
+    # receiver: heavy round body, glow bands (Empire), top rib, ejection port, lock lugs, bolt guide
     body += rod(B, 0.98, -0.6, 7.6, "steel")
-    body += rod(B, 1.0, 0.2, 0.6, "glow")
-    body += rod(B, 1.0, 6.6, 7.0, "glow")
-    body.append(box(-1.0, 1.0, 5.9, 6.4, 0.0, 9.0, "steel"))
-    # wood fore-end with bipod folded under it
+    body += rod(B, 1.0, 0.2, 0.6, "glow") + rod(B, 1.0, 6.6, 7.0, "glow")
+    body.append(box(-0.5, 0.5, B + 0.9, B + 1.2, -0.4, 7.4, "steel", decal="ribs"))                 # top rib
+    body.append(box(0.85, 1.05, B - 0.5, B + 0.5, 1.0, 5.0, "steel", decal="serial"))
+    body.append(box(-1.06, -0.9, B - 0.2, B + 0.7, 1.4, 4.4, "dark"))                                 # ejection port
+    body.append(box(-1.0, 1.0, 5.9, 6.4, 0.0, 9.0, "steel", decal="panel"))                           # trigger plate
+    for sx in (-1, 1):
+        body.append(box(sx * 0.9, sx * 1.1, 6.0, 6.5, 6.0, 8.2, "steel", decal="screw"))
+    # wood fore-end, steel barrel band and a real folding bipod (clamp, hinge, two legs, feet)
     body += profile([(-16.0, 6.95, 5.6, 1.5), (-1.0, 7.0, 5.0, 1.8), (0.0, 6.6, 5.2, 1.8)], "wood")
-    body.append(box(-1.0, 1.0, 5.4, 7.6, -17.0, -15.8, "steel"))  # bipod clamp
+    body.append(box(-1.0, 1.0, 5.4, 7.6, -17.0, -15.8, "steel", decal="screw"))
     for sx in (-1, 1):
         body.append(box(sx * 0.35, sx * 0.65, 5.0, 5.3, -16.5, -4.0, "steel"))
         body.append(box(sx * 0.30, sx * 0.70, 4.85, 5.35, -4.6, -3.6, "dark"))
-    # pistol grip, trigger guard, separate butt stock
+        body.append(box(sx * 0.30, sx * 0.70, 4.55, 5.0, -15.0, -14.4, "steel", decal="screw"))       # hinge
+        body.append(box(sx * 0.4, sx * 0.7, 4.5, 5.0, -8.0, -5.6, "dark"))                            # foot pads
+    # pistol grip, trigger group
     body += profile([(9.0, 6.2, 4.9, 1.4), (12.0, 6.2, 4.9, 1.4)], "wood")
     body.append(slab(12.6, 5.0, 14.0, 1.6, 1.25, 1.2, "wood", top=False))
-    body.append(box(-0.6, 0.6, 1.2, 1.7, 13.3, 15.3, "steel"))
+    body.append(box(-0.6, 0.6, 1.2, 1.7, 13.3, 15.3, "steel", decal="screw"))                         # grip cap
     body.append(box(-0.2, 0.2, 3.9, 4.95, 9.4, 9.7, "steel"))
     body.append(box(-0.2, 0.2, 3.78, 4.0, 9.6, 12.4, "steel"))
     body.append(box(-0.09, 0.09, 4.05, 4.95, 10.4, 10.7, "steel", rot=[-14, 0, 0], piv=[0, 4.95, 10.55]))
-    body += profile([(12.0, 6.95, 4.95, 1.5), (14.5, 6.8, 4.4, 1.5), (28.0, 7.2, 1.8, 1.8)], "wood")
-    body.append(box(-0.95, 0.95, 1.7, 7.25, 28.0, 28.5, "steel"))
+    # stock with cheek piece, rubber recoil pad, swivels
+    body += profile([(12.0, 6.95, 4.95, 1.5), (14.5, 6.8, 4.4, 1.5), (20.0, 7.5, 3.4, 1.7), (28.0, 7.4, 1.8, 1.8)], "wood")
+    body.append(box(-0.95, 0.95, 1.7, 7.4, 28.0, 28.8, "dark"))
+    body.append(box(-0.97, 0.97, 1.6, 1.9, 27.9, 28.9, "steel"))
     body.append(box(0.9, 0.93, 4.0, 5.4, 21.0, 23.4, "brass", decal="crest"))
+    body.append(box(0.9, 1.15, 3.2, 3.8, 24.0, 24.5, "steel"))
+    body += bolt_rifle_extras(B, 0.0, 9.0, bolt_z=8.6, floor_z=(11.0, 11.3))[:0]
     bolt = rod(B + 0.05, 0.62, 0.4, 9.6, "bright")
     bolt += rod(B - 0.05, 0.5, 9.6, 11.4, "steel")
+    bolt += rod(B + 0.05, 0.66, 3.0, 3.4, "steel")                                                    # lug ring
     bolt.append(box(-2.2, -0.4, B - 0.18, B + 0.22, 8.4, 9.2, "bright"))
-    bolt += rod(B + 0.02, 0.55, 8.2, 9.4, "bright", x=-2.6)
-    return {"main_body": body, "rotate": bolt, "striker": [box(-0.15, 0.15, 6.3, 6.7, 10.6, 11.8, "steel")],
+    bolt += rod(B + 0.02, 0.62, 8.2, 9.4, "bright", x=-2.6)
+    return {"main_body": body, "rotate": bolt, "striker": [box(-0.15, 0.15, 6.3, 6.7, 10.6, 11.8, "steel"), box(-0.3, 0.3, 6.2, 6.8, 11.6, 12.2, "bright")],
             "_pivots": {"muzzle_pos": [0, B, muzzle - 0.2], "muzzle_flash": [0, B, muzzle - 1.2],
                         "refit_muzzle_view": [12.35, 7.85, muzzle - 6]}}
 
@@ -394,6 +481,11 @@ def mosin():
     for sx in (-1, 1):  # sling slots through the butt and fore-end
         body.append(box(sx * 0.8, sx * 0.83, 3.2, 3.8, 18.0, 20.0, "dark"))
         body.append(box(sx * 0.62, sx * 0.66, 6.3, 6.8, -15.0, -13.4, "dark"))
+    body += bolt_rifle_extras(B, 0.0, 7.6)
+    body += rod(B, 0.52, muzzle - 0.2, muzzle + 3.4, "steel")                                  # fixed socket bayonet mount
+    body.append(box(-0.5, 0.5, B - 0.12, B + 0.12, muzzle + 0.8, muzzle + 1.3, "dark"))          # bayonet slot
+    body += rod(B, 0.60, muzzle + 3.4, muzzle + 3.8, "steel")
+    body.append(box(-0.30, 0.30, B + 0.5, B + 0.78, -6.0, -1.0, "steel", decal="ribs"))           # ladder-sight leaf
     bolt = rod(B + 0.05, 0.40, 1.4, 8.9, "bright") + rod(B, 0.33, 8.9, 10.3, "steel")
     bolt += straight_bolt(8.4, B, 1.7)
     return {"main_body": body, "rotate": bolt, "striker": [box(-0.12, 0.12, 6.45, 6.75, 9.9, 10.9, "steel")],
@@ -406,8 +498,11 @@ def lebel():
     nose = muzzle + 7.0
     body = rod(B, 0.30, muzzle, nose, "steel") + rod(B, 0.38, nose, 0.0, "steel")
     body += rod(B, 0.15, muzzle - 0.05, muzzle + 0.1, "dark") + hooded_front(muzzle, B, S, hood=False)
-    body += rod(6.15, 0.36, nose - 0.3, -0.5, "steel")  # tube magazine, its cap shows at the fore-end tip
-    body += rod(6.15, 0.30, nose - 0.6, nose - 0.3, "dark")
+    body += rod(5.85, 0.36, nose - 0.3, -0.5, "steel")  # tube magazine, slung under the barrel
+    body += rod(5.85, 0.30, nose - 0.7, nose - 0.3, "dark")
+    for z in (nose + 1.2, -6.0):                          # tube clamps
+        body.append(box(-0.5, 0.5, 5.4, 6.4, z, z + 0.45, "steel", decal="screw"))
+    body += rod(5.85, 0.44, -1.3, -0.5, "steel")           # tube / receiver joint
     for z in (nose + 0.2, -12.0):
         body.append(box(-0.7, 0.7, 5.6, B + 0.6, z - 0.7, z, "steel", decal="screw"))
         body.append(box(0.7, 0.84, 5.5, 6.1, z - 0.6, z - 0.1, "steel"))
@@ -415,11 +510,17 @@ def lebel():
     body.append(slab(-3.7, 8.2, -0.9, 7.95, 0.24, 0.66, "steel"))
     body += rear_notch(-3.6, 8.0, S)
     # receiver block running down to the trigger guard
-    body.append(box(-0.7, 0.7, 4.6, 7.9, -0.5, 10.4, "steel", decal="serial"))
-    body.append(box(-0.5, 0.5, 4.2, 4.7, 1.0, 9.0, "steel"))
+    body += rod(B, 0.76, -0.5, 9.0, "steel")                                   # round receiver
+    body.append(box(0.46, 0.72, 6.4, 7.9, 0.4, 8.6, "steel", decal="serial"))
+    body.append(box(-0.72, -0.46, 6.4, 7.5, 0.4, 8.6, "steel"))
+    body.append(box(-0.64, 0.64, 4.6, 6.6, 0.6, 9.6, "steel", decal="panel"))   # lower housing around the lifter
+    body.append(box(-0.52, 0.52, 4.2, 4.7, 1.0, 9.0, "steel"))
+    body.append(box(-0.66, -0.62, 5.0, 6.2, 2.0, 5.0, "dark"))                  # loading gate
+    body.append(box(-0.5, 0.5, 6.4, 7.9, 9.0, 10.4, "steel"))
+    body += bolt_rifle_extras(B, 0.0, 9.0, bolt_z=9.1)
     body += trigger_group(6.4, y_bottom=3.55, y_top=4.6)
     # Distinct two-piece stock: fore-end and butt separated by the steel receiver frame
-    body += profile([(nose + 0.7, B - 0.1, 5.4, 1.2), (-0.5, B - 0.05, 5.0, 1.36)], "wood")  # fore-end
+    body += profile([(nose + 0.7, B - 0.1, 6.15, 1.2), (-0.5, B - 0.05, 6.0, 1.36)], "wood")  # fore-end
     body.append(box(-0.5, 0.5, B + 0.2, 7.85, nose + 2.0, -1.0, "wood"))
     # Steel frame side connection screws between wood sections
     for sx in (-1, 1):
@@ -460,6 +561,11 @@ def lee_enfield():
     body.append(box(-0.85, 0.85, 1.8, 6.85, 25.4, 25.8, "brass", decal="screw"))  # brass butt plate
     body.append(box(-0.84, -0.81, 4.3, 5.5, 17.4, 18.6, "brass", decal="crest"))  # unit disc
     body += sling([(-12.3, 5.75), (6.0, 4.4), (20.5, 3.3)], 0.86)
+    body += bolt_rifle_extras(B, 0.0, 9.6, bolt_z=9.4)
+    body.append(box(-0.30, 0.30, 7.95, 8.18, -4.0, 3.0, "steel", decal="ribs"))                  # long charger bridge
+    body.append(box(-0.56, 0.56, 8.05, 8.4, 3.0, 8.4, "steel"))
+    for sx in (-1, 1):                                                                            # volley sight arms
+        body.append(box(sx * 0.62, sx * 0.72, 6.6, 7.9, 1.0, 3.0, "steel"))
     mag = [box(-0.42, 0.42, 3.4, 6.3, 1.4, 5.6, "steel", decal="ribs"), box(-0.46, 0.46, 3.3, 3.55, 1.3, 5.7, "steel")]
     bolt = rod(B + 0.05, 0.40, 1.0, 9.4, "bright") + rod(B, 0.32, 9.4, 10.8, "steel")
     bolt.append(box(-1.5, -0.3, B - 0.12, B + 0.2, 9.4, 9.9, "bright"))
@@ -582,6 +688,161 @@ def kampfpistole():
             "_pivots": {"iron_view": [Bx, S, 7.96]}}
 
 
+def m1911():
+    """Colt M1911 on the m1911 rig: slide with serrations, dust-cover frame, beavertail, walnut grip panels.
+    Bore y=5.45, sight line y=6.175 (m1911 iron_view)."""
+    B, S, muzzle = 5.45, 6.175, -6.4
+    gun = rod(B, 0.21, muzzle, -4.6, "steel") + rod(B, 0.10, muzzle - 0.03, muzzle + 0.08, "dark")
+    gun += rod(B, 0.30, -5.0, -4.5, "steel")                                          # barrel bushing
+    gun.append(box(-0.36, 0.36, 4.05, 4.95, -3.8, 3.0, "steel", decal="panel"))       # frame, dust cover and rails
+    gun.append(box(-0.30, 0.30, 4.9, 5.1, 2.9, 3.9, "steel"))                         # beavertail grip safety
+    gun.append(box(-0.20, 0.20, 3.2, 4.1, -0.5, -0.3, "steel"))                       # trigger guard, front
+    gun.append(box(-0.20, 0.20, 3.2, 3.4, -0.5, 1.7, "steel"))
+    gun.append(box(-0.20, 0.20, 3.2, 4.1, 1.5, 1.7, "steel"))
+    gun.append(box(-0.38, -0.34, 4.35, 4.75, 0.9, 1.9, "steel"))                      # thumb safety lever
+    gun.append(box(-0.40, -0.36, 4.1, 4.4, -1.2, -0.4, "dark"))                       # slide stop
+    lower = [box(-0.33, 0.33, 3.9, 4.15, -1.2, 3.2, "steel")]
+    grip = [box(-0.34, 0.34, 0.2, 4.2, 1.75, 3.2, "steel", rot=[-10, 0, 0], piv=[0, 4.2, 2.4]),            # backstrap
+            box(-0.46, -0.30, 0.3, 4.1, 1.85, 3.1, "wood", rot=[-10, 0, 0], piv=[0, 4.2, 2.4], decal="checkering"),
+            box(0.30, 0.46, 0.3, 4.1, 1.85, 3.1, "wood", rot=[-10, 0, 0], piv=[0, 4.2, 2.4], decal="checkering"),
+            box(-0.36, 0.36, 0.0, 0.25, 1.7, 3.3, "steel", rot=[-10, 0, 0], piv=[0, 4.2, 2.4])]
+    trigger = [box(-0.07, 0.07, 3.55, 4.4, 0.35, 0.55, "steel", rot=[-12, 0, 0], piv=[0, 4.4, 0.45])]
+    hammer = [box(-0.12, 0.12, 5.1, 5.75, 3.0, 3.35, "steel", rot=[-20, 0, 0], piv=[0, 5.1, 3.1])]
+    slide = [box(-0.40, 0.40, 4.95, 5.95, -4.9, 3.2, "steel", decal="serial"),
+             box(-0.30, 0.30, 5.95, 6.0, -4.9, 3.2, "steel"),
+             box(-0.41, 0.41, 5.05, 5.9, 1.3, 2.9, "steel", decal="vribs"),             # rear serrations
+             box(-0.41, 0.41, 5.05, 5.9, -4.8, -3.7, "steel", decal="vribs"),           # front serrations
+             box(-0.42, -0.38, 5.4, 5.8, -1.4, 0.2, "dark"),                            # ejection port
+             box(-0.06, 0.06, 5.95, S, -4.75, -4.45, "steel")]                          # front blade
+    slide += rear_notch(2.95, 5.95, S, w=0.34)
+    mag = [box(-0.28, 0.28, 0.5, 4.1, 1.95, 3.0, "steel", rot=[-10, 0, 0], piv=[0, 4.2, 2.4], decal="holes"),
+           box(-0.34, 0.34, 0.15, 0.55, 1.85, 3.1, "dark", rot=[-10, 0, 0], piv=[0, 4.2, 2.4])]
+    return {"gun": gun, "lower": lower, "grip": grip, "trigger": trigger, "hammer": hammer, "slide": slide,
+            "mag_standard": mag, "_pivots": {"muzzle_pos": [0, B, muzzle - 0.1], "muzzle_flash": [0, B, muzzle - 0.9]}}
+
+
+def springfield():
+    """Springfield M1903 on the m700 rig: full-length handguard, stacking swivel, aperture ('peep') rear sight on
+    the bridge (its hole centred on the sight line), blued receiver, straight walnut stock."""
+    B, S, muzzle = 7.25, 8.406, -28.0
+    nose = muzzle + 6.0
+    body = rod(B, 0.30, muzzle, nose, "steel") + rod(B, 0.36, nose, -6, "steel") + rod(B, 0.42, -6, 0.2, "steel")
+    body += rod(B, 0.15, muzzle - 0.05, muzzle + 0.1, "dark") + hooded_front(muzzle, B, S)
+    body.append(box(-0.66, 0.66, 6.1, B + 0.42, nose - 0.5, nose + 0.5, "steel", decal="screw"))   # nose cap
+    body += rod(6.2, 0.11, nose - 1.8, nose - 0.3, "steel")                                         # cleaning rod
+    for z in (-12.0, -4.8):
+        body.append(box(-0.70, 0.70, 5.85, B + 0.55, z - 0.5, z, "steel", decal="screw"))           # barrel bands
+    body.append(box(0.70, 0.84, 5.6, 6.2, -12.4, -12.1, "steel"))                                   # stacking swivel
+    body.append(box(-0.44, 0.44, B + 0.38, 7.95, -9.0, -6.2, "steel"))                              # rear sight base
+    body.append(slab(-8.8, 8.15, -6.4, 7.95, 0.2, 0.6, "steel"))
+    body += rear_notch(-8.6, 8.0, S)
+    body += rod(B, 0.74, -0.2, 7.9, "steel")                                                       # round receiver
+    body.append(box(0.42, 0.70, 6.55, 7.85, 0.0, 6.6, "steel", decal="serial"))
+    body.append(box(-0.70, -0.42, 6.55, 7.4, 0.0, 6.6, "steel"))
+    for sx in (-1, 1):                                                                             # peep sight posts
+        body.append(box(sx * 0.27, sx * 0.43, 7.8, S + 0.5, 7.9, 8.4, "steel"))
+    body.append(box(-0.43, 0.43, S + 0.25, S + 0.5, 7.9, 8.4, "steel"))
+    body.append(box(-0.43, 0.43, 7.8, S - 0.25, 7.9, 8.4, "steel"))
+    body += rod(B + 0.9, 0.12, 6.4, 8.2, "steel")                                                  # sight windage pin
+    body.append(box(-0.5, 0.5, 5.05, 5.3, 1.2, 8.6, "steel"))                                      # trigger guard
+    body += trigger_group(6.4, y_bottom=3.9, y_top=5.0)
+    body += profile([(nose + 0.6, B - 0.05, 6.15, 1.18), (-12.0, B - 0.05, 5.9, 1.30), (0.0, 7.05, 5.2, 1.40),
+                     (9.0, 7.0, 4.95, 1.50), (11.5, 6.9, 4.9, 1.38), (13.5, 6.5, 4.3, 1.28), (15.5, 6.35, 4.0, 1.34),
+                     (25.4, 6.8, 1.9, 1.62)], "wood")
+    body.append(box(-0.5, 0.5, B + 0.2, 7.82, nose + 1.0, -1.4, "wood"))                            # handguard
+    body.append(box(-0.84, 0.84, 1.85, 6.85, 25.4, 25.85, "steel", decal="screw"))
+    for sx in (-1, 1):
+        body.append(box(sx * 0.6, sx * 0.67, 6.4, 6.55, nose + 1.6, -13.0, "groove"))
+    body += sling([(-12.2, 5.8), (6.0, 4.4), (20.6, 3.3)], 0.86)
+    body += bolt_rifle_extras(B, 0.0, 7.9)
+    bolt = rod(B + 0.05, 0.38, 1.4, 8.9, "bright") + rod(B, 0.33, 8.9, 10.3, "steel")
+    bolt.append(box(-1.45, -0.3, B - 0.12, B + 0.2, 7.9, 8.5, "bright"))
+    bolt.append(box(-1.85, -1.5, 6.25, B + 0.2, 7.9, 8.5, "bright", rot=[0, 0, -22], piv=[-1.45, B + 0.1, 8.2]))
+    bolt += rod(5.95, 0.38, 7.75, 8.65, "bright", x=-2.2)
+    return {"main_body": body, "rotate": bolt, "striker": [box(-0.12, 0.12, 6.45, 6.75, 9.9, 10.9, "steel")],
+            "_pivots": {"muzzle_pos": [0, B, muzzle - 0.2], "muzzle_flash": [0, B, muzzle - 1.2], "refit_muzzle_view": [12.35, 7.85, muzzle - 6]}}
+
+
+def thompson():
+    """Thompson M1928 on the hk_mp5a5 rig: finned barrel with Cutts compensator, vertical foregrip, walnut
+    furniture, 20-round stick magazine. Bore y=10.875, sight line y=12.0."""
+    B, S, muzzle = 10.875, 12.0, -15.0
+    gun = rod(B, 0.30, muzzle, -9.0, "steel") + rod(B, 0.13, muzzle - 0.04, muzzle + 0.1, "dark")
+    gun += rod(B, 0.52, muzzle, muzzle + 2.6, "steel")                                  # Cutts compensator
+    for k in range(4):
+        gun.append(box(-0.56, 0.56, B + 0.28, B + 0.5, muzzle + 0.35 + k * 0.55, muzzle + 0.6 + k * 0.55, "dark"))
+    gun.append(box(-0.07, 0.07, B + 0.45, S, muzzle + 0.8, muzzle + 1.1, "steel"))      # front blade
+    for k in range(9):                                                                  # cooling fins
+        gun += rod(B, 0.72, -9.0 + k * 0.62, -8.6 + k * 0.62, "steel")
+    gun += rod(B, 0.5, -3.6, -3.0, "steel")
+    gun.append(box(-0.64, 0.64, 9.55, 11.55, -3.6, 8.8, "steel", decal="serial"))      # receiver
+    gun.append(box(-0.64, 0.64, 11.55, 11.8, -3.6, 8.8, "steel"))
+    gun.append(box(-0.68, -0.64, 10.3, 11.2, 0.2, 2.8, "dark"))                          # ejection port
+    gun.append(box(-0.40, 0.40, 11.8, 12.0 - 0.2, 4.6, 6.0, "steel"))                    # rear sight base
+    for sx in (-1, 1):
+        gun.append(box(sx * 0.09, sx * 0.34, 11.8, S + 0.15, 5.6, 5.95, "steel"))
+    gun.append(box(-0.34, 0.34, 11.8, S, 5.6, 5.95, "steel"))
+    gun.append(box(-0.6, 0.6, 8.6, 9.6, -2.0, 1.2, "steel"))                              # magazine well
+    gun.append(box(-0.6, 0.6, 8.0, 9.4, 1.2, 2.0, "steel"))                               # trigger group
+    gun.append(box(-0.2, 0.2, 7.6, 7.85, 1.2, 4.4, "steel"))                              # trigger guard
+    gun.append(box(-0.2, 0.2, 7.6, 8.8, 1.2, 1.45, "steel"))
+    gun.append(box(-0.2, 0.2, 7.6, 8.8, 4.15, 4.4, "steel"))
+    # wood: fore-grip (vertical), pistol grip, stock
+    gun.append(box(-0.62, 0.62, 9.55, 10.45, -9.2, -3.6, "wood"))                      # fore-end under the barrel
+    gun.append(box(-0.52, 0.52, 6.2, 9.6, -7.9, -6.0, "wood", decal="checkering"))   # vertical foregrip
+    gun.append(box(-0.5, 0.5, 5.9, 6.3, -8.0, -5.9, "steel"))                         # its steel cap
+    gun.append(box(-0.55, 0.55, 8.2, 9.55, 1.8, 4.6, "wood"))                         # lower receiver wood
+    gun.append(box(-0.5, 0.5, 6.0, 8.3, 3.7, 5.1, "wood", rot=[-14, 0, 0], piv=[0, 8.3, 4.3]))   # pistol grip
+    gun += profile([(8.8, 10.9, 8.9, 1.2), (12.0, 10.7, 8.5, 1.3), (22.0, 10.9, 6.0, 1.6)], "wood")
+    gun.append(box(-0.85, 0.85, 6.0, 10.9, 22.0, 22.4, "steel", decal="screw"))
+    trigger = [box(-0.08, 0.08, 7.9, 8.8, 2.7, 2.95, "steel", rot=[-12, 0, 0], piv=[0, 8.8, 2.8])]
+    handle = [box(-1.0, -0.6, B + 0.65, B + 0.95, 6.5, 7.0, "bright")] + rod(B + 0.8, 0.3, 6.3, 7.2, "bright", x=-1.2)
+    bolt = [box(-0.58, -0.45, 10.3, 10.9, 1.9, 3.9, "bright")]
+    mag = [box(-0.36, 0.36, 4.0, 9.6, -1.4, 1.0, "steel", rot=[3, 0, 0], piv=[0, 9.6, -0.2], decal="holes"),
+           box(-0.40, 0.40, 3.7, 4.1, -1.5, 1.1, "dark", rot=[3, 0, 0], piv=[0, 9.6, -0.2])]
+    return {"body": gun, "trigger": trigger, "bolthandle": handle, "bolt": bolt, "mag2": mag,
+            "_pivots": {"muzzle_pos": [0, B, muzzle - 0.1], "muzzle_flash": [0, B, muzzle - 1.0],
+                        "iron_view": [0, S, 11], "refit_muzzle_view": [8, 9, muzzle - 5]}}
+
+
+def bar_m1918():
+    """Browning Automatic Rifle M1918 on the rpk rig: slotted flash hider, gas cylinder, full walnut fore-end,
+    20-round box magazine, pistol grip and stock. Bore y=8.556, sight line y=10.919 (rpk iron_view)."""
+    B, S, muzzle = 8.556, 10.919, -27.7
+    barrel = rod(B, 0.36, muzzle + 3.4, -12.0, "steel") + rod(B, 0.5, muzzle, muzzle + 3.4, "steel")
+    barrel += rod(B, 0.2, muzzle - 0.03, muzzle + 0.1, "dark")
+    for k in range(3):
+        barrel.append(box(-0.56, 0.56, B - 0.12, B + 0.12, muzzle + 0.5 + k * 0.9, muzzle + 0.9 + k * 0.9, "dark"))
+    barrel.append(box(-0.5, 0.5, B + 0.4, B + 1.2, -26.4, -24.4, "steel"))                      # front sight base
+    barrel.append(box(-0.07, 0.07, B + 1.2, S, -25.8, -25.4, "steel"))
+    for sx in (-1, 1):
+        barrel.append(box(sx * 0.3, sx * 0.4, B + 1.1, S + 0.25, -26.0, -25.2, "steel"))
+    gas = rod(B - 1.0, 0.30, -23.5, -8.0, "steel") + rod(B - 1.0, 0.38, -24.0, -23.4, "steel")  # gas cylinder
+    gas.append(box(-0.3, 0.3, B - 0.8, B - 0.2, -24.0, -20.0, "steel"))
+    wood = profile([(-22.0, B - 0.1, B - 1.9, 1.5), (-8.0, B + 0.15, B - 2.1, 1.6), (-2.5, B + 0.25, B - 2.2, 1.7)], "wood")
+    wood.append(box(-0.9, 0.9, B + 0.1, B + 0.5, -21.5, -5.0, "wood"))                         # handguard top
+    wood.append(box(-0.85, 0.85, B - 2.4, B - 1.9, -12.5, -11.8, "steel", decal="screw"))     # fore-end band
+    lower = [box(-0.74, 0.74, 6.2, 9.7, -3.0, 13.0, "steel", decal="serial"),                   # receiver
+             box(-0.78, -0.72, 7.5, 9.3, 0.5, 6.0, "dark"),                                      # ejection port
+             box(-0.6, 0.6, 9.7, 10.15, -3.0, 13.0, "steel"),
+             box(-0.72, 0.72, 4.8, 6.2, -1.0, 5.2, "steel"),                                     # magazine well
+             box(-0.2, 0.2, 5.0, 5.2, 5.4, 10.4, "steel"), box(-0.2, 0.2, 5.0, 6.4, 5.2, 5.45, "steel"),
+             box(-0.2, 0.2, 5.0, 6.4, 10.2, 10.45, "steel"),                                     # trigger guard
+             box(-0.4, 0.4, 10.15, 10.55, 6.0, 7.6, "steel")]                                    # rear sight base
+    for sx in (-1, 1):
+        lower.append(box(sx * 0.09, sx * 0.36, 10.55, S + 0.2, 6.5, 6.9, "steel"))
+    lower.append(box(-0.36, 0.36, 10.55, S, 6.5, 6.9, "steel"))
+    lower += profile([(13.0, 9.6, 6.9, 1.4), (15.5, 9.4, 5.4, 1.4), (26.0, 9.9, 2.4, 1.7)], "wood")   # stock
+    lower.append(box(-0.9, 0.9, 2.3, 9.9, 26.0, 26.5, "steel", decal="screw"))
+    grip = [box(-0.5, 0.5, 3.2, 6.4, 8.8, 10.4, "wood", rot=[-16, 0, 0], piv=[0, 6.4, 9.3], decal="checkering")]
+    trigger = [box(-0.08, 0.08, 4.9, 6.2, 7.0, 7.3, "steel", rot=[-12, 0, 0], piv=[0, 6.2, 7.15])]
+    bolt = [box(-0.55, 0.55, 8.4, 9.5, 0.6, 6.2, "bright")] + [box(-0.9, -0.55, 8.5, 9.0, 3.4, 4.2, "bright")]
+    mag = [box(-0.5, 0.5, 1.0, 5.2, 0.4, 4.4, "steel", rot=[6, 0, 0], piv=[0, 5.2, 2.4], decal="ribs"),
+           box(-0.56, 0.56, 0.7, 1.1, 0.3, 4.5, "dark", rot=[6, 0, 0], piv=[0, 5.2, 2.4])]
+    return {"barrel3": barrel, "gastube2": gas, "wood2": wood, "lower2": lower, "grip2": grip, "trigger2": trigger,
+            "bolt": bolt, "mag2": mag, "_pivots": {"muzzle_pos": [0, B, muzzle - 0.2], "muzzle_flash": [0, B, muzzle - 1.2]}}
+
+
 GUNS = {  # id -> (donor, builder)
     "kar98k": ("m700", lambda: mauser_rifle(-25.0)),
     "gewehr98": ("m700", lambda: {**mauser_rifle(-31.0, gew=True),
@@ -598,6 +859,10 @@ GUNS = {  # id -> (donor, builder)
     "mg08": ("m249", lambda: mg08(heavy=True)),
     "m1897": ("m870", m1897),
     "kampfpistole": ("m320", kampfpistole),
+    "m1911": ("m1911", m1911),
+    "springfield": ("m700", springfield),
+    "thompson": ("hk_mp5a5", thompson),
+    "bar_m1918": ("rpk", bar_m1918),
 }
 BULLET_BONES = {"bullet", "bullet2", "bullet3", "bullet4", "bullet5", "bullet_in_mag", "bullet_in_chamber",
                 "bullet_in_barrel", "bullet_shell", "bullet_shell2", "head"}
@@ -646,7 +911,10 @@ def donor_cube(c, m):
 
 def face_dims(c):
     w, h, d = c["s"]
-    return {"north": (w, h), "south": (w, h), "east": (d, h), "west": (d, h), "up": (w, d), "down": (w, d)}
+    dims = {"north": (w, h), "south": (w, h), "east": (d, h), "west": (d, h), "up": (w, d), "down": (w, d)}
+    for f in c.get("hide", ()):  # buried faces get a single texel instead of a full texture rect
+        dims[f] = (1.0 / P, 1.0 / P)
+    return dims
 
 
 def pack(bones):
@@ -722,10 +990,12 @@ def mul(c, k):
     return tuple(max(0, min(255, int(v * k))) for v in c)
 
 
-WOOD = (136, 78, 42)
-WOOD_DARK = (56, 28, 14)
-STEEL = (46, 50, 62)        # deep gunmetal blued steel
-BRIGHT = (182, 186, 192)
+WOODS = {  # name -> (dark, mid, light) of the grain
+    "wood": ((36, 23, 16), (98, 65, 43), (142, 98, 66)),     # dark oiled walnut
+    "beech": ((86, 56, 34), (142, 100, 64), (184, 140, 94)),  # lighter beech / birch service stock
+}
+STEEL = (44, 49, 60)        # blued steel: blue-black, the highlights do the rest
+BRIGHT = (176, 180, 186)
 BRASS = (206, 160, 68)
 COPPER = (184, 102, 64)
 GLOW = (110, 235, 255)
@@ -739,7 +1009,6 @@ def texel(m, f, i, j, fw, fh, gx, gy, seed, world=None):
     side = f not in ("up", "down")
     vert = j / max(1, fh - 1) if side else 0.3  # 0 = top of a side face
 
-    # World coordinates if available: wz = Z (along gun), wy = Y (height), wx = X (lateral)
     wz, wy, wx = None, None, None
     if world:
         if f in ("east", "west"):
@@ -749,84 +1018,77 @@ def texel(m, f, i, j, fw, fh, gx, gy, seed, world=None):
         elif f in ("north", "south"):
             wx, wy = world[0], world[1]
 
-    if m == "wood":
-        if f in ("north", "south"):  # end grain: growth rings
+    if m in WOODS:
+        dark, mid, light = WOODS[m]
+        if f in ("north", "south"):  # end grain: dark growth rings
             r = math.hypot(i - fw / 2, (j - fh / 2) * 1.4)
-            ring_noise = vnoise(i, j, 3, 3, seed) * 3.5
-            k = 0.78 + 0.20 * math.sin(r * 1.7 + ring_noise)
-            # End-grain is naturally darker and absorbs more oil
-            col = mul(WOOD_DARK, k * 1.25)
+            k = 0.5 + 0.28 * math.sin(r * 1.5 + vnoise(i, j, 3, 3, seed) * 3.0)
+            col = mix(dark, mid, k * 0.8)
         else:
             wa = wz * P if wz is not None else along
-            wc = wy * P if wy is not None else across
-            # Natural flowing wood grain with multi-frequency waviness
-            warp = vnoise(wa, wc, 64, 16, 5) * 8.0 + vnoise(wa, wc, 16, 5, 6) * 2.2
-            stripe = math.sin((wc + warp) * 0.85)
-            stripe_fine = math.sin((wc + warp * 1.5) * 2.1)
-            figure = vnoise(wa, wc, 42, 28, 8)  # broad walnut figure clouds
-            fine = vnoise(wa * 1.8, wc * 4, 8, 1, 9)
-            grain_mix = 0.48 + 0.26 * stripe + 0.12 * stripe_fine + 0.24 * (fine - 0.5) + 0.28 * (figure - 0.5)
-            col = mix(WOOD_DARK, WOOD, grain_mix)
-            # Wood pores and subtle dark flecks
-            if h2(int(wa) // 4, int(wc), 7) < 0.015:
-                col = mul(col, 0.68)
-            # Tiny surface dents/scratches in aged military wood
-            if h2(int(wa) // 12, int(wc) // 2, 13) < 0.008:
-                col = mul(col, 0.75)
-
-            # Grip / wrist handling grime (darkening where hands hold the rifle: wrist z ~ 10-15, fore-end undergrip)
-            if wz is not None:
-                if 9.5 <= wz <= 15.0:  # wrist / grip area
-                    dist = abs(wz - 12.2) / 2.8
-                    col = mix((42, 22, 12), col, 0.75 + 0.25 * min(1.0, dist))
-                elif -14.0 <= wz <= 3.0 and wy is not None and wy < 6.8:  # fore-end undergrip
-                    col = mix((48, 26, 14), col, 0.82)
-
-        # Oiled walnut sheen on upward-facing surfaces, darker underside
-        if f == "up":
-            col = mul(col, 1.14)
+            wc = (wy * P if wy is not None else wx * P if wx is not None else across)
+            warp = vnoise(wa, wc, 70, 14, 5) * 7.0 + vnoise(wa, wc, 22, 5, 6) * 1.6
+            ring = 0.5 + 0.5 * math.sin((wc + warp) * 0.7)           # long flame / cathedral grain lines
+            fibre = vnoise(wa, wc, 48, 1.3, 9)                          # very long fibres
+            fine = vnoise(wa, wc, 14, 0.9, 11)
+            cloud = vnoise(wa, wc, 60, 30, 8)                           # broad colour clouds
+            k = 0.30 + 0.30 * ring * (0.6 + 0.5 * fibre) + 0.22 * (cloud - 0.5) + 0.20 * (fine - 0.5)
+            col = mix(dark, mid, k * 1.6) if k < 0.62 else mix(mid, light, (k - 0.62) * 2.2)
+            if h2(int(wa) // 5, int(wc), 7) < 0.02:                     # open pores
+                col = mul(col, 0.62)
+            if h2(int(wa) // 14, int(wc) // 2, 13) < 0.006:             # dents and scratches
+                col = mul(col, 1.35 if h2(int(wa), int(wc), 3) > 0.5 else 0.7)
+            if wz is not None:  # hand polish at the wrist and fore-end: darker, glossier
+                if 9.5 <= wz <= 15.0:
+                    col = mix(mul(dark, 1.2), col, 0.62 + 0.38 * min(1.0, abs(wz - 12.2) / 2.8))
+                elif -14.0 <= wz <= 3.0 and wy is not None and wy < 6.8:
+                    col = mix(mul(dark, 1.3), col, 0.78)
+        if f == "up":  # oil sheen: a soft lighter band down the middle of the top face
+            col = mul(col, 1.10 + 0.18 * math.exp(-((i / max(1, fw - 1) - 0.5) / 0.22) ** 2))
         elif f == "down":
-            col = mul(col, 0.82)
+            col = mul(col, 0.7)
         else:
-            col = mul(col, 1.10 - 0.26 * vert)
+            col = mul(col, 1.08 - 0.32 * vert)
+        # rounded-over long edges only (not the ends of segments, which would show seams in a smoothed stock)
+        if side and min(fw, fh) >= 3 and (j == 0 or j == fh - 1):
+            col = mul(col, 1.18 if j == 0 else 0.72)
+        elif f in ("up", "down") and min(fw, fh) >= 3 and (i == 0 or i == fw - 1):
+            col = mul(col, 1.1 if f == "up" else 0.7)
 
     elif m in ("steel", "dark"):
-        base = STEEL if m == "steel" else (24, 26, 30)
-        # Vertical gradient: subtle ambient occlusion on underside, cool sky highlight on top
-        grad = 1.20 - 0.38 * vert
-        col = mul(base, grad)
-        # Brushed bluing streak along the bore axis
-        streak = vnoise(along, across, 14, 2, seed)
-        col = mul(col, 0.93 + 0.14 * streak)
-        # Micro-speckle / metallurgical grain
-        speckle = (h2(i, j, seed) - 0.5) * 0.08
-        col = mul(col, 1.0 + speckle)
+        base = STEEL if m == "steel" else (21, 22, 25)
+        sk = 0.55 + 0.45 * (1.0 - vert) if side else 0.95  # underside falls into shadow
+        col = mul(base, sk)
+        # fake environment reflection: soft light band on the shoulder of side faces, centre line on top faces
+        if m == "steel":
+            if side:
+                spec = math.exp(-((vert - 0.16) / 0.10) ** 2) * 0.55 + math.exp(-((vert - 0.55) / 0.25) ** 2) * 0.10
+            else:
+                spec = math.exp(-((i / max(1, fw - 1) - 0.5) / 0.20) ** 2) * 0.45
+            col = (min(255, int(col[0] + spec * 70)), min(255, int(col[1] + spec * 80)), min(255, int(col[2] + spec * 104)))
+        col = mul(col, 0.94 + 0.12 * vnoise(along, across, 20, 1.6, seed))   # machining streaks along the bore
+        col = mul(col, 1.0 + (h2(i, j, seed) - 0.5) * 0.10)                   # grain
+        # blued steel fades to plum-brown where it is handled; oil stains pool low
+        patch = vnoise(world[0] * P if world else along, world[1] * P if world else across, 38, 22, seed + 3)
+        if patch > 0.62:
+            col = mix(col, (74, 58, 52), (patch - 0.62) * 1.1)
+        # bare-metal edge wear on the high points, dark crease on the lower edges
+        if m == "steel" and min(fw, fh) >= 6 and edge == 0:
+            top_edge = (f == "up") or (side and j == 0)
+            if h2(i, j, seed + 17) > (0.2 if top_edge else 0.55):
+                col = mix(col, (176, 180, 188), 0.62 if top_edge else 0.32)
+            elif not top_edge:
+                col = mul(col, 0.6)
+        elif m == "steel" and min(fw, fh) >= 6 and edge == 1 and (f == "up" or (side and j == 1)):
+            col = mix(col, (110, 116, 128), 0.22)
 
-        # Cool bluing tint on upward and side highlights
-        if f == "up":
-            col = (min(255, col[0] + 4), min(255, col[1] + 7), min(255, col[2] + 14))
-        elif side and vert < 0.25:
-            col = (min(255, col[0] + 2), min(255, col[1] + 4), min(255, col[2] + 8))
-
-        # Authentic edge wear to bare silver metal on exposed corners/edges
-        if m == "steel" and min(fw, fh) >= 4:
-            if edge == 0:
-                # High-wear points: muzzles, sights, receiver corners, trigger guard bottom
-                is_high_wear = (f == "up") or (side and (j == 0 or j == fh - 1))
-                wear_int = 0.52 if is_high_wear else 0.35
-                # Varied edge wear so it looks realistically rubbed/chipped
-                if h2(i, j, seed + 17) > 0.15:
-                    col = mix(col, (168, 172, 178), wear_int)
-            elif edge == 1 and (f == "up" or (side and j == 0)):
-                col = mix(col, (130, 134, 142), 0.25)
-
-    elif m == "bright":
-        # Polished or machined in-the-white steel (bolt body, extractor, bolt handle)
-        col = mul(BRIGHT, 1.14 - 0.28 * vert)
-        # Fine lathe / machining turning marks
-        col = mul(col, 0.94 + 0.12 * vnoise(along, across, 7, 1, seed))
+    elif m == "bright":  # polished bolt body, handle, extractor
+        col = mul(BRIGHT, 1.12 - 0.30 * vert)
+        col = mul(col, 0.93 + 0.14 * vnoise(along, across, 6, 1, seed))
+        if side:
+            col = mul(col, 1.0 + 0.25 * math.exp(-((vert - 0.2) / 0.12) ** 2))
         if edge == 0:
-            col = mul(col, 0.76)  # subtle chamfer shading
+            col = mul(col, 0.74)
 
     elif m == "olive":  # painted grenade body
         col = mul((86, 92, 58), 1.1 - 0.3 * vert)
@@ -905,6 +1167,10 @@ def decal(kind, put, fw, fh, seed):
         for j in range(1, fh - 1, 3):
             for i in range(fw):
                 put(i, j, None)
+    elif kind == "vribs":  # vertical serrations
+        for i in range(1, fw - 1, 2):
+            for j in range(1, fh - 1):
+                put(i, j, None)
     elif kind == "checkering":  # fine diamond checkering on walnut or grips
         for j in range(1, fh - 1):
             for i in range(1, fw - 1):
@@ -969,9 +1235,12 @@ def paint(bones, size):
 
 DONOR_JSON = "assets/tacz/custom/tacz_default_gun/{}"
 SOUNDS_FROM = {"kar98k": "m700", "gewehr98": "m700", "t_gewehr": "m95", "c96": "m1911", "mp18": "hk_mp5a5",
-               "luger_p08": "glock_17", "mosin": "m700", "lebel": "springfield1873", "lee_enfield": "m700", "mg08_15": "m249", "mg08": "m249", "m1897": "m870", "kampfpistole": "m320"}
+               "luger_p08": "glock_17", "mosin": "m700", "lebel": "springfield1873", "lee_enfield": "m700", "mg08_15": "m249", "mg08": "m249", "m1897": "m870", "kampfpistole": "m320",
+               "m1911": "m1911", "springfield": "m700", "thompson": "ump45", "bar_m1918": "rpk"}
 DISPLAY_EXTRA = {}  # gun id -> display fields to override
-TRACER = {"c96": "#FFE6A0", "mp18": "#FFE6A0", "luger_p08": "#FFE6A0", "m1897": "#FFD08A"}  # rifles take the tracer colour from their youjoarms ammo
+TRACER = {"kar98k": "#FFE6A0", "gewehr98": "#FFE6A0", "t_gewehr": "#FFE6A0", "mosin": "#FFE6A0", "lebel": "#FFE6A0",
+          "lee_enfield": "#FFE6A0", "mg08": "#FFE6A0", "mg08_15": "#FFE6A0", "springfield": "#FFE6A0", "thompson": "#FFE6A0",
+          "bar_m1918": "#FFE6A0", "m1911": "#FFE6A0", "c96": "#FFE6A0", "mp18": "#FFE6A0", "luger_p08": "#FFE6A0", "m1897": "#FFD08A"}  # rifles take the tracer colour from their youjoarms ammo
 
 
 def donor_json(z, path):

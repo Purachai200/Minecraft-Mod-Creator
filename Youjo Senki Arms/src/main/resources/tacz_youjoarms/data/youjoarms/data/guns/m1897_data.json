@@ -2,9 +2,9 @@
   "ammo": "tacz:12g",
   "ammo_amount": 5,
   "extended_mag_ammo_amount": [
-    6,
-    7,
-    8
+    5,
+    5,
+    5
   ],
   "bolt": "manual_action",
   "rpm": 300,

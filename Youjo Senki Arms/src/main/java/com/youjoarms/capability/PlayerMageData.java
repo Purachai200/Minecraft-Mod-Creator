@@ -11,6 +11,10 @@ public class PlayerMageData {
     private boolean charging = false;
     private int chargeTicks = 0;
     private int shieldTicks = 0;
+    // set every tick from the held gun (see GunMana); not saved
+    private int maxOverride = -1;
+    private int regenOverride = -1;
+    private double costMultiplier = 1.0;
 
     public PlayerMageData() {
         this.mana = 100;
@@ -24,7 +28,23 @@ public class PlayerMageData {
         this.mana = Math.max(0, Math.min(mana, getMaxMana()));
     }
 
+    public void applyProfile(com.youjoarms.mana.GunMana.Profile p) {
+        maxOverride = p == null ? -1 : p.maxMana();
+        regenOverride = p == null ? -1 : p.regenPerSecond();
+        costMultiplier = p == null ? 1.0 : p.costMultiplier();
+        if (mana > getMaxMana()) mana = getMaxMana();
+    }
+
+    public int getRegenPerSecond() {
+        return regenOverride >= 0 ? regenOverride : YoujoArmsConfig.COMMON.manaRegenPerSecond.get();
+    }
+
+    public double getCostMultiplier() {
+        return costMultiplier;
+    }
+
     public int getMaxMana() {
+        if (maxOverride > 0) return maxOverride;
         if (YoujoArmsConfig.COMMON_SPEC.isLoaded()) {
             return YoujoArmsConfig.COMMON.maxMana.get();
         }

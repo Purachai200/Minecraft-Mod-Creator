@@ -1,0 +1,7 @@
+{
+  "name": "youjoarms.gun.thompson.name",
+  "display": "youjoarms:thompson_display",
+  "data": "youjoarms:thompson_data",
+  "tooltip": "youjoarms.gun.thompson.desc",
+  "type": "smg"
+}

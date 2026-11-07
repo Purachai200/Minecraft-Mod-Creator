@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "DGD",
+    "GCG",
+    "DGD"
+  ],
+  "key": {
+    "D": {
+      "item": "minecraft:diamond"
+    },
+    "G": {
+      "item": "minecraft:glowstone_dust"
+    },
+    "C": {
+      "type": "forge:partial_nbt",
+      "item": "tacz:attachment",
+      "nbt": "{AttachmentId:\"youjoarms:mana_cell_2\"}"
+    }
+  },
+  "result": {
+    "item": "tacz:attachment",
+    "nbt": "{AttachmentId:\"youjoarms:mana_cell_3\"}"
+  }
+}

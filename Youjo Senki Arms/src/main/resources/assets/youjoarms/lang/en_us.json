@@ -14,5 +14,18 @@
   "youjoarms.ammo.13mm.name": "13.2mm TuF Heavy Cartridge",
   "key.youjoarms.category": "Arcane Infantry",
   "key.youjoarms.cast": "Charge / Cast Formula",
-  "key.youjoarms.cycle_formula": "Cycle Formula"
+  "key.youjoarms.cycle_formula": "Cycle Formula",
+  "youjoarms.gun.m1911.name": "Colt M1911",
+  "youjoarms.gun.m1911.desc": "Single-action .45 ACP service pistol with a 7-round magazine.",
+  "youjoarms.gun.springfield.name": "Springfield M1903",
+  "youjoarms.gun.springfield.desc": "Bolt-action rifle with an aperture rear sight, in .30-06.",
+  "youjoarms.gun.thompson.name": "Thompson M1928",
+  "youjoarms.gun.thompson.desc": "Finned-barrel .45 ACP submachine gun with a vertical foregrip.",
+  "youjoarms.gun.bar_m1918.name": "Browning M1918 BAR",
+  "youjoarms.gun.bar_m1918.desc": "Select-fire .30-06 automatic rifle with a 20-round box magazine.",
+  "youjoarms.attachment.mana_cell_1.name": "Elenium Mana Cell I (Common)",
+  "youjoarms.attachment.mana_cell_2.name": "Elenium Mana Cell II (Uncommon)",
+  "youjoarms.attachment.mana_cell_3.name": "Elenium Mana Cell III (Rare)",
+  "youjoarms.attachment.mana_cell_4.name": "Elenium Mana Cell IV (Epic)",
+  "youjoarms.attachment.mana_cell_5.name": "Elenium Mana Cell V (Legendary)"
 }
