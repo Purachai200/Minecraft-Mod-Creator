@@ -7,7 +7,7 @@
   },
   "hud": "youjoarms:gun/hud/springfield",
   "slot": "youjoarms:gun/slot/springfield",
-  "animation": "tacz:m700",
+  "animation": "youjoarms:springfield",
   "state_machine": "tacz:manual_action_state_machine",
   "state_machine_param": {
     "bolt_shell_ejecting_time": 0.4

@@ -7,7 +7,7 @@
   },
   "hud": "youjoarms:gun/hud/kar98k",
   "slot": "youjoarms:gun/slot/kar98k",
-  "animation": "tacz:m700",
+  "animation": "youjoarms:kar98k",
   "state_machine": "tacz:manual_action_state_machine",
   "state_machine_param": {
     "bolt_shell_ejecting_time": 0.4

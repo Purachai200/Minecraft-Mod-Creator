@@ -7,11 +7,11 @@
     5,
     5
   ],
-  "rpm": 45,
+  "rpm": 71,
   "bullet": {
     "life": 1.2,
     "bullet_amount": 1,
-    "damage": 26,
+    "damage": 34,
     "tracer_count_interval": 0,
     "extra_damage": {
       "armor_ignore": 0.5,
@@ -19,19 +19,19 @@
       "damage_adjust": [
         {
           "distance": 80,
-          "damage": 26
+          "damage": 34
         },
         {
           "distance": 150,
-          "damage": 23
+          "damage": 30
         },
         {
           "distance": 250,
-          "damage": 19
+          "damage": 25
         },
         {
           "distance": "infinite",
-          "damage": 16
+          "damage": 21
         }
       ]
     },
@@ -55,7 +55,7 @@
   "put_away_time": 0.4,
   "aim_time": 0.25,
   "sprint_time": 0.25,
-  "bolt_action_time": 1.2,
+  "bolt_action_time": 0.75,
   "weight": 4.1,
   "movement_speed": {
     "base": 0.0,

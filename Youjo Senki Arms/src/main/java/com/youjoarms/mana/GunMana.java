@@ -71,6 +71,12 @@ public final class GunMana {
         }
     }
 
+    /** True for a youjoarms gun; formulas are never cast from another pack's or mod's guns. */
+    public static boolean isOurs(ItemStack gunStack) {
+        IGun gun = IGun.getIGunOrNull(gunStack);
+        return gun != null && gun.getGunId(gunStack).getNamespace().equals("youjoarms");
+    }
+
     /** Effective profile of a held gun, or null when it is not one of ours (the config defaults apply). */
     public static Profile of(ItemStack gunStack) {
         IGun gun = IGun.getIGunOrNull(gunStack);

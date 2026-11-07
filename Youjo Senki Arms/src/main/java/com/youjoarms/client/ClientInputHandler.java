@@ -36,7 +36,7 @@ public class ClientInputHandler {
             if (player == null) return;
 
             ItemStack held = player.getMainHandItem();
-            IGun gun = IGun.getIGunOrNull(held);
+            IGun gun = com.youjoarms.mana.GunMana.isOurs(held) ? IGun.getIGunOrNull(held) : null;
 
             // Handle Formula cycle key (press once)
             while (KeyBindings.CYCLE_KEY.consumeClick()) {

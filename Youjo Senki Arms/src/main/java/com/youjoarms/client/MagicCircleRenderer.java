@@ -93,7 +93,7 @@ public class MagicCircleRenderer {
 
     private static void renderCharge(Player player, PlayerMageData cap, PoseStack pose, Vec3 cam, float pt, float now) {
         boolean charging = cap.isCharging() && cap.getSelectedFormula() != FormulaType.NONE
-                && IGun.getIGunOrNull(player.getMainHandItem()) != null;
+                && com.youjoarms.mana.GunMana.isOurs(player.getMainHandItem());
         Charge last = LAST_CHARGE.get(player.getId());
         if (!charging) {
             if (last != null && last.progress() >= 1f) RELEASES.put(player.getId(), new Release(last, now));
@@ -114,8 +114,11 @@ public class MagicCircleRenderer {
         boolean full = c.progress() >= 1f;
         float pulse = full ? 1.0f + 0.25f * Mth.sin(now * 0.6f) : 1.0f;
         // hip-fire: the stack sits off to the right like the gun; aiming centres it on the sights
-        Vec3 right = new Vec3(-c.look().z, 0, c.look().x).normalize();
-        Vec3 origin = c.eye().add(right.scale(0.22 * (1 - c.aim()))).add(0, -0.16 * (1 - c.aim()), 0);
+        // offsets are along the camera's own right/up axes so the stack stays on the muzzle line when looking up or down
+        double yawRad = Math.toRadians(c.yaw());
+        Vec3 right = new Vec3(-Math.cos(yawRad), 0, -Math.sin(yawRad));
+        Vec3 up = right.cross(c.look()).normalize();
+        Vec3 origin = c.eye().add(right.scale(0.22 * (1 - c.aim()))).subtract(up.scale(0.16 * (1 - c.aim())));
 
         for (int i = 0; i < n; i++) {
             float appear = Mth.clamp((c.progress() * n - i) * 2f, 0f, 1f);
@@ -220,7 +223,7 @@ public class MagicCircleRenderer {
         pose.pushPose();
         pose.translate(at.x - cam.x, at.y - cam.y, at.z - cam.z);
         pose.mulPose(new Quaternionf().rotationY((float) Math.toRadians(-yaw + 180f)));
-        pose.mulPose(new Quaternionf().rotationX((float) Math.toRadians(pitch)));
+        pose.mulPose(new Quaternionf().rotationX((float) Math.toRadians(-pitch)));  // with the 180 flip above, -pitch keeps the plane square to the aim
     }
 
     /** Pushes a pose at {@code at} lying flat on the ground. Caller pops. */

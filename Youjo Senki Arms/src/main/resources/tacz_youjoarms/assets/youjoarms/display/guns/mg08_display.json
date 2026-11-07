@@ -3,7 +3,7 @@
   "texture": "youjoarms:gun/uv/mg08",
   "hud": "youjoarms:gun/hud/mg08",
   "slot": "youjoarms:gun/slot/mg08",
-  "animation": "tacz:m249",
+  "animation": "youjoarms:mg08",
   "use_default_animation": "rifle",
   "third_person_animation": "default",
   "state_machine": "tacz:m249_state_machine",

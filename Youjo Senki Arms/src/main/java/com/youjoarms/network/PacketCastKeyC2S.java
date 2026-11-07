@@ -32,7 +32,8 @@ public class PacketCastKeyC2S {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
-            if (player != null) {
+            // releasing is always allowed; starting a charge or cycling needs one of our guns in hand
+            if (player != null && ((!pressed && !cycleFormula) || com.youjoarms.mana.GunMana.isOurs(player.getMainHandItem()))) {
                 player.getCapability(PlayerMageProvider.MAGE_DATA).ifPresent(cap -> {
                     if (cycleFormula) {
                         cap.setSelectedFormula(cap.getSelectedFormula().next());

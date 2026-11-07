@@ -7,7 +7,7 @@
   },
   "hud": "youjoarms:gun/hud/mp18",
   "slot": "youjoarms:gun/slot/mp18",
-  "animation": "tacz:hk_mp5a5",
+  "animation": "youjoarms:mp18",
   "state_machine": "tacz:hk_mp5a5_state_machine",
   "use_default_animation": "rifle",
   "third_person_animation": "default",

@@ -7,7 +7,7 @@
   },
   "hud": "youjoarms:gun/hud/gewehr98",
   "slot": "youjoarms:gun/slot/gewehr98",
-  "animation": "tacz:m700",
+  "animation": "youjoarms:gewehr98",
   "state_machine": "tacz:manual_action_state_machine",
   "state_machine_param": {
     "bolt_shell_ejecting_time": 0.4

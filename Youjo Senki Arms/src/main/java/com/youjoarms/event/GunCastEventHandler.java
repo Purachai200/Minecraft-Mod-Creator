@@ -119,7 +119,7 @@ public class GunCastEventHandler {
 
         ItemStack gunStack = event.getGunItemStack();
         IGun gun = IGun.getIGunOrNull(gunStack);
-        if (gun == null) return;
+        if (gun == null || !com.youjoarms.mana.GunMana.isOurs(gunStack)) return;
 
         player.getCapability(PlayerMageProvider.MAGE_DATA).ifPresent(cap -> {
             FormulaType formula = cap.getSelectedFormula();

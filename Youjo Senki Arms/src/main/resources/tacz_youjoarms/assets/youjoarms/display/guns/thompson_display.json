@@ -7,7 +7,7 @@
   },
   "hud": "youjoarms:gun/hud/thompson",
   "slot": "youjoarms:gun/slot/thompson",
-  "animation": "tacz:hk_mp5a5",
+  "animation": "youjoarms:thompson",
   "state_machine": "tacz:hk_mp5a5_state_machine",
   "use_default_animation": "rifle",
   "third_person_animation": "default",

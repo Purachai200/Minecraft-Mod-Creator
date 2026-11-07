@@ -11,7 +11,7 @@
   "bullet": {
     "life": 1.0,
     "bullet_amount": 1,
-    "damage": 16,
+    "damage": 19,
     "tracer_count_interval": 0,
     "extra_damage": {
       "armor_ignore": 0.5,
@@ -19,15 +19,15 @@
       "damage_adjust": [
         {
           "distance": 35,
-          "damage": 16.0
+          "damage": 19
         },
         {
           "distance": 80,
-          "damage": 12.57
+          "damage": 15
         },
         {
           "distance": "infinite",
-          "damage": 10.29
+          "damage": 12
         }
       ]
     },

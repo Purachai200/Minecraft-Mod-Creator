@@ -843,24 +843,35 @@ def bar_m1918():
             "bolt": bolt, "mag2": mag, "_pivots": {"muzzle_pos": [0, B, muzzle - 0.2], "muzzle_flash": [0, B, muzzle - 1.2]}}
 
 
+def boxmag(builder):
+    """The m700 reload pulls a detachable magazine off the rig, so every m700-rig rifle needs a visible one on
+    mag_default (otherwise only the loose cartridges seem to float out)."""
+    def build():
+        parts = builder()
+        parts.setdefault("mag_default", [box(-0.42, 0.42, 3.5, 6.3, 1.8, 5.8, "steel", decal="ribs"),
+                                         box(-0.46, 0.46, 3.35, 3.6, 1.7, 5.9, "steel")])
+        return parts
+    return build
+
+
 GUNS = {  # id -> (donor, builder)
-    "kar98k": ("m700", lambda: mauser_rifle(-25.0)),
-    "gewehr98": ("m700", lambda: {**mauser_rifle(-31.0, gew=True),
+    "kar98k": ("m700", boxmag(lambda: mauser_rifle(-25.0))),
+    "gewehr98": ("m700", boxmag(lambda: {**mauser_rifle(-31.0, gew=True),
                                    "_pivots": {"muzzle_pos": [0, 7.25, -31.2], "muzzle_flash": [0, 7.25, -32.2],
-                                               "refit_muzzle_view": [12.35, 7.85, -37]}}),
-    "t_gewehr": ("m700", t_gewehr),
+                                               "refit_muzzle_view": [12.35, 7.85, -37]}})),
+    "t_gewehr": ("m700", boxmag(t_gewehr)),
     "c96": ("m1911", c96),
     "mp18": ("hk_mp5a5", mp18),
     "luger_p08": ("m1911", luger),
-    "mosin": ("m700", mosin),
-    "lebel": ("m700", lebel),
+    "mosin": ("m700", boxmag(mosin)),
+    "lebel": ("m700", boxmag(lebel)),
     "lee_enfield": ("m700", lee_enfield),
     "mg08_15": ("m249", mg08),
     "mg08": ("m249", lambda: mg08(heavy=True)),
     "m1897": ("m870", m1897),
     "kampfpistole": ("m320", kampfpistole),
     "m1911": ("m1911", m1911),
-    "springfield": ("m700", springfield),
+    "springfield": ("m700", boxmag(springfield)),
     "thompson": ("hk_mp5a5", thompson),
     "bar_m1918": ("rpk", bar_m1918),
 }
@@ -1255,6 +1266,7 @@ def write_display(z, gun_id, donor_name):
              lod={"model": f"youjoarms:gun/{gun_id}_geo", "texture": f"youjoarms:gun/uv/{gun_id}"},
              hud=f"youjoarms:gun/hud/{gun_id}", slot=f"youjoarms:gun/slot/{gun_id}")
     d["sounds"] = donor_json(z, f"assets/tacz/display/guns/{SOUNDS_FROM[gun_id]}_display.json")["sounds"]
+    d["animation"] = f"youjoarms:{gun_id}"  # built by build_gun_animations.py
     d.pop("ammo", None)  # m700 ships a debug mycelium particle trail on its rounds
     d.update(DISPLAY_EXTRA.get(gun_id, {}))
     if gun_id in TRACER:

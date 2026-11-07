@@ -7,7 +7,7 @@
   },
   "hud": "youjoarms:gun/hud/bar_m1918",
   "slot": "youjoarms:gun/slot/bar_m1918",
-  "animation": "tacz:rpk",
+  "animation": "youjoarms:bar_m1918",
   "use_default_animation": "rifle",
   "third_person_animation": "default",
   "show_crosshair": false,

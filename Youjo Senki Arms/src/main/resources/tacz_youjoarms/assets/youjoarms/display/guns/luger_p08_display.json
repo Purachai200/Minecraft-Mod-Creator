@@ -7,7 +7,7 @@
   },
   "hud": "youjoarms:gun/hud/luger_p08",
   "slot": "youjoarms:gun/slot/luger_p08",
-  "animation": "tacz:m1911",
+  "animation": "youjoarms:luger_p08",
   "use_default_animation": "pistol",
   "player_animator_3rd": "tacz:pistol_default.player_animation",
   "transform": {
