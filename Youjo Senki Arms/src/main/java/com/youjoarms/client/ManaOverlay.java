@@ -29,8 +29,7 @@ public class ManaOverlay {
         if (player == null || mc.options.hideGui) return;
 
         ItemStack heldItem = player.getMainHandItem();
-        IGun gun = IGun.getIGunOrNull(heldItem);
-        if (gun == null) return;
+        if (!com.youjoarms.mana.GunMana.isOurs(heldItem)) return;
 
         // Render only if holding a youjoarms gun or a gun with active mage capability
         player.getCapability(PlayerMageProvider.MAGE_DATA).ifPresent(cap -> {

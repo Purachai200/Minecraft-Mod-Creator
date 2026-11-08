@@ -155,9 +155,11 @@ public class KeyInputHandler {
         // 1. Instant Rocket Dash on Spacebar tap (when not using continuous flight equipment)
         if (mc.options.keyJump.consumeClick()) {
             boolean hasFlight = mc.player.getVehicle() instanceof BaseTitanEntity titan && titan.hasFlightModule();
-            if (!hasFlight) {
+            if (!hasFlight && mc.player.getVehicle() instanceof BaseMechEntity mech) {
                 float forward = mc.player.zza;
                 float strafe = mc.player.xxa;
+                // Client prediction: run dash locally so client travelPiloted gets velocity immediately
+                mech.performDash(forward, strafe);
                 // Space alone fires the jump jets; Space + a direction dashes that way.
                 ModNetworking.sendToServer(new MechControlC2SPacket(forward, strafe, true, false, false, false, false, false));
             }

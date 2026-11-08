@@ -66,6 +66,9 @@ public class ClientSetup {
         event.registerEntityRenderer(ModEntities.V22_OSPREY.get(), TransportVehicleRenderer::new);
         event.registerEntityRenderer(ModEntities.ARMORED_APC.get(), TransportVehicleRenderer::new);
         event.registerEntityRenderer(ModEntities.LCAC_HOVERCRAFT.get(), TransportVehicleRenderer::new);
+        event.registerEntityRenderer(ModEntities.PATROL_BOAT.get(), TransportVehicleRenderer::new);
+        event.registerEntityRenderer(ModEntities.PATROL_FRIGATE.get(), TransportVehicleRenderer::new);
+        event.registerEntityRenderer(ModEntities.SKY_CARRIER.get(), TransportVehicleRenderer::new);
         event.registerEntityRenderer(ModEntities.C130_HERCULES.get(), TransportVehicleRenderer::new);
         event.registerEntityRenderer(ModEntities.REPAIR_TRUCK.get(), TransportVehicleRenderer::new);
         event.registerEntityRenderer(ModEntities.MOBILE_SUIT_TRAILER.get(), TransportVehicleRenderer::new);

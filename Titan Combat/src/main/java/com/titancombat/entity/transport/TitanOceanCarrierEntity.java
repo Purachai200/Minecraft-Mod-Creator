@@ -29,9 +29,9 @@ public class TitanOceanCarrierEntity extends BaseTransportVehicleEntity {
     private static final Vec3 BRIDGE_HELM_OFFSET = new Vec3(5.0D, 7.72D - 0.6D, 6.625D);
 
     // Well Deck Bay 1 (Mid-ship cargo deck, behind command bridge): model z = 5 -> local z = -5/16
-    private static final Vec3 BAY_BOW_OFFSET = new Vec3(2.375D, 5.0D, -4.375D);
+    private static final Vec3 BAY_BOW_OFFSET = new Vec3(-1.5D, 5.0D, -4.375D);
     // Well Deck Bay 2 (Aft cargo deck): model z = 52 -> local z = -52/16
-    private static final Vec3 BAY_AFT_OFFSET = new Vec3(2.375D, 5.0D, -11.875D);
+    private static final Vec3 BAY_AFT_OFFSET = new Vec3(-1.5D, 5.0D, -11.875D);
 
     // Flight deck geometry in blocks, local frame (+X left, +Z forward); from scripts/gen_ocean_carrier.py's report
     public static final double DECK_TOP_Y = 5.0D;
@@ -39,8 +39,6 @@ public class TitanOceanCarrierEntity extends BaseTransportVehicleEntity {
     private static final double DECK_Z_MIN = -18.75D, DECK_Z_MAX = 19.0D;
     /** Island superstructure footprint (starboard side): x +3.75..+6, z 0.5..8.25, roof 4.4 above the deck. */
     private static final double ISLAND_X = 4.875D, ISLAND_Z_MIN = 0.5D, ISLAND_Z_MAX = 8.25D, ISLAND_SIZE = 2.25D, ISLAND_HEIGHT = 4.4D;
-
-    private boolean collidersSpawned = false;
 
     public TitanOceanCarrierEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -56,13 +54,24 @@ public class TitanOceanCarrierEntity extends BaseTransportVehicleEntity {
     }
 
     @Override
+    public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
+        // Place dismounted passenger safely on the flight deck walkway instead of dropping into water
+        float yawRad = this.getYRot() * ((float) Math.PI / 180.0F);
+        double cos = Math.cos(yawRad);
+        double sin = Math.sin(yawRad);
+        double localX = 3.2D;
+        double localZ = 4.5D;
+        return new Vec3(this.getX() + (localX * cos - localZ * sin), this.getY() + DECK_TOP_Y, this.getZ() + (localX * sin + localZ * cos));
+    }
+
+    @Override
     public int getCargoCapacity() {
         return 2; // Dual-bay heavy carrier
     }
 
     @Override
     protected boolean shouldTitanKneel() {
-        return false; // Titans / Mechs stand upright on the broad carrier well deck
+        return true; // Kneels securely on flight deck so large titans fit without clipping
     }
 
     @Override
@@ -76,9 +85,10 @@ public class TitanOceanCarrierEntity extends BaseTransportVehicleEntity {
     }
 
     /** Tiles the flight deck with square colliders (one beam wide) plus a column for the island. */
-    private void spawnDeckColliders() {
+    @Override
+    protected void spawnDeckColliders() {
         // 1-block-thick slab whose top is the deck surface
-        DeckColliderEntity.spawnRow(this, (float) DECK_BEAM, 1.0F, 0.0F, (float) DECK_TOP_Y - 1.0F, DECK_Z_MIN, DECK_Z_MAX);
+        DeckColliderEntity.spawnRow(this, (float) DECK_BEAM, 3.0F, 0.0F, (float) DECK_TOP_Y - 3.0F, DECK_Z_MIN, DECK_Z_MAX);
         DeckColliderEntity.spawnRow(this, (float) ISLAND_SIZE, (float) ISLAND_HEIGHT, (float) ISLAND_X, (float) DECK_TOP_Y, ISLAND_Z_MIN, ISLAND_Z_MAX);
     }
 
@@ -90,10 +100,6 @@ public class TitanOceanCarrierEntity extends BaseTransportVehicleEntity {
     @Override
     public void tick() {
         super.tick();
-        if (!this.level().isClientSide && !this.collidersSpawned) {
-            this.collidersSpawned = true;
-            spawnDeckColliders();
-        }
 
         // Flight deck services: aircraft and vehicles parked on deck get charged and patched up
         if (!this.level().isClientSide && this.tickCount % 20 == 0) {

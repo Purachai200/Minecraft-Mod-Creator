@@ -1,0 +1,37 @@
+{
+ "format_version": "1.8.0",
+ "animations": {
+  "animation.transport_sub.idle": {
+   "loop": true,
+   "bones": {
+    "prop": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  "animation.transport_sub.swim": {
+   "loop": true,
+   "animation_length": 0.5,
+   "bones": {
+    "prop": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.5": [
+       0,
+       0,
+       360
+      ]
+     }
+    }
+   }
+  }
+ }
+}

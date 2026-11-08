@@ -112,6 +112,12 @@ public class VehicleWrenchItem extends Item {
             stack = new ItemStack(ModItems.ARMORED_APC.get());
         } else if (vehicle instanceof TitanMobileSuitTrailerEntity) {
             stack = new ItemStack(ModItems.MOBILE_SUIT_TRAILER.get());
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanPatrolBoatEntity) {
+            stack = new ItemStack(ModItems.PATROL_BOAT.get());
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanPatrolFrigateEntity) {
+            stack = new ItemStack(ModItems.PATROL_FRIGATE.get());
+        } else if (vehicle instanceof com.titancombat.entity.transport.TitanSkyCarrierEntity) {
+            stack = new ItemStack(ModItems.SKY_CARRIER.get());
         } else if (vehicle instanceof com.titancombat.entity.transport.TitanLcacHovercraftEntity) {
             stack = new ItemStack(ModItems.LCAC_HOVERCRAFT.get());
         } else if (vehicle instanceof com.titancombat.entity.transport.TitanC130HerculesEntity) {

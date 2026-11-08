@@ -23,8 +23,8 @@ public class ModEntities {
             ENTITIES.register("formula_zone", () ->
                     EntityType.Builder.<FormulaZoneEntity>of(FormulaZoneEntity::new, MobCategory.MISC)
                             .sized(0.5F, 0.5F)
-                            .clientTrackingRange(16)
-                            .updateInterval(20)
+                            .clientTrackingRange(160)
+                            .updateInterval(1)
                             .build("formula_zone")
             );
 }

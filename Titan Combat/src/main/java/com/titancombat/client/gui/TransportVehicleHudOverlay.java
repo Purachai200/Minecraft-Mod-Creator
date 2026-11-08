@@ -110,6 +110,7 @@ public class TransportVehicleHudOverlay {
         int x0 = 16;
         int base = H - 16;
         drawPayloadConsole(g, font, x0, base, vehicle, dockedTitanNames, hpRatio, hpPct);
+        drawSeatMap(g, font, x0, base - 72, vehicle, player);
 
         // ---------------------------------------------------------------------
         // 5. Bottom-Right Console: Velocity Speedometer & FE Power Core
@@ -338,5 +339,43 @@ public class TransportVehicleHudOverlay {
                         + "] Descend  [L-CLICK] Drop"
                 : "[W/A/S/D] Steer";
         textRight(g, font, hint, xr, base - 2, DIM, 0.65F, false);
+    }
+
+    // =========================================================================
+    // CREW PANEL: top-down seat map + seated / capacity
+    // =========================================================================
+    /** Top-down plan (nose up, left = screen left): one marker per player seat, filled when taken, white for you. */
+    private static void drawSeatMap(GuiGraphics g, Font font, int x0, int bottom, BaseTransportVehicleEntity vehicle, Player me) {
+        int cap = vehicle.getPlayerSeatCapacity();
+        List<Player> seated = vehicle.getSeatedPlayers();
+        int top = bottom - 62;
+        text(g, font, "CREW " + seated.size() + "/" + cap, x0, top - 11, CYAN, 0.90F, true);
+        final int w = 44, h = 56;
+        rect(g, x0, top, x0 + w, top + 1, CYAN, 0.35F);
+        rect(g, x0, bottom - 1, x0 + w, bottom, CYAN, 0.35F);
+        rect(g, x0, top, x0 + 1, bottom, CYAN, 0.35F);
+        rect(g, x0 + w - 1, top, x0 + w, bottom, CYAN, 0.35F);
+        text(g, font, "▲", x0 + w / 2 - 3, top + 2, DIM, 0.6F, false);   // nose marker
+
+        double minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9;
+        for (int i = 0; i < cap; i++) {
+            var o = vehicle.getPlayerSeatOffset(i);
+            minX = Math.min(minX, o.x); maxX = Math.max(maxX, o.x); minZ = Math.min(minZ, o.z); maxZ = Math.max(maxZ, o.z);
+        }
+        double span = Math.max(Math.max(maxX - minX, maxZ - minZ), 0.5D);
+        float k = (float) ((Math.min(w, h) - 24) / span);
+        float mx = (float) ((minX + maxX) / 2), mz = (float) ((minZ + maxZ) / 2);
+        for (int i = 0; i < cap; i++) {
+            var o = vehicle.getPlayerSeatOffset(i);
+            int sx = x0 + w / 2 - Math.round(((float) o.x - mx) * k);
+            int sy = top + h / 2 + 4 - Math.round(((float) o.z - mz) * k);
+            Player who = i < seated.size() ? seated.get(i) : null;
+            int col = who == null ? DIM : (who == me ? WHITE : GREEN);
+            rect(g, sx - 3, sy - 3, sx + 4, sy + 4, col, who == null ? 0.35F : 0.95F);
+            if (who == null) rect(g, sx - 2, sy - 2, sx + 3, sy + 3, 0x000000, 0.55F);
+            if (i == 0) text(g, font, "D", sx + 5, sy - 3, ICE, 0.7F, false);
+        }
+        int mine = seated.indexOf(me);
+        if (mine >= 0) text(g, font, mine == 0 ? "SEAT: DRIVER" : "SEAT: TROOP " + mine, x0 + w + 6, top + h / 2 - 4, ICE, 0.75F, false);
     }
 }

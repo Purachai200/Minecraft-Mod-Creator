@@ -453,6 +453,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         float before = getDashCharge();
         super.performDash(forward, strafe);
         if (getDashCharge() < before) {
+            this.dashAnimTicks = 14;
             this.level().playSound(null, this.blockPosition(), ModSounds.TITAN_DASH.get(), SoundSource.PLAYERS, 2.5F, 1.0F);
             this.level().broadcastEntityEvent(this, EVENT_DASH);
         }
@@ -644,11 +645,14 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
         Vec3 vel = this.getDeltaMovement();
         // Pull velocity toward the wanted ground velocity; dash impulses bleed off naturally this way.
         // While a dash is bleeding off, hold most of the thrust so it carries ~10 blocks.
-        double blend = !grounded ? (hasFlight ? 0.08D : 0.02D) : (this.dashAnimTicks > 0 ? 0.12D : 0.25D);
+        double blend = !grounded ? (hasFlight ? 0.08D : 0.04D) : (this.dashAnimTicks > 0 ? 0.06D : 0.25D);
         double vx = vel.x + (wantX - vel.x) * blend;
         double vz = vel.z + (wantZ - vel.z) * blend;
         double vy = vel.y;
-        if (!this.isNoGravity()) vy -= 0.08D;
+        if (!this.isNoGravity()) {
+            double grav = grounded ? 0.08D : 0.16D * c.getWeightMultiplier();
+            vy -= grav;
+        }
 
         if (hasFlight) {
             double groundY = getGroundYBelow((int) flight.getMaxFlightCeiling() + 5);
@@ -1764,7 +1768,7 @@ public abstract class BaseTitanEntity extends BaseMechEntity implements GeoEntit
     private void spawnRocket(Player pilot, Vec3 origin, Vec3 dir) {
         TitanBulletEntity rocket = new TitanBulletEntity(this.level(), pilot, 28.0F).withWeapon(TitanWeapon.ROCKET_POD);
         rocket.setPos(origin.x, origin.y, origin.z);
-        rocket.shoot(dir.x, dir.y, dir.z, 2.4F, 0.05F);
+        rocket.shoot(dir.x, dir.y, dir.z, 4.5F, 0.05F);
         this.level().addFreshEntity(rocket);
 
         if (this.level() instanceof ServerLevel serverLevel) {

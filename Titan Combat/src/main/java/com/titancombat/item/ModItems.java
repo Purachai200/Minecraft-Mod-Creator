@@ -75,6 +75,15 @@ public class ModItems {
     public static final RegistryObject<Item> OCEAN_CARRIER = ITEMS.register("ocean_carrier",
             () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.OCEAN_CARRIER::get, "Oceanic Super-Carrier Barge", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
+    public static final RegistryObject<Item> PATROL_BOAT = ITEMS.register("patrol_boat",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.PATROL_BOAT::get, "Coastal Patrol Boat", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> PATROL_FRIGATE = ITEMS.register("patrol_frigate",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.PATROL_FRIGATE::get, "Ocean Patrol Frigate", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> SKY_CARRIER = ITEMS.register("sky_carrier",
+            () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.SKY_CARRIER::get, "Sky Carrier", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
     public static final RegistryObject<Item> TACTICAL_TRUCK = ITEMS.register("tactical_truck",
             () -> new TransportVehicleDeployItem(com.titancombat.entity.ModEntities.TACTICAL_TRUCK::get, "Heavy Tactical Technical", new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 

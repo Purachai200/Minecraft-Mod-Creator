@@ -1,0 +1,140 @@
+{
+ "format_version": "1.8.0",
+ "animations": {
+  "animation.c17_airlifter.idle": {
+   "loop": true,
+   "bones": {
+    "cargo_ramp": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  "animation.c17_airlifter.taxi": {
+   "loop": true,
+   "animation_length": 0.4,
+   "bones": {
+    "wheel_ml0": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_ml1": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_ml2": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_mr0": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_mr1": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_mr2": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_nose": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "cargo_ramp": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  "animation.c17_airlifter.ramp_open": {
+   "loop": true,
+   "bones": {
+    "cargo_ramp": {
+     "rotation": [
+      -135,
+      0,
+      0
+     ]
+    }
+   }
+  }
+ }
+}

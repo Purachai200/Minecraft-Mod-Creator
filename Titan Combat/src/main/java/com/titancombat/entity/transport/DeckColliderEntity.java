@@ -33,6 +33,11 @@ public class DeckColliderEntity extends Entity {
     private static final EntityDataAccessor<Float> LY = SynchedEntityData.defineId(DeckColliderEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> LZ = SynchedEntityData.defineId(DeckColliderEntity.class, EntityDataSerializers.FLOAT);
 
+    /** The hull's pose as of this tile's last tick. Not parent.xo: a driven hull is moved by network packets before it ticks, which would reset xo and hide the motion. */
+    private double px, py, pz;
+    private float pyaw;
+    private boolean seen = false;
+
     public DeckColliderEntity(EntityType<?> type, Level level) {
         super(type, level);
         this.noPhysics = true;
@@ -106,23 +111,28 @@ public class DeckColliderEntity extends Entity {
             return;
         }
         // Pick up riders on the tile's old position first: if the ship bobs up before we look, they'd end up inside the tile and drop through
+        if (!seen) {
+            seen = true;
+            px = parent.getX(); py = parent.getY(); pz = parent.getZ(); pyaw = parent.getYRot();
+        }
         java.util.List<Entity> riders = ridersOnTop(parent);
         followParent(parent);
         carryRiders(parent, riders);
+        px = parent.getX(); py = parent.getY(); pz = parent.getZ(); pyaw = parent.getYRot();
     }
 
     private java.util.List<Entity> ridersOnTop(Entity parent) {
         AABB top = this.getBoundingBox();
         // 2-block margin: this box trails the hull by a tick, and a seam rider may belong to this tile while just past its edge
-        AABB zone = new AABB(top.minX - 2.0D, top.maxY - 0.3D, top.minZ - 2.0D, top.maxX + 2.0D, top.maxY + 0.6D, top.maxZ + 2.0D);
+        AABB zone = new AABB(top.minX - 2.0D, top.maxY - 1.2D, top.minZ - 2.0D, top.maxX + 2.0D, top.maxY + 0.8D, top.maxZ + 2.0D);
         return this.level().getEntities(this, zone, e -> !(e instanceof DeckColliderEntity) && e != parent && !e.isPassenger()
-                && e.getY() >= top.maxY - 0.3D && claims(parent, e));
+                && e.getY() >= top.maxY - 1.2D && claims(parent, e));
     }
 
     /** Tiles overlap, so a rider belongs only to the nearest tile at its height (in the hull's frame, so every tile agrees); otherwise it is carried twice per tick. */
     private boolean claims(Entity parent, Entity e) {
-        float yaw = -parent.yRotO * Mth.DEG_TO_RAD; // world -> parent's local frame, as of last tick like the carry itself
-        double rx = e.getX() - parent.xo, rz = e.getZ() - parent.zo;
+        float yaw = -pyaw * Mth.DEG_TO_RAD; // world -> parent's local frame, as of last tick like the carry itself
+        double rx = e.getX() - px, rz = e.getZ() - pz;
         double lx = rx * Math.cos(yaw) - rz * Math.sin(yaw), lz = rx * Math.sin(yaw) + rz * Math.cos(yaw);
         double mine = localDistSqr(lx, lz);
         for (DeckColliderEntity t : this.level().getEntitiesOfClass(DeckColliderEntity.class, e.getBoundingBox().inflate(3.0D),
@@ -144,13 +154,15 @@ public class DeckColliderEntity extends Entity {
 
     /** Anything standing on this tile moves and turns with the ship. Players are moved on their own client (it owns their position). */
     private void carryRiders(Entity parent, java.util.List<Entity> riders) {
-        double dx = parent.getX() - parent.xo, dy = parent.getY() - parent.yo, dz = parent.getZ() - parent.zo;
-        float dYaw = Mth.wrapDegrees(parent.getYRot() - parent.yRotO);
+        double dy = parent.getY() - py;
+        float dYaw = Mth.wrapDegrees(parent.getYRot() - pyaw);
         double deckTop = this.getBoundingBox().maxY;
         for (Entity e : riders) {
-            boolean owner = e instanceof Player ? e.isControlledByLocalInstance() && this.level().isClientSide : !this.level().isClientSide;
+            // A player moves on their own client; so does an aircraft they fly (ours or another mod's, e.g. Immersive Aircraft). Everything else moves on the server.
+            Entity pilot = e instanceof Player ? e : e.getControllingPassenger();
+            boolean owner = pilot instanceof Player p ? this.level().isClientSide && p.isLocalPlayer() : !this.level().isClientSide;
             if (!owner) continue;
-            double rx = e.getX() - parent.xo, rz = e.getZ() - parent.zo; // relative to where the ship was last tick
+            double rx = e.getX() - px, rz = e.getZ() - pz; // relative to where the ship was last tick
             float r = dYaw * Mth.DEG_TO_RAD;
             double nx = rx * Math.cos(r) - rz * Math.sin(r), nz = rx * Math.sin(r) + rz * Math.cos(r);
             // Ride the deck height exactly so the bob never leaves anything sunk into the slab

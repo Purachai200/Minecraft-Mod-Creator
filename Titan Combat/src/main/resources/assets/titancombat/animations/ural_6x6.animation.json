@@ -1,0 +1,212 @@
+{
+ "format_version": "1.8.0",
+ "animations": {
+  "animation.ural_6x6.idle": {
+   "loop": true,
+   "bones": {
+    "tailgate": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "drop_side_l": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "drop_side_r": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  "animation.ural_6x6.drive": {
+   "loop": true,
+   "animation_length": 0.4,
+   "bones": {
+    "wheel_fl": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_fr": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_ml": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_mr": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_rl": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_rr": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "tailgate": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "drop_side_l": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "drop_side_r": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  "animation.ural_6x6.deck_open": {
+   "loop": true,
+   "bones": {
+    "tailgate": {
+     "rotation": [
+      -90,
+      0,
+      0
+     ]
+    },
+    "drop_side_l": {
+     "rotation": [
+      0,
+      0,
+      90
+     ]
+    },
+    "drop_side_r": {
+     "rotation": [
+      0,
+      0,
+      -90
+     ]
+    }
+   }
+  },
+  "animation.ural_6x6.beam_rock": {
+   "loop": true,
+   "animation_length": 2.0,
+   "bones": {
+    "walking_beam_l": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "1.0": [
+       6,
+       0,
+       0
+      ],
+      "2.0": [
+       0,
+       0,
+       0
+      ]
+     }
+    },
+    "walking_beam_r": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "1.0": [
+       -6,
+       0,
+       0
+      ],
+      "2.0": [
+       0,
+       0,
+       0
+      ]
+     }
+    }
+   }
+  }
+ }
+}

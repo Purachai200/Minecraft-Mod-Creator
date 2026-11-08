@@ -15,24 +15,24 @@ import java.util.function.Supplier;
  */
 public enum TitanWeapon {
     //                 id                  factory chassis      mag  reload cd  dmg    speed spread pellets raise ignite boom
-    SPLITTER_RIFLE("splitter_rifle", TitanClass.ION,       24,  50,  8,  30.0F, 2.8F, 0.05F, 1,  7,  0, 0.0F, ModSounds.ION_FIRE),
-    THERMITE_LAUNCHER("thermite_launcher", TitanClass.SCORCH, 6, 70, 18, 45.0F, 2.0F, 0.1F, 1,  9, 10, 1.2F, ModSounds.SCORCH_FIRE),
-    LEADWALL("leadwall", TitanClass.RONIN,                  8,  50, 12, 11.0F, 2.5F, 5.0F, 6,  6,  0, 0.0F, ModSounds.RONIN_FIRE),
-    TRACKER_CANNON("tracker_cannon", TitanClass.TONE,      12,  60,  9, 38.0F, 3.0F, 0.0F, 1,  8,  0, 1.0F, ModSounds.TONE_FIRE),
-    PREDATOR_CANNON("predator_cannon", TitanClass.LEGION, 100,  90,  3, 13.0F, 3.2F, 0.45F, 1, 16,  0, 0.0F, ModSounds.LEGION_FIRE),
-    XO16_CHAINGUN("xo16_chaingun", TitanClass.MONARCH,     50,  55,  5, 18.0F, 2.8F, 0.15F, 1,  8,  0, 0.0F, ModSounds.MONARCH_FIRE),
-    PLASMA_RAILGUN("plasma_railgun", TitanClass.NORTHSTAR,  6,  60, 25, 90.0F, 4.5F, 0.0F, 1, 12,  0, 0.0F, ModSounds.NORTHSTAR_FIRE),
+    SPLITTER_RIFLE("splitter_rifle", TitanClass.ION,       24,  50,  8,  30.0F, 6.8F, 0.05F, 1,  7,  0, 0.0F, ModSounds.ION_FIRE),
+    THERMITE_LAUNCHER("thermite_launcher", TitanClass.SCORCH, 6, 70, 18, 45.0F, 4.2F, 0.1F, 1,  9, 10, 1.2F, ModSounds.SCORCH_FIRE),
+    LEADWALL("leadwall", TitanClass.RONIN,                  8,  50, 12, 11.0F, 6.0F, 5.0F, 6,  6,  0, 0.0F, ModSounds.RONIN_FIRE),
+    TRACKER_CANNON("tracker_cannon", TitanClass.TONE,      12,  60,  9, 38.0F, 7.2F, 0.0F, 1,  8,  0, 1.0F, ModSounds.TONE_FIRE),
+    PREDATOR_CANNON("predator_cannon", TitanClass.LEGION, 100,  90,  3, 13.0F, 7.5F, 0.45F, 1, 16,  0, 0.0F, ModSounds.LEGION_FIRE),
+    XO16_CHAINGUN("xo16_chaingun", TitanClass.MONARCH,     50,  55,  5, 18.0F, 7.2F, 0.15F, 1,  8,  0, 0.0F, ModSounds.MONARCH_FIRE),
+    PLASMA_RAILGUN("plasma_railgun", TitanClass.NORTHSTAR,  6,  60, 25, 90.0F, 10.0F, 0.0F, 1, 12,  0, 0.0F, ModSounds.NORTHSTAR_FIRE),
     MINING_DRILL("mining_drill", TitanClass.TROOPER, 100, 30, 4, 25.0F, 2.0F, 0.0F, 1, 4, 0, 0.0F, () -> net.minecraft.sounds.SoundEvents.GRINDSTONE_USE),
     CHAINSAW("chainsaw", TitanClass.TROOPER, 100, 30, 5, 35.0F, 2.0F, 0.0F, 1, 4, 0, 0.0F, () -> net.minecraft.sounds.SoundEvents.WOOD_BREAK),
-    LIGHT_SMG("light_smg", TitanClass.SCOUT,               60,  40,  2,  9.0F, 3.4F, 0.10F, 1,  5,  0, 0.0F, ModSounds.ION_FIRE),
-    HEAVY_ASSAULT_RIFLE("heavy_assault_rifle", TitanClass.TROOPER, 32, 45, 4, 16.0F, 3.5F, 0.04F, 1, 6, 0, 0.0F, ModSounds.MONARCH_FIRE),
-    ROTARY_MACHINE_GUN("rotary_machine_gun", TitanClass.TROOPER, 120, 75, 2, 11.0F, 3.2F, 0.18F, 1, 10, 0, 0.0F, ModSounds.LEGION_FIRE),
-    ROCKET_POD("rocket_pod", TitanClass.TROOPER, 12, 60, 12, 35.0F, 2.2F, 0.08F, 1, 8, 4, 2.2F, ModSounds.TONE_FIRE),
+    LIGHT_SMG("light_smg", TitanClass.SCOUT,               60,  40,  2,  9.0F, 6.5F, 0.10F, 1,  5,  0, 0.0F, ModSounds.ION_FIRE),
+    HEAVY_ASSAULT_RIFLE("heavy_assault_rifle", TitanClass.TROOPER, 32, 45, 4, 16.0F, 7.2F, 0.04F, 1, 6, 0, 0.0F, ModSounds.MONARCH_FIRE),
+    ROTARY_MACHINE_GUN("rotary_machine_gun", TitanClass.TROOPER, 120, 75, 2, 11.0F, 7.5F, 0.18F, 1, 10, 0, 0.0F, ModSounds.LEGION_FIRE),
+    ROCKET_POD("rocket_pod", TitanClass.TROOPER, 12, 60, 12, 35.0F, 4.5F, 0.08F, 1, 8, 4, 2.2F, ModSounds.TONE_FIRE),
     // Heavy weapons pack: modelled on the Trooper's weapon bone, so any chassis can mount them
-    ARC_CANNON("arc_cannon", TitanClass.TROOPER,             4,  60, 22, 55.0F, 3.6F, 0.0F, 1, 10,  0, 0.8F, ModSounds.ION_FIRE),
-    SCATTER_CANNON("scatter_cannon", TitanClass.TROOPER,      6,  55, 14,  9.0F, 2.4F, 4.0F, 9,  7,  0, 0.0F, ModSounds.RONIN_FIRE),
-    INFERNO_FLAMETHROWER("inferno_flamethrower", TitanClass.TROOPER, 80, 60, 2, 5.0F, 1.3F, 2.5F, 2, 6, 8, 0.0F, ModSounds.SCORCH_FIRE),
-    GRENADE_LAUNCHER("grenade_launcher", TitanClass.TROOPER,  6,  60, 16, 30.0F, 1.6F, 0.05F, 1, 8,  0, 2.0F, ModSounds.TONE_FIRE);
+    ARC_CANNON("arc_cannon", TitanClass.TROOPER,             4,  60, 22, 55.0F, 8.5F, 0.0F, 1, 10,  0, 0.8F, ModSounds.ION_FIRE),
+    SCATTER_CANNON("scatter_cannon", TitanClass.TROOPER,      6,  55, 14,  9.0F, 6.0F, 4.0F, 9,  7,  0, 0.0F, ModSounds.RONIN_FIRE),
+    INFERNO_FLAMETHROWER("inferno_flamethrower", TitanClass.TROOPER, 80, 60, 2, 5.0F, 2.2F, 2.5F, 2, 6, 8, 0.0F, ModSounds.SCORCH_FIRE),
+    GRENADE_LAUNCHER("grenade_launcher", TitanClass.TROOPER,  6,  60, 16, 30.0F, 3.6F, 0.05F, 1, 8,  0, 2.0F, ModSounds.TONE_FIRE);
 
     private final String id;
     private final TitanClass factoryChassis;

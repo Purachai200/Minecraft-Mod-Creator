@@ -87,6 +87,9 @@ public final class CockpitViewRenderer {
                 pose.mulPose(Axis.XP.rotationDegrees(-28.0F * lower));
             }
             RENDERER.render(pose, arms, buffers, null, null, light);
+            if (buffers instanceof MultiBufferSource.BufferSource bs) {
+                bs.endBatch();
+            }
         } catch (Throwable t) {
             TitanCombatMod.LOGGER.error("Failed to render first-person cockpit for {}", titan.getTitanClass(), t);
         }

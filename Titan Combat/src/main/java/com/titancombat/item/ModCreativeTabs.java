@@ -66,6 +66,9 @@ public class ModCreativeTabs {
                         output.accept(ModItems.CARGO_BARGE.get());
                         output.accept(ModItems.SKYCRANE_DRONE.get());
                         output.accept(ModItems.OCEAN_CARRIER.get());
+                        output.accept(ModItems.PATROL_BOAT.get());
+                        output.accept(ModItems.PATROL_FRIGATE.get());
+                        output.accept(ModItems.SKY_CARRIER.get());
                         output.accept(ModItems.TACTICAL_TRUCK.get());
                         output.accept(ModItems.CHINOOK_TRANSPORTER.get());
                         output.accept(ModItems.V22_OSPREY.get());

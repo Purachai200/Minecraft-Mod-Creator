@@ -61,7 +61,8 @@ public class VehicleEngineSound extends AbstractTickableSoundInstance {
         if (v instanceof TitanSkyCraneDroneEntity) return ModSounds.VEHICLE_ROTOR_DRONE.get();
         if (v instanceof TitanC130HerculesEntity) return ModSounds.VEHICLE_ENGINE_TURBOPROP.get();
         if (v instanceof TitanLcacHovercraftEntity) return ModSounds.VEHICLE_LIFT_FAN.get();
-        if (v instanceof TitanCargoBargeEntity || v instanceof TitanOceanCarrierEntity) return ModSounds.VEHICLE_ENGINE_SHIP.get();
+        if (v instanceof com.titancombat.entity.transport.TitanSkyCarrierEntity) return ModSounds.VEHICLE_LIFT_FAN.get();
+        if (v instanceof com.titancombat.entity.transport.BaseShipEntity || v instanceof TitanCargoBargeEntity || v instanceof TitanOceanCarrierEntity) return ModSounds.VEHICLE_ENGINE_SHIP.get();
         if (v instanceof TitanTacticalTruckEntity) return ModSounds.VEHICLE_ENGINE_DIESEL_LIGHT.get();
         return ModSounds.VEHICLE_ENGINE_DIESEL_HEAVY.get();
     }

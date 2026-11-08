@@ -1,0 +1,73 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.ah64_apache.idle": {
+      "loop": true,
+      "animation_length": 2.0,
+      "bones": {
+        "main_rotor": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "2.0": [
+              0,
+              360,
+              0
+            ]
+          }
+        },
+        "tail_rotor": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "2.0": [
+              0,
+              0,
+              360
+            ]
+          }
+        }
+      }
+    },
+    "animation.ah64_apache.fly": {
+      "loop": true,
+      "animation_length": 0.25,
+      "bones": {
+        "main_rotor": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.25": [
+              0,
+              360,
+              0
+            ]
+          }
+        },
+        "tail_rotor": {
+          "rotation": {
+            "0.0": [
+              0,
+              0,
+              0
+            ],
+            "0.25": [
+              0,
+              0,
+              720
+            ]
+          }
+        }
+      }
+    }
+  }
+}

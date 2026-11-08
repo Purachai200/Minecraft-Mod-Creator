@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "vehiclefleet:item/mi28_havoc"
+  }
+}

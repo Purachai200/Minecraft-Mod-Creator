@@ -1,0 +1,98 @@
+{
+ "format_version": "1.8.0",
+ "animations": {
+  "animation.technical_4x4.idle": {
+   "loop": true,
+   "bones": {
+    "tailgate": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  "animation.technical_4x4.drive": {
+   "loop": true,
+   "animation_length": 0.4,
+   "bones": {
+    "wheel_fl": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_fr": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_rl": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_rr": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "tailgate": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  "animation.technical_4x4.tailgate_open": {
+   "loop": true,
+   "bones": {
+    "tailgate": {
+     "rotation": [
+      -90,
+      0,
+      0
+     ]
+    }
+   }
+  }
+ }
+}

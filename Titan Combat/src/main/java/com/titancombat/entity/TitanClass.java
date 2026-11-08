@@ -30,7 +30,7 @@ public enum TitanClass {
     BULWARK("bulwark", "Bulwark", "Heavy Mass-Production Frame", 300.0D, 90.0F, 0.27D, 24.0D, 2.6F, 4.6F,
             4.8F, 6.2F, 5.70F, 0.50F, 4.10F, 1.40F),
     // Mass-production exoskeleton (MP-05): a bare strut frame that wears the modular armour sets.
-    EXO_FRAME("exo_frame", "Exo Frame", "Mass-Production Exoskeleton", 260.0D, 70.0F, 0.33D, 22.0D, 2.5F, 4.6F,
+    EXO_FRAME("exo_frame", "Knightmare Old Exo Frame", "Knightmare-Class Mass-Production Exoskeleton", 150.0D, 40.0F, 0.44D, 22.0D, 2.5F, 4.6F,
             4.8F, 6.2F, 5.70F, 0.50F, 4.10F, 1.40F),
     // The MP-05 inner frame wearing the real titans as armour (each archetype is one titan's shell).
     TITAN_EXO("titan_exo", "Titan Exo", "Titan-Armour Exoskeleton", 280.0D, 80.0F, 0.33D, 24.0D, 2.5F, 4.6F,

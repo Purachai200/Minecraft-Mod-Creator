@@ -36,7 +36,7 @@ public class PacketCastKeyC2S {
             if (player != null && ((!pressed && !cycleFormula) || com.youjoarms.mana.GunMana.isOurs(player.getMainHandItem()))) {
                 player.getCapability(PlayerMageProvider.MAGE_DATA).ifPresent(cap -> {
                     if (cycleFormula) {
-                        cap.setSelectedFormula(cap.getSelectedFormula().next());
+                        cap.cycleFormula();
                     } else {
                         cap.setCharging(pressed);
                     }

@@ -21,8 +21,12 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
@@ -77,7 +81,11 @@ public class GunCastEventHandler {
         Player player = event.player;
 
         player.getCapability(PlayerMageProvider.MAGE_DATA).ifPresent(cap -> {
+            FormulaType oldFormula = cap.getSelectedFormula();
             cap.applyProfile(com.youjoarms.mana.GunMana.of(player.getMainHandItem()));
+            if (!player.level().isClientSide && cap.getSelectedFormula() != oldFormula && player instanceof ServerPlayer sp) {
+                syncToPlayer(sp, cap);
+            }
             // Recharge the held gun's Mana Cell: sneak with Amethyst Shards in the off hand, one shard a second
             if (!player.level().isClientSide && player.isShiftKeyDown() && player.tickCount % 20 == 0) {
                 ItemStack held = player.getMainHandItem();
@@ -181,12 +189,38 @@ public class GunCastEventHandler {
                 }
                 case ULTIMATE -> {
                     event.setCanceled(true);
-                    HitResult hit = player.pick(160.0D, 1.0F, false);
-                    Vec3 at = hit.getLocation();
+                    Vec3 eye = player.getEyePosition(1.0F);
+                    Vec3 look = player.getViewVector(1.0F);
+                    double reach = 160.0D;
+                    Vec3 end = eye.add(look.scale(reach));
+                    HitResult blockHit = player.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+                    double maxD = blockHit.getType() != HitResult.Type.MISS ? blockHit.getLocation().distanceTo(eye) : reach;
+                    AABB aabb = player.getBoundingBox().expandTowards(look.scale(maxD)).inflate(1.5D);
+                    EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
+                            player.level(), player, eye, eye.add(look.scale(maxD)), aabb, e -> !e.isSpectator() && e.isPickable());
+
+                    Vec3 at = entityHit != null ? entityHit.getEntity().position() : (blockHit.getType() != HitResult.Type.MISS ? blockHit.getLocation() : eye.add(look.scale(48.0D)));
+
+                    if (player.level() instanceof ServerLevel serverLevel) {
+                        Vec3 dir = at.subtract(eye);
+                        double len = dir.length();
+                        int steps = (int) Math.max(8, len * 2);
+                        for (int i = 0; i < steps; i += 2) {
+                            double frac = (double) i / steps;
+                            double bx = eye.x + dir.x * frac;
+                            double by = eye.y + dir.y * frac;
+                            double bz = eye.z + dir.z * frac;
+                            serverLevel.sendParticles(ParticleTypes.END_ROD, bx, by, bz, 1, 0.04, 0.04, 0.04, 0.01);
+                            if (i % 4 == 0) {
+                                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, bx, by, bz, 1, 0.04, 0.04, 0.04, 0.02);
+                            }
+                        }
+                    }
+
                     player.level().addFreshEntity(new FormulaZoneEntity(player.level(), formula, at.x, at.y, at.z, player));
                     gun.reduceCurrentAmmoCount(gunStack);
                     player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                            SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 1.0f, 1.6f);
+                            SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 1.2f, 1.6f);
                 }
                 default -> ACTIVE_SHOT_FORMULAS.put(player.getUUID(),
                         new ShotFormula(formula, player.level().getGameTime() + SHOT_LIFETIME_TICKS));

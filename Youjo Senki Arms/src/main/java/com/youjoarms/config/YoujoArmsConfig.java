@@ -101,8 +101,8 @@ public class YoujoArmsConfig {
             builder.pop();
 
             builder.push("ultimate");
-            ultimateManaCost = builder.comment("Mana cost for Annihilation").defineInRange("manaCost", 100, 0, 1000);
-            ultimateChargeTicks = builder.comment("Ticks to charge Annihilation").defineInRange("chargeTicks", 80, 1, 600);
+            ultimateManaCost = builder.comment("Mana cost for Annihilation").defineInRange("manaCost", 50, 0, 1000);
+            ultimateChargeTicks = builder.comment("Ticks to charge Annihilation").defineInRange("chargeTicks", 40, 1, 600);
             ultimateRadius = builder.comment("Blast radius").defineInRange("radius", 11.0D, 1.0D, 32.0D);
             ultimateBlockDamage = builder.comment("Whether Annihilation breaks blocks").define("blockDamage", false);
             builder.pop();

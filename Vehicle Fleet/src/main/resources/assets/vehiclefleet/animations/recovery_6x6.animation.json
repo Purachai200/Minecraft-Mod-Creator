@@ -1,0 +1,224 @@
+{
+ "format_version": "1.8.0",
+ "animations": {
+  "animation.recovery_6x6.idle": {
+   "loop": true,
+   "bones": {}
+  },
+  "animation.recovery_6x6.drive": {
+   "loop": true,
+   "animation_length": 0.4,
+   "bones": {
+    "wheel_fl": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_fr": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_ml": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_mr": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_rl": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    },
+    "wheel_rr": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.4": [
+       360,
+       0,
+       0
+      ]
+     }
+    }
+   }
+  },
+  "animation.recovery_6x6.beacon": {
+   "loop": true,
+   "animation_length": 1.0,
+   "bones": {
+    "beacon": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "1.0": [
+       0,
+       360,
+       0
+      ]
+     }
+    }
+   }
+  },
+  "animation.recovery_6x6.outriggers_down": {
+   "loop": true,
+   "bones": {
+    "outrigger_l": {
+     "position": [
+      14,
+      0,
+      0
+     ]
+    },
+    "outrigger_r": {
+     "position": [
+      -14,
+      0,
+      0
+     ]
+    },
+    "outrigger_jack_l": {
+     "position": [
+      0,
+      -12,
+      0
+     ]
+    },
+    "outrigger_jack_r": {
+     "position": [
+      0,
+      -12,
+      0
+     ]
+    }
+   }
+  },
+  "animation.recovery_6x6.crane_work": {
+   "loop": true,
+   "animation_length": 6.0,
+   "bones": {
+    "outrigger_l": {
+     "position": [
+      14,
+      0,
+      0
+     ]
+    },
+    "outrigger_r": {
+     "position": [
+      -14,
+      0,
+      0
+     ]
+    },
+    "outrigger_jack_l": {
+     "position": [
+      0,
+      -12,
+      0
+     ]
+    },
+    "outrigger_jack_r": {
+     "position": [
+      0,
+      -12,
+      0
+     ]
+    },
+    "crane_boom": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "3.0": [
+       -20,
+       0,
+       0
+      ],
+      "6.0": [
+       0,
+       0,
+       0
+      ]
+     }
+    },
+    "crane_base": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "3.0": [
+       0,
+       30,
+       0
+      ],
+      "6.0": [
+       0,
+       0,
+       0
+      ]
+     }
+    }
+   }
+  }
+ }
+}

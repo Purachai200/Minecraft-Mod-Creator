@@ -69,6 +69,19 @@ def sym(*cubes):
     return list(cubes) + mirror(list(cubes))
 
 
+FOREARM_X, FOREARM_Z = -23.4, 10.7
+def arm_fore(cubes):
+    out = []
+    for c in cubes:
+        m = dict(c)
+        m["o"] = [2 * FOREARM_X - (c["o"][0] + c["s"][0]), c["o"][1], 2 * FOREARM_Z - (c["o"][2] + c["s"][2])]
+        if "rot" in c:
+            m["rot"] = [-c["rot"][0], c["rot"][1], -c["rot"][2]]
+        if "piv" in c:
+            m["piv"] = [2 * FOREARM_X - c["piv"][0], c["piv"][1], 2 * FOREARM_Z - c["piv"][2]]
+        out.append(m)
+    return out
+
 def arm(cubes):
     """Authored where it should sit on the right arm; pre-turned 180 degrees about the shoulder's vertical axis
     so the arm bone's rest turn puts it back."""
@@ -87,13 +100,16 @@ def arm(cubes):
 
 RIGHT_ARM1 = ball(-24.4, 94.8, 10.7, 10, "metal") + [
     B(-28.5, -20.5, 76, 90, 6.5, 15, "dark"),                                 # upper arm frame
+    B(-31, -18, 90, 102, 1, 20, "paint2"),                                     # mass-production shoulder pauldron
+    B(-31.5, -17.5, 98, 101, 3, 18, "dark"),                                  # pauldron top ridge
     B(-29, -20, 82, 86, 6, 15.5, "paint2"),                                   # frame band
     B(-27, -22, 73, 77, 7.5, 14, "metal"),
 ] + piston(-24.4, 88, 76, 16.5, w=2.2) + hub(-24, 72.5, 10.7, 12, 8.5, "metal")
 
 RIGHT_ARM2 = [
     B(-29, -19.5, 54, 70, 6, 15.5, "dark"),                                   # forearm frame
-    B(-29.5, -19, 62, 66, 5.5, 16, "paint2"),
+    B(-31, -17.5, 52, 68, 3, 18.5, "paint2"),                                 # mass-production forearm gauntlet plate
+    B(-31.5, -17, 58, 64, 4, 18, "dark"),                                     # gauntlet side block
     B(-28.5, -20, 49, 54, 6.5, 15, "metal"),                                  # wrist joint
 ] + piston(-24.2, 68, 55, 4.6, w=2.2)
 
@@ -132,18 +148,22 @@ CHEST_CORE = [
     slab(-7, -5, (106, 18), (115, 23), 2, "white"), slab(5, 7, (106, 18), (115, 23), 2, "white"),  # saber hilts
 ]
 
-FRONT = [  # upper chest / cockpit hatch
-    slab(-11, 11, (94, -9), (106, -6), 3, "paint2"),                          # hatch
-    B(-10, 10, 94, 100, -9, -5, "dark"),
+FRONT = [  # upper chest / mass-production armored cockpit hatch
+    slab(-12, 12, (94, -9.5), (107, -6), 3.5, "paint2"),                      # heavy sloped hatch plate
+    B(-10.5, 10.5, 94, 102, -9.2, -5, "dark"),
+    B(-8, -3, 98, 104, -9.8, -9.0, "vent"), B(3, 8, 98, 104, -9.8, -9.0, "vent"),  # dual chest cooling intakes
 ]
 # The bare head is its own bone so a variant wearing a full titan cockpit can hide it (TitanModel: frame_head)
+# Mass-Production Grunt Tactical Head & Visor (ดุดัน สไตล์หุ่นทหารราบมาตรฐาน)
 FRAME_HEAD = [
-    B(-5, 5, 110, 118, -4, 5, "paint2"),                                      # head
-    B(-4, 4, 110, 114, -5, -4, "dark"),                                       # face
-    B(-1, 1, 118, 123, 2, 3, "dark"),                                         # antenna mast
+    B(-6, 6, 110, 118, -4, 6, "paint2"),                                      # main armored helmet
+    B(-5.5, 5.5, 115, 118.5, -6, 5, "paint2"),                                # sloped brow brow-guard
+    B(-6.5, -5.0, 109, 116, -2, 4, "dark"), B(5.0, 6.5, 109, 116, -2, 4, "dark"),  # armored ear communications pods
+    B(-4, 4, 108, 111, -5.5, -2, "dark"),                                     # chin rebreather / intake
+    B(-0.8, 0.8, 118, 124, 0, 2, "steel"),                                    # tactical blade comms antenna
 ]
 
-EYES = [B(-3.6, -0.6, 114.2, 115.6, -5.4, -5, "visor"), B(0.6, 3.6, 114.2, 115.6, -5.4, -5, "visor")]
+EYES = [B(-4.2, 4.2, 112.5, 114.5, -6.1, -5.4, "visor")]                     # unified tactical combat visor slit
 
 LOWER_FRONT = [B(-9, 9, 84, 94, -8, -4, "paint2"), B(-7, 7, 86, 88, -8.4, -8, "vent"), B(-7, 7, 90, 92, -8.4, -8, "vent")]
 
@@ -367,11 +387,12 @@ ARCHETYPES = {"infantry": infantry, "siege": siege, "samurai": samurai, "aero": 
               "stealth": stealth, "sovereign": sovereign, "expedition": expedition}
 
 # slot -> (bone suffix, parent, pivot, side handling)
+# Pauldrons attach to body3 at shoulder sockets (like Trooper) so they stay level and don't tilt 30 deg crookedly
 SLOTS = [("head", "head", "doorUp", [0, 107, -8], None),
          ("chest", "chest", "body3", [0.5, 78.7, 17.8], None),
          ("skirt", "skirt", "body1", [0, 61.0, 7.0], None),
-         ("paul", "arm", "Arm1", ([-24.4, 94.8, 10.7], [24.4, 94.8, 10.7]), "arm"),
-         ("fore", "forearm", "Arm2", ([-23.4, 72.5, 10.7], [23.4, 72.5, 10.7]), "arm"),
+         ("paul", "arm", "body3", ([-24.4, 94.8, 10.7], [24.4, 94.8, 10.7]), "paul"),
+         ("fore", "forearm", "Arm2", ([-23.4, 72.5, 10.7], [23.4, 72.5, 10.7]), "fore"),
          ("thigh", "leg", "Leg2", ([-14.5, 43.5, 2.7], [14.8, 43.5, 2.7]), "leg"),
          ("shin", "shin", "Leg1", ([-14.5, 22.8, 3.4], [14.8, 22.8, 3.4]), "leg"),
          ("foot", "foot", "Foot", ([-14.5, 8.1, -3.4], [14.8, 8.1, -3.4]), "leg")]
@@ -402,8 +423,17 @@ def armour_bones():
             if side is None:
                 bones += [(f"armor_{name}_{aid}", parent, piv, main), (f"armor_{name}_{aid}_trim", f"armor_{name}_{aid}", piv, trim)]
                 continue
-            if side == "arm":
-                main, trim = arm(main), arm(trim)
+            if side == "paul":
+                # Pauldrons sit on body3: no arm inversion, clean shoulder placement
+                for lr, p, mm, tt in (("right", piv[0], main, trim), ("left", piv[1], mirror(main), mirror(trim))):
+                    bones += [(f"armor_{lr}_{name}_{aid}", "body3", p, mm), (f"armor_{lr}_{name}_{aid}_trim", f"armor_{lr}_{name}_{aid}", p, tt)]
+                continue
+            if side == "fore":
+                # Forearm flipped about forearm pivot
+                main, trim = arm_fore(main), arm_fore(trim)
+                for lr, p, mm, tt in (("right", piv[0], main, trim), ("left", piv[1], mirror(main), mirror(trim))):
+                    bones += [(f"armor_{lr}_{name}_{aid}", lr + "Arm2", p, mm), (f"armor_{lr}_{name}_{aid}_trim", f"armor_{lr}_{name}_{aid}", p, tt)]
+                continue
             pr = parent if parent.startswith(("Arm", "Leg", "Foot")) else parent
             for lr, p, mm, tt in (("right", piv[0], main, trim), ("left", piv[1], mirror(main), mirror(trim))):
                 bone_parent = lr + pr if pr != "Foot" else lr + "Foot"

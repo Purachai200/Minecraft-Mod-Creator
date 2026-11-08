@@ -1,0 +1,37 @@
+{
+ "format_version": "1.8.0",
+ "animations": {
+  "animation.fac_patrol.idle": {
+   "loop": true,
+   "bones": {
+    "radar": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  "animation.fac_patrol.radar_spin": {
+   "loop": true,
+   "animation_length": 4.0,
+   "bones": {
+    "radar": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "4.0": [
+       0,
+       360,
+       0
+      ]
+     }
+    }
+   }
+  }
+ }
+}

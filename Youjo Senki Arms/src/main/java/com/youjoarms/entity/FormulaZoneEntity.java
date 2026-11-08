@@ -52,7 +52,7 @@ public class FormulaZoneEntity extends Entity implements IEntityAdditionalSpawnD
 
     /** Ticks from landing to detonation. */
     public int getFuse() {
-        return getFormula() == FormulaType.ULTIMATE ? 60 : 30;
+        return getFormula() == FormulaType.ULTIMATE ? 45 : 30;
     }
 
     public float getRadius() {
@@ -102,6 +102,12 @@ public class FormulaZoneEntity extends Entity implements IEntityAdditionalSpawnD
                 }
             }
             level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, getX(), getY() + 1, getZ(), 4, radius * 0.3, 0.5, radius * 0.3, 0);
+            float damage = 80.0F;
+            for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(getX() - radius, getY() - 4, getZ() - radius,
+                    getX() + radius, getY() + 8, getZ() + radius), e -> e.distanceToSqr(this) <= radius * radius && e != owner)) {
+                e.hurt(damageSources().indirectMagic(this, owner), damage);
+            }
+            level.playSound(null, getX(), getY(), getZ(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 6.0F, 0.7F);
         } else {
             float damage = YoujoArmsConfig.COMMON.areaDamage.get().floatValue();
             for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(getX() - radius, getY() - 2, getZ() - radius,

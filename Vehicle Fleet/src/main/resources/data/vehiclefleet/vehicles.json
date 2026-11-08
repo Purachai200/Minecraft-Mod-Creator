@@ -1,0 +1,851 @@
+[
+  {
+    "id": "technical_4x4",
+    "name": "Heavy Tactical Technical 4x4",
+    "tier": 1,
+    "kind": "ground",
+    "payload": "1 Obsolete Exoframe only",
+    "seat_capacity": 2,
+    "seats": [
+      {
+        "name": "driver",
+        "pos": [
+          7.5,
+          26.0,
+          -13.8
+        ]
+      },
+      {
+        "name": "passenger",
+        "pos": [
+          -7.5,
+          26.0,
+          -13.8
+        ]
+      }
+    ],
+    "cargo": [],
+    "half_width": 21.8,
+    "length": [
+      -58,
+      66
+    ],
+    "height": 85.6,
+    "draft": 0,
+    "rgb": [
+      150,
+      132,
+      98
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": "drive",
+      "open": "tailgate_open",
+      "sling": null,
+      "beacon": null,
+      "radar": null
+    },
+    "speed": 0.34
+  },
+  {
+    "id": "ural_6x6",
+    "name": "Heavy 6x6 Off-Road Hauler",
+    "tier": 2,
+    "kind": "ground",
+    "payload": "1 kneeling Titan or 2 Exoframes",
+    "seat_capacity": 3,
+    "seats": [
+      {
+        "name": "driver",
+        "pos": [
+          10.0,
+          47.0,
+          -25.5
+        ]
+      },
+      {
+        "name": "passenger",
+        "pos": [
+          -10.0,
+          47.0,
+          -25.5
+        ]
+      },
+      {
+        "name": "centre",
+        "pos": [
+          0.0,
+          47.0,
+          -25.5
+        ]
+      }
+    ],
+    "cargo": [],
+    "half_width": 28.5,
+    "length": [
+      -78,
+      84.1
+    ],
+    "height": 124.6,
+    "draft": 0,
+    "rgb": [
+      92,
+      104,
+      72
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": "drive",
+      "open": "deck_open",
+      "sling": null,
+      "beacon": null,
+      "radar": null
+    },
+    "speed": 0.31000000000000005
+  },
+  {
+    "id": "mi17_hip",
+    "name": "Mil Mi-17 Hip Heavy Tactical Transport",
+    "tier": 2,
+    "kind": "air",
+    "payload": "1 Titan or 2 Exoframes, underslung on the ventral rig (also walkable troop hold)",
+    "seat_capacity": 2,
+    "seats": [
+      {
+        "name": "pilot",
+        "pos": [
+          8.0,
+          40.0,
+          -70.0
+        ]
+      },
+      {
+        "name": "copilot",
+        "pos": [
+          -8.0,
+          40.0,
+          -70.0
+        ]
+      }
+    ],
+    "cargo": [
+      {
+        "name": "titan_hang_point",
+        "pos": [
+          0,
+          -60,
+          0
+        ],
+        "type": "titan"
+      }
+    ],
+    "half_width": 152,
+    "length": [
+      -114.0,
+      200.0
+    ],
+    "height": 170.0,
+    "draft": 0,
+    "rgb": [
+      98,
+      112,
+      80
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": "fly",
+      "open": "cargo_open",
+      "sling": "sling",
+      "beacon": null,
+      "radar": null
+    },
+    "speed": 0.75
+  },
+  {
+    "id": "coaster_freighter",
+    "name": "Civilian Coaster Tramp Freighter",
+    "tier": 3,
+    "kind": "ship",
+    "payload": "2 Titans in the well, or 4-6 Exoframes (well + walkable deck perimeter)",
+    "seat_capacity": 1,
+    "seats": [
+      {
+        "name": "helm",
+        "pos": [
+          0.0,
+          96.0,
+          140.0
+        ]
+      }
+    ],
+    "cargo": [
+      {
+        "name": "titan_slot_a",
+        "pos": [
+          0,
+          28,
+          -120
+        ],
+        "type": "titan"
+      },
+      {
+        "name": "titan_slot_b",
+        "pos": [
+          0,
+          28,
+          -20
+        ],
+        "type": "titan"
+      }
+    ],
+    "half_width": 68.6,
+    "length": [
+      -260,
+      258
+    ],
+    "height": 254.6,
+    "draft": 24,
+    "rgb": [
+      84,
+      96,
+      108
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": null,
+      "open": null,
+      "sling": null,
+      "beacon": null,
+      "radar": "radar_spin"
+    },
+    "speed": 0.24
+  },
+  {
+    "id": "mi26_halo",
+    "name": "Mil Mi-26 Halo Strategic Heavy-Lift",
+    "tier": 3,
+    "kind": "air",
+    "payload": "up to 3 Titans (or 2 Titans + 2 Exoframes) on the ventral spreader bar; hold fits 12 troops",
+    "seat_capacity": 3,
+    "seats": [
+      {
+        "name": "pilot",
+        "pos": [
+          12.0,
+          60.0,
+          -105.0
+        ]
+      },
+      {
+        "name": "copilot",
+        "pos": [
+          -12.0,
+          60.0,
+          -105.0
+        ]
+      },
+      {
+        "name": "flight_engineer",
+        "pos": [
+          -14.0,
+          60.0,
+          -96.0
+        ]
+      }
+    ],
+    "cargo": [
+      {
+        "name": "titan_hang_a",
+        "pos": [
+          0,
+          -118,
+          -84
+        ],
+        "type": "titan"
+      },
+      {
+        "name": "titan_hang_b",
+        "pos": [
+          0,
+          -118,
+          0
+        ],
+        "type": "titan"
+      },
+      {
+        "name": "titan_hang_c",
+        "pos": [
+          0,
+          -118,
+          84
+        ],
+        "type": "titan"
+      }
+    ],
+    "half_width": 214,
+    "length": [
+      -171.0,
+      300.0
+    ],
+    "height": 255.0,
+    "draft": 0,
+    "rgb": [
+      112,
+      120,
+      88
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": "fly",
+      "open": "cargo_open",
+      "sling": "sling",
+      "beacon": null,
+      "radar": null
+    },
+    "speed": 0.6000000000000001
+  },
+  {
+    "id": "recovery_6x6",
+    "name": "Heavy 6x6 Recovery Truck",
+    "tier": 2,
+    "kind": "ground",
+    "payload": "recovers downed Titans/vehicles with a 40-degree lattice crane + front winch; carries no deck cargo",
+    "seat_capacity": 3,
+    "seats": [
+      {
+        "name": "driver",
+        "pos": [
+          10.0,
+          47.0,
+          -25.5
+        ]
+      },
+      {
+        "name": "passenger",
+        "pos": [
+          -10.0,
+          47.0,
+          -25.5
+        ]
+      },
+      {
+        "name": "centre",
+        "pos": [
+          0.0,
+          47.0,
+          -25.5
+        ]
+      }
+    ],
+    "cargo": [],
+    "half_width": 28.5,
+    "length": [
+      -88,
+      122.0
+    ],
+    "height": 167.9,
+    "draft": 0,
+    "rgb": [
+      200,
+      124,
+      40
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": "drive",
+      "open": null,
+      "sling": null,
+      "beacon": "beacon",
+      "radar": null
+    },
+    "speed": 0.31000000000000005
+  },
+  {
+    "id": "humvee_m1165",
+    "name": "M1165 Up-Armoured Humvee",
+    "tier": 1,
+    "kind": "ground",
+    "payload": "1 Obsolete Exoframe (short bed)",
+    "seat_capacity": 4,
+    "seats": [
+      {
+        "name": "driver",
+        "pos": [
+          7.0,
+          26.4,
+          -12.0
+        ]
+      },
+      {
+        "name": "passenger",
+        "pos": [
+          -7.0,
+          26.4,
+          -12.0
+        ]
+      },
+      {
+        "name": "rear_left",
+        "pos": [
+          7.0,
+          26.4,
+          6.0
+        ]
+      },
+      {
+        "name": "rear_right",
+        "pos": [
+          -7.0,
+          26.4,
+          6.0
+        ]
+      }
+    ],
+    "cargo": [],
+    "half_width": 22.6,
+    "length": [
+      -52,
+      47
+    ],
+    "height": 86.4,
+    "draft": 0,
+    "rgb": [
+      84,
+      92,
+      62
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": "drive",
+      "open": "tailgate_open",
+      "sling": null,
+      "beacon": null,
+      "radar": null
+    },
+    "speed": 0.34
+  },
+  {
+    "id": "uh60_blackhawk",
+    "name": "UH-60 Black Hawk Utility Helicopter",
+    "tier": 1,
+    "kind": "air",
+    "payload": "1 Obsolete Exoframe on the ventral hook (Titan is too heavy); cabin seats 8 troops",
+    "seat_capacity": 2,
+    "seats": [
+      {
+        "name": "pilot",
+        "pos": [
+          6.4,
+          32.0,
+          -56.0
+        ]
+      },
+      {
+        "name": "copilot",
+        "pos": [
+          -6.4,
+          32.0,
+          -56.0
+        ]
+      }
+    ],
+    "cargo": [
+      {
+        "name": "exo_hang",
+        "pos": [
+          0,
+          -60,
+          0
+        ],
+        "type": "exo"
+      }
+    ],
+    "half_width": 131,
+    "length": [
+      -91.2,
+      160.0
+    ],
+    "height": 136.0,
+    "draft": 0,
+    "rgb": [
+      74,
+      82,
+      62
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": "fly",
+      "open": null,
+      "sling": "sling",
+      "beacon": null,
+      "radar": null
+    },
+    "speed": 0.9
+  },
+  {
+    "id": "fac_patrol",
+    "name": "Fast Attack Patrol Craft",
+    "tier": 1,
+    "kind": "ship",
+    "payload": "crew only; 4 gun hard-points (2 large, 2 pintle)",
+    "seat_capacity": 2,
+    "seats": [
+      {
+        "name": "helm",
+        "pos": [
+          0.0,
+          48.0,
+          28.0
+        ]
+      },
+      {
+        "name": "co_helm",
+        "pos": [
+          -6.0,
+          48.0,
+          36.0
+        ]
+      }
+    ],
+    "cargo": [],
+    "half_width": 30,
+    "length": [
+      -140,
+      141.2
+    ],
+    "height": 154.6,
+    "draft": 18,
+    "rgb": [
+      120,
+      128,
+      136
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": null,
+      "open": null,
+      "sling": null,
+      "beacon": null,
+      "radar": "radar_spin"
+    },
+    "speed": 0.42
+  },
+  {
+    "id": "opv_cutter",
+    "name": "Offshore Patrol Vessel",
+    "tier": 2,
+    "kind": "ship",
+    "payload": "crew + 1 helicopter on the helideck (Mi-17 / UH-60 can land); 5 gun hard-points",
+    "seat_capacity": 3,
+    "seats": [
+      {
+        "name": "helm",
+        "pos": [
+          0.0,
+          84.0,
+          -50.0
+        ]
+      },
+      {
+        "name": "co_helm",
+        "pos": [
+          -10.0,
+          84.0,
+          -50.0
+        ]
+      },
+      {
+        "name": "captain",
+        "pos": [
+          0.0,
+          84.0,
+          -30.0
+        ]
+      }
+    ],
+    "cargo": [],
+    "half_width": 56.6,
+    "length": [
+      -210,
+      211.2
+    ],
+    "height": 178.4,
+    "draft": 18,
+    "rgb": [
+      206,
+      210,
+      214
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": null,
+      "open": null,
+      "sling": null,
+      "beacon": null,
+      "radar": "radar_spin"
+    },
+    "speed": 0.32999999999999996
+  },
+  {
+    "id": "corvette_stealth",
+    "name": "Stealth Corvette",
+    "tier": 3,
+    "kind": "ship",
+    "payload": "crew + 1 helicopter on the helideck; 5 gun hard-points incl. a main gun on the foredeck",
+    "seat_capacity": 3,
+    "seats": [
+      {
+        "name": "helm",
+        "pos": [
+          0.0,
+          84.0,
+          -40.0
+        ]
+      },
+      {
+        "name": "co_helm",
+        "pos": [
+          -10.0,
+          84.0,
+          -40.0
+        ]
+      },
+      {
+        "name": "captain",
+        "pos": [
+          0.0,
+          84.0,
+          -20.0
+        ]
+      }
+    ],
+    "cargo": [],
+    "half_width": 44.4,
+    "length": [
+      -260,
+      261.2
+    ],
+    "height": 199,
+    "draft": 18,
+    "rgb": [
+      112,
+      120,
+      128
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": null,
+      "open": null,
+      "sling": null,
+      "beacon": null,
+      "radar": "radar_spin"
+    },
+    "speed": 0.24
+  },
+  {
+    "id": "lpd_assault",
+    "name": "LPD Amphibious Assault Ship",
+    "tier": 3,
+    "kind": "ship",
+    "payload": "well deck dock for 3+ Titans / 8 Exoframes (stern gate opens to a ramp); flight deck for 2 helicopters (Mi-26 fits)",
+    "seat_capacity": 3,
+    "seats": [
+      {
+        "name": "helm",
+        "pos": [
+          0.0,
+          128.0,
+          -24.0
+        ]
+      },
+      {
+        "name": "co_helm",
+        "pos": [
+          -10.0,
+          128.0,
+          -24.0
+        ]
+      },
+      {
+        "name": "captain",
+        "pos": [
+          0.0,
+          128.0,
+          -10.0
+        ]
+      }
+    ],
+    "cargo": [],
+    "half_width": 52,
+    "length": [
+      -280,
+      281.0
+    ],
+    "height": 228.4,
+    "draft": 22,
+    "rgb": [
+      118,
+      124,
+      130
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": null,
+      "open": "gate_open",
+      "sling": null,
+      "beacon": null,
+      "radar": "radar_spin"
+    },
+    "speed": 0.24
+  },
+  {
+    "id": "transport_sub",
+    "name": "Transport Submarine",
+    "tier": 2,
+    "kind": "ship",
+    "payload": "2 Exoframes in the stores bay (kneeling); 1 deck gun",
+    "seat_capacity": 3,
+    "seats": [
+      {
+        "name": "helm",
+        "pos": [
+          0.0,
+          20.0,
+          30.0
+        ]
+      },
+      {
+        "name": "co_helm",
+        "pos": [
+          12.0,
+          20.0,
+          30.0
+        ]
+      },
+      {
+        "name": "captain",
+        "pos": [
+          -12.0,
+          20.0,
+          30.0
+        ]
+      }
+    ],
+    "cargo": [
+      {
+        "name": "exo_a",
+        "pos": [
+          0,
+          16,
+          90
+        ],
+        "type": "exo"
+      },
+      {
+        "name": "exo_b",
+        "pos": [
+          0,
+          16,
+          140
+        ],
+        "type": "exo"
+      }
+    ],
+    "half_width": 54,
+    "length": [
+      -260.0,
+      270
+    ],
+    "height": 173.0,
+    "draft": 60,
+    "rgb": [
+      52,
+      60,
+      70
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": "swim",
+      "open": null,
+      "sling": null,
+      "beacon": null,
+      "radar": null
+    },
+    "speed": 0.32999999999999996
+  },
+  {
+    "id": "c17_airlifter",
+    "name": "C-17 Style Strategic Airlifter",
+    "tier": 3,
+    "kind": "air",
+    "payload": "2 Titans (standing) or up to 4 Exoframes on the cargo deck; 24 jump seats",
+    "seat_capacity": 3,
+    "seats": [
+      {
+        "name": "pilot",
+        "pos": [
+          12.0,
+          46.0,
+          -296.0
+        ]
+      },
+      {
+        "name": "copilot",
+        "pos": [
+          -12.0,
+          46.0,
+          -296.0
+        ]
+      },
+      {
+        "name": "loadmaster",
+        "pos": [
+          0.0,
+          40.0,
+          -200.0
+        ]
+      }
+    ],
+    "cargo": [
+      {
+        "name": "titan_slot_a",
+        "pos": [
+          0,
+          40,
+          -60
+        ],
+        "type": "titan"
+      },
+      {
+        "name": "titan_slot_b",
+        "pos": [
+          0,
+          40,
+          100
+        ],
+        "type": "titan"
+      }
+    ],
+    "half_width": 356,
+    "length": [
+      -334,
+      340
+    ],
+    "height": 272,
+    "draft": 0,
+    "rgb": [
+      108,
+      116,
+      122
+    ],
+    "clips": {
+      "idle": "idle",
+      "move": "taxi",
+      "open": "ramp_open",
+      "sling": null,
+      "beacon": null,
+      "radar": null
+    },
+    "speed": 0.6000000000000001
+  }
+]

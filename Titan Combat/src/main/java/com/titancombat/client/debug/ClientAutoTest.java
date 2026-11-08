@@ -1931,6 +1931,10 @@ public final class ClientAutoTest {
             DriveAutoTest.run(mc);
             return;
         }
+        if (NAME.startsWith("navy")) {
+            NavyAutoTest.run(mc);
+            return;
+        }
         if (NAME.startsWith("arsenal")) {
             ArsenalAutoTest.run(mc);
             return;

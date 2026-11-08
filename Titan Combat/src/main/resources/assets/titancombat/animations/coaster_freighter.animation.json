@@ -1,0 +1,62 @@
+{
+ "format_version": "1.8.0",
+ "animations": {
+  "animation.coaster_freighter.idle": {
+   "loop": true,
+   "bones": {
+    "radar": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  "animation.coaster_freighter.radar_spin": {
+   "loop": true,
+   "animation_length": 4.0,
+   "bones": {
+    "radar": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "4.0": [
+       0,
+       360,
+       0
+      ]
+     }
+    }
+   }
+  },
+  "animation.coaster_freighter.derrick_luff": {
+   "loop": true,
+   "animation_length": 8.0,
+   "bones": {
+    "derrick_boom": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "4.0": [
+       18,
+       0,
+       0
+      ],
+      "8.0": [
+       0,
+       0,
+       0
+      ]
+     }
+    }
+   }
+  }
+ }
+}

@@ -62,6 +62,12 @@ public class TitanLcacHovercraftEntity extends BaseTransportVehicleEntity {
         return CARGO_SLOTS[Math.min(slotIndex, CARGO_SLOTS.length - 1)];
     }
 
+    /** The open deck (top 1.375 blocks, 4 wide) is solid and carries whatever stands or parks on it while the craft skims along. */
+    @Override
+    protected void spawnDeckColliders() {
+        DeckColliderEntity.spawnRow(this, 4.0F, 1.0F, 0.0F, 0.375F, -4.9D, 5.1D);
+    }
+
     /** Vertical speed that eases the hull to HOVER blocks above the water surface (null = no water under it). */
     private Double cushionLift() {
         // Steer to the surface itself, not "in water or not": that flips every tick and bounces the hull
@@ -90,13 +96,12 @@ public class TitanLcacHovercraftEntity extends BaseTransportVehicleEntity {
 
     @Override
     protected void travelTransport(LivingEntity driver, Vec3 travelVector) {
-        updateThrottle(driver, 1.0F, 0.35F, 0.025F, 0.04F, 0.008F);
-        // Rudders in the prop wash: some authority even at rest
-        float turnRate = 0.8F + 1.2F * Math.min(1.0F, Math.abs(this.currentSpeed)); // at most 40 deg/s, like the other hulls
-        this.yawDelta = -driver.xxa * turnRate * (this.currentSpeed < -0.02F ? -1.0F : 1.0F);
+        // Drives predictably like a boat on land and water
+        updateThrottle(driver, 0.9F, 0.3F, 0.03F, 0.05F, 0.01F);
+        this.yawDelta = -driver.xxa * 2.2F;
         Double lift = cushionLift();
         double vert = lift != null ? lift : gravityMotion();
-        moveAlongHeading(0.12F, vert); // low grip: it drifts through turns
+        moveAlongHeading(0.82F, vert); // Stable hover grip: no wild drill-spinning
 
         if (this.level().isClientSide && this.tickCount % 2 == 0) {
             // Spray / dust thrown out from under the skirt

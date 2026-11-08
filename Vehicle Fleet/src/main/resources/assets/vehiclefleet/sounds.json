@@ -1,0 +1,58 @@
+{
+  "vehicle_rotor_helo_heavy": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/rotor_helo_heavy", "stream": false}]
+  },
+  "vehicle_rotor_helo_light": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/rotor_helo_light", "stream": false}]
+  },
+  "vehicle_rotor_helo_littlebird": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/rotor_helo_littlebird", "stream": false}]
+  },
+  "vehicle_rotor_helo_apache": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/rotor_helo_apache", "stream": false}]
+  },
+  "vehicle_rotor_helo_venom": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/rotor_helo_venom", "stream": false}]
+  },
+  "vehicle_rotor_helo_havoc": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/rotor_helo_havoc", "stream": false}]
+  },
+  "vehicle_rotor_helo_tiger": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/rotor_helo_tiger", "stream": false}]
+  },
+  "vehicle_engine_jet_heavy": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/engine_jet_heavy", "stream": false}]
+  },
+  "vehicle_engine_diesel_light": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/engine_diesel_light", "stream": false}]
+  },
+  "vehicle_engine_diesel_heavy": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/engine_diesel_heavy", "stream": false}]
+  },
+  "vehicle_engine_ship": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/engine_ship", "stream": false}]
+  },
+  "vehicle_engine_submarine": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/engine_submarine", "stream": false}]
+  },
+  "vehicle_horn_truck": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/horn_truck", "stream": false}]
+  },
+  "vehicle_horn_ship": {
+    "category": "neutral",
+    "sounds": [{"name": "vehiclefleet:vehicle/horn_ship", "stream": false}]
+  }
+}

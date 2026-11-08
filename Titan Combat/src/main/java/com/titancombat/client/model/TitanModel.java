@@ -143,9 +143,10 @@ public class TitanModel<T extends BaseTitanEntity> extends GeoModel<T> {
             addRotation("cape", -(lift + 0.05F + 0.04F * Mth.sin(t * 0.12F)), 0, 0.03F * Mth.sin(t * 0.09F));
         }
         if (titan.getTitanClass() == TitanClass.RONIN) {
-            boolean swordOut = titan.getEntityData().get(BaseTitanEntity.DATA_IS_MELEEING);
-            setHidden("sword", !swordOut);
-            setHidden("swordBack", swordOut);
+            boolean melee = titan.getEntityData().get(BaseTitanEntity.DATA_IS_MELEEING);
+            boolean holdSword = melee || (!stowed && !unarmed);
+            setHidden("sword", !holdSword);
+            setHidden("swordBack", holdSword);
         }
 
         BaseTitanEntity.Gait gait = titan.getGait();

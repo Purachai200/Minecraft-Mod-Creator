@@ -1,0 +1,56 @@
+{
+ "format_version": "1.8.0",
+ "animations": {
+  "animation.lpd_assault.idle": {
+   "loop": true,
+   "bones": {
+    "stern_gate": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "radar": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  "animation.lpd_assault.radar_spin": {
+   "loop": true,
+   "animation_length": 4.0,
+   "bones": {
+    "radar": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "4.0": [
+       0,
+       360,
+       0
+      ]
+     }
+    }
+   }
+  },
+  "animation.lpd_assault.gate_open": {
+   "loop": true,
+   "bones": {
+    "stern_gate": {
+     "rotation": [
+      -90,
+      0,
+      0
+     ]
+    }
+   }
+  }
+ }
+}

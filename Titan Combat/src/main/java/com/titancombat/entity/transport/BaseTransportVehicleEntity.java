@@ -373,10 +373,20 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         return super.mobInteract(player, hand);
     }
 
+    private boolean collidersSpawned = false;
+
+    /** Ships and hovercraft override this to lay walkable deck tiles (see DeckColliderEntity); whatever stands on them rides along. */
+    protected void spawnDeckColliders() {
+    }
+
     @Override
     public void tick() {
         this.yawDelta = 0.0F;
         super.tick();
+        if (!this.level().isClientSide && !this.collidersSpawned) {
+            this.collidersSpawned = true;
+            spawnDeckColliders();
+        }
         // A vehicle hull points where it drives, never where a mob body would turn to look
         this.yBodyRot = this.getYRot();
         this.yHeadRot = this.getYRot();
@@ -449,6 +459,11 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
 
         if (this.hasCargo() != hasTitan && !this.level().isClientSide) {
             setHasCargo(hasTitan);
+        }
+
+        if (!this.level().isClientSide) {
+            updateLampsBlockLight();
+            tickInteriorPhysics();
         }
     }
 
@@ -555,6 +570,27 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
 
     /** Offset for the driver's seat (Seat 0). */
     protected abstract Vec3 getDriverSeatOffset();
+
+    /** Player seats (driver + troop seats). Vehicles with troop seats override this. */
+    public int getPlayerSeatCapacity() {
+        return 1;
+    }
+
+    /** Local seat position (+X left, +Y up, +Z forward) for player seat {@code idx}; 0 = driver. */
+    public Vec3 getPlayerSeatOffset(int idx) {
+        if (idx > 0) {
+            if (this instanceof TitanV22OspreyEntity osprey) return osprey.getPassengerTroopOffset(idx - 1);
+            if (this instanceof TitanArmoredApcEntity apc) return apc.getTroopSeatOffset(idx - 1);
+        }
+        return getDriverSeatOffset();
+    }
+
+    /** Players currently seated; seat i is taken by the i-th player in passenger order (same order seatOffset uses). */
+    public java.util.List<Player> getSeatedPlayers() {
+        java.util.List<Player> out = new java.util.ArrayList<>();
+        for (Entity p : this.getPassengers()) if (p instanceof Player pl) out.add(pl);
+        return out;
+    }
 
     /** Offset for the Titan's cargo mounting position on the deck (Seat 1+). */
     protected abstract Vec3 getTitanCargoOffset(int slotIndex);
@@ -709,9 +745,6 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         moveFunction.accept(passenger, seat.x, seat.y, seat.z);
 
         if (passenger instanceof Player player) {
-            // Turn the driver/passenger's view with the hull but leave mouse-look free (full 360 freedom for TACZ guns!)
-            player.setYRot(player.getYRot() + this.yawDelta);
-            player.setYHeadRot(player.getYHeadRot() + this.yawDelta);
             if (this.getPassengers().indexOf(player) == 0) {
                 player.yBodyRot = this.getYRot();
             }
@@ -771,6 +804,16 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         tag.putInt("Faction", getFaction().getId());
         tag.putFloat("PropulsionDamage", getPropulsionDamage());
         tag.putInt("Camo", getCamo());
+        if (!activeLightBlocks.isEmpty()) {
+            net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+            for (net.minecraft.core.BlockPos pos : activeLightBlocks) {
+                list.add(net.minecraft.nbt.NbtUtils.writeBlockPos(pos));
+            }
+            tag.put("LightBlocks", list);
+        }
+        if (!fleetVehicleId.isEmpty()) {
+            tag.putString("FleetId", fleetVehicleId);
+        }
     }
 
     @Override
@@ -783,6 +826,183 @@ public abstract class BaseTransportVehicleEntity extends PathfinderMob implement
         if (tag.contains("Faction")) setFaction(com.titancombat.entity.MechFaction.byId(tag.getInt("Faction")));
         if (tag.contains("PropulsionDamage")) setPropulsionDamage(tag.getFloat("PropulsionDamage"));
         if (tag.contains("Camo")) setCamo(tag.getInt("Camo"));
+        if (tag.contains("LightBlocks", net.minecraft.nbt.Tag.TAG_LIST)) {
+            net.minecraft.nbt.ListTag list = tag.getList("LightBlocks", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            for (int i = 0; i < list.size(); i++) {
+                activeLightBlocks.add(net.minecraft.nbt.NbtUtils.readBlockPos(list.getCompound(i)));
+            }
+        }
+        if (tag.contains("FleetId")) {
+            this.fleetVehicleId = tag.getString("FleetId");
+        }
+    }
+
+    protected String fleetVehicleId = "";
+    private final java.util.Set<net.minecraft.core.BlockPos> activeLightBlocks = new java.util.HashSet<>();
+
+    public String getVehicleTypeId() {
+        if (fleetVehicleId != null && !fleetVehicleId.isEmpty()) return fleetVehicleId;
+        if (this instanceof TitanPatrolBoatEntity) return "fac_patrol";
+        if (this instanceof TitanPatrolFrigateEntity) return "corvette_stealth";
+        if (this instanceof TitanCargoBargeEntity) return "coaster_freighter";
+        if (this instanceof TitanOceanCarrierEntity) return "lpd_assault";
+        if (this instanceof TitanC130HerculesEntity) return "c17_airlifter";
+        if (this instanceof TitanChinookTransporterEntity) return "mi26_halo";
+        if (this instanceof TitanTacticalTruckEntity) return "ural_6x6";
+        if (this instanceof TitanHaulerTruckEntity) return "technical_4x4";
+        if (this instanceof TitanRepairTruckEntity) return "recovery_6x6";
+        if (this instanceof TitanArmoredApcEntity) return "humvee_m1165";
+        if (this instanceof TitanV22OspreyEntity) return "mi17_hip";
+        if (this instanceof TitanSkyCraneDroneEntity) return "uh60_blackhawk";
+        return "technical_4x4";
+    }
+
+    public void setFleetVehicleId(String id) {
+        this.fleetVehicleId = id;
+    }
+
+    public float getYawDelta() {
+        return this.yawDelta;
+    }
+
+    public Vec3 localToWorld(Vec3 local) {
+        float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
+        double cos = Math.cos(yawRad), sin = Math.sin(yawRad);
+        return new Vec3(this.getX() + local.x * cos - local.z * sin, this.getY() + local.y, this.getZ() + local.x * sin + local.z * cos);
+    }
+
+    public Vec3 worldToLocal(Vec3 world) {
+        float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
+        double cos = Math.cos(yawRad), sin = Math.sin(yawRad);
+        double dx = world.x - this.getX(), dy = world.y - this.getY(), dz = world.z - this.getZ();
+        return new Vec3(dx * cos + dz * sin, dy, -dx * sin + dz * cos);
+    }
+
+    public boolean isInsideInterior(Vec3 worldPos) {
+        Vec3 local = worldToLocal(worldPos);
+        return com.titancombat.entity.transport.collision.VehicleCollisionManager.isInsideInterior(getVehicleTypeId(), local);
+    }
+
+    /** PART C: Places minecraft:light blocks (level 13) in air below ceiling lamps; diffs set to avoid unnecessary updates. */
+    protected void updateLampsBlockLight() {
+        if (this.level().isClientSide) return;
+        java.util.List<Vec3> lamps = com.titancombat.entity.transport.collision.VehicleCollisionManager.getLights(getVehicleTypeId());
+        if (lamps.isEmpty()) {
+            cleanupLightBlocks();
+            return;
+        }
+
+        boolean playerNearby = this.level().hasNearbyAlivePlayer(this.getX(), this.getY(), this.getZ(), 64.0D);
+        if (!playerNearby || !this.isAlive()) {
+            cleanupLightBlocks();
+            return;
+        }
+
+        java.util.Set<net.minecraft.core.BlockPos> targetPositions = new java.util.HashSet<>();
+        for (Vec3 lamp : lamps) {
+            Vec3 worldPos = localToWorld(new Vec3(lamp.x, lamp.y - 1.0D, lamp.z));
+            targetPositions.add(net.minecraft.core.BlockPos.containing(worldPos));
+        }
+
+        if (targetPositions.equals(this.activeLightBlocks)) return;
+
+        java.util.Iterator<net.minecraft.core.BlockPos> it = this.activeLightBlocks.iterator();
+        while (it.hasNext()) {
+            net.minecraft.core.BlockPos pos = it.next();
+            if (!targetPositions.contains(pos)) {
+                if (this.level().hasChunkAt(pos)) {
+                    net.minecraft.world.level.block.state.BlockState state = this.level().getBlockState(pos);
+                    if (state.is(net.minecraft.world.level.block.Blocks.LIGHT)) {
+                        this.level().removeBlock(pos, false);
+                    }
+                }
+                it.remove();
+            }
+        }
+
+        for (net.minecraft.core.BlockPos pos : targetPositions) {
+            if (!this.activeLightBlocks.contains(pos)) {
+                if (this.level().hasChunkAt(pos)) {
+                    net.minecraft.world.level.block.state.BlockState state = this.level().getBlockState(pos);
+                    if (state.isAir()) {
+                        this.level().setBlock(pos, net.minecraft.world.level.block.Blocks.LIGHT.defaultBlockState()
+                                .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 13)
+                                .setValue(net.minecraft.world.level.block.LightBlock.WATERLOGGED, false), 3);
+                        this.activeLightBlocks.add(pos);
+                    }
+                }
+            }
+        }
+    }
+
+    public void cleanupLightBlocks() {
+        if (this.activeLightBlocks.isEmpty()) return;
+        for (net.minecraft.core.BlockPos pos : this.activeLightBlocks) {
+            if (this.level().hasChunkAt(pos)) {
+                net.minecraft.world.level.block.state.BlockState state = this.level().getBlockState(pos);
+                if (state.is(net.minecraft.world.level.block.Blocks.LIGHT)) {
+                    this.level().removeBlock(pos, false);
+                }
+            }
+        }
+        this.activeLightBlocks.clear();
+    }
+
+    /** PART B: Walking physics inside moving, turning vehicles; carries riders, resolves collision, submarine air pocket. */
+    protected void tickInteriorPhysics() {
+        if (this.level().isClientSide) return;
+        var col = com.titancombat.entity.transport.collision.VehicleCollisionManager.getCollision(getVehicleTypeId());
+        if (col.getStaticBoxes().isEmpty()) return;
+
+        net.minecraft.world.phys.AABB searchBox = this.getBoundingBox().inflate(6.0D, 4.0D, 6.0D);
+        java.util.List<Player> nearbyPlayers = this.level().getEntitiesOfClass(Player.class, searchBox,
+                p -> p.isAlive() && !this.hasPassenger(p) && !p.isSpectator());
+
+        boolean includeDynamic = !isRampOpen();
+        boolean isSubmarine = "transport_sub".equals(getVehicleTypeId());
+        float turnDelta = this.yawDelta != 0.0F ? this.yawDelta : Mth.wrapDegrees(this.getYRot() - this.yRotO);
+
+        for (Player p : nearbyPlayers) {
+            Vec3 local = worldToLocal(p.position());
+            Double groundY = col.standY(local.x, local.z, local.y);
+            if (groundY != null || isInsideInterior(p.position())) {
+                Vec3 worldDelta = p.getDeltaMovement();
+                float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
+                double cos = Math.cos(yawRad), sin = Math.sin(yawRad);
+                double dlx = worldDelta.x * cos + worldDelta.z * sin;
+                double dly = worldDelta.y;
+                double dlz = -worldDelta.x * sin + worldDelta.z * cos;
+
+                Vec3 resolvedLocal = col.resolveMove(local, new Vec3(dlx, dly, dlz), includeDynamic);
+                Vec3 newWorld = localToWorld(resolvedLocal);
+                p.setPos(newWorld.x, newWorld.y, newWorld.z);
+
+                if (Math.abs(turnDelta) > 0.001F) {
+                    p.setYRot(p.getYRot() + turnDelta);
+                    p.yRotO += turnDelta;
+                }
+
+                p.fallDistance = 0.0F;
+                p.setOnGround(true);
+
+                if (isSubmarine && isInsideInterior(p.position())) {
+                    p.setAirSupply(p.getMaxAirSupply());
+                    p.clearFire();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void remove(RemovalReason reason) {
+        super.remove(reason);
+        cleanupLightBlocks();
+    }
+
+    @Override
+    public void onRemovedFromWorld() {
+        super.onRemovedFromWorld();
+        cleanupLightBlocks();
     }
 
     @Override

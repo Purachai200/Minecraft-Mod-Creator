@@ -33,6 +33,9 @@ public class PlayerMageData {
         regenOverride = p == null ? -1 : p.regenPerSecond();
         costMultiplier = p == null ? 1.0 : p.costMultiplier();
         if (mana > getMaxMana()) mana = getMaxMana();
+        if (p == null || !canAfford(selectedFormula)) {
+            setSelectedFormula(FormulaType.NONE);
+        }
     }
 
     public int getRegenPerSecond() {
@@ -69,6 +72,21 @@ public class PlayerMageData {
 
     public void setSelectedFormula(FormulaType formula) {
         this.selectedFormula = formula != null ? formula : FormulaType.NONE;
+    }
+
+    public boolean canAfford(FormulaType formula) {
+        if (formula == FormulaType.NONE) return true;
+        int cost = Math.max(1, (int) Math.round(formula.getManaCost() * costMultiplier));
+        return getMaxMana() >= cost;
+    }
+
+    public void cycleFormula() {
+        FormulaType next = selectedFormula.next();
+        int attempts = FormulaType.values().length;
+        while (!canAfford(next) && attempts-- > 0) {
+            next = next.next();
+        }
+        setSelectedFormula(canAfford(next) ? next : FormulaType.NONE);
     }
 
     public boolean isCharging() {

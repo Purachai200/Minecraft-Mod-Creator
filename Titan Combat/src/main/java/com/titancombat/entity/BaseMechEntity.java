@@ -511,7 +511,7 @@ public abstract class BaseMechEntity extends PathfinderMob {
                 -Mth.sin(yaw) * forward + Mth.cos(yaw) * strafe,
                 0,
                 Mth.cos(yaw) * forward + Mth.sin(yaw) * strafe
-        ).normalize().scale(1.5D);
+        ).normalize().scale(1.8D);
 
         this.setDeltaMovement(this.getDeltaMovement().add(direction.x, 0.15D, direction.z));
         this.hasImpulse = true;

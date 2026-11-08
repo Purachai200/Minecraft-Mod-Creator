@@ -28,6 +28,9 @@ public class TransportVehicleModel<T extends BaseTransportVehicleEntity> extends
         if (animatable instanceof com.titancombat.entity.transport.TitanLcacHovercraftEntity) return "lcac_hovercraft";
         if (animatable instanceof com.titancombat.entity.transport.TitanC130HerculesEntity) return "c130_hercules";
         if (animatable instanceof com.titancombat.entity.transport.TitanRepairTruckEntity) return "repair_truck";
+        if (animatable instanceof com.titancombat.entity.transport.TitanPatrolBoatEntity) return "patrol_boat";
+        if (animatable instanceof com.titancombat.entity.transport.TitanPatrolFrigateEntity) return "patrol_frigate";
+        if (animatable instanceof com.titancombat.entity.transport.TitanSkyCarrierEntity) return "sky_carrier";
         return "hauler_truck";
     }
 
@@ -84,8 +87,8 @@ public class TransportVehicleModel<T extends BaseTransportVehicleEntity> extends
             getBone("body").ifPresent(b -> b.setRotZ(roll));
         } else if (vehicle instanceof TitanCargoBargeEntity) {
             getBone("hull").ifPresent(b -> {
-                b.setRotZ(b.getRotZ() - roll * 1.5F); // planing hull banks into the turn
-                b.setRotX(b.getRotX() + Mth.clamp(speed * 0.06F, -0.05F, 0.07F)); // bow rises under power
+                b.setRotZ(-roll * 1.5F); // planing hull banks into the turn
+                b.setRotX(Mth.clamp(speed * 0.06F, -0.05F, 0.07F)); // bow rises under power
             });
         } else if (vehicle instanceof TitanSkyCraneDroneEntity) {
             getBone("fuselage").ifPresent(b -> {
@@ -108,11 +111,12 @@ public class TransportVehicleModel<T extends BaseTransportVehicleEntity> extends
                 b.setRotX(-vehicle.getHullPitch()); // nose dips forward in flight; the pilot's seat tilts the same way
                 b.setRotZ(vehicle.getHullRoll());
             });
-        } else if (vehicle instanceof com.titancombat.entity.transport.TitanOceanCarrierEntity
+        } else if (vehicle instanceof com.titancombat.entity.transport.BaseShipEntity
+                || vehicle instanceof com.titancombat.entity.transport.TitanOceanCarrierEntity
                 || vehicle instanceof com.titancombat.entity.transport.TitanLcacHovercraftEntity) {
             getBone("hull").ifPresent(b -> {
-                b.setRotZ(b.getRotZ() - roll * 1.8F);
-                b.setRotX(b.getRotX() + Mth.clamp(speed * 0.04F, -0.03F, 0.05F));
+                b.setRotZ(-roll * 1.8F);
+                b.setRotX(Mth.clamp(speed * 0.04F, -0.03F, 0.05F));
             });
         }
     }

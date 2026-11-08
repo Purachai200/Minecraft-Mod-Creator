@@ -1,0 +1,363 @@
+{
+ "format_version": "1.8.0",
+ "animations": {
+  "animation.mi17_hip.idle": {
+   "loop": true,
+   "bones": {
+    "sling_hook": {
+     "scale": [
+      0,
+      0,
+      0
+     ]
+    },
+    "sling_cables": {
+     "scale": [
+      0,
+      0,
+      0
+     ]
+    },
+    "sling_rig_clamp": {
+     "scale": [
+      0,
+      0,
+      0
+     ]
+    },
+    "clamshell_door_left": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "clamshell_door_right": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  "animation.mi17_hip.fly": {
+   "loop": true,
+   "animation_length": 0.3,
+   "bones": {
+    "main_rotor": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.3": [
+       0,
+       360,
+       0
+      ]
+     }
+    },
+    "tail_rotor": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.3": [
+       720,
+       0,
+       0
+      ]
+     }
+    },
+    "main_blade_1_droop": {
+     "rotation": [
+      0,
+      0,
+      -3
+     ]
+    },
+    "main_blade_1_tip": {
+     "rotation": [
+      0,
+      0,
+      -5
+     ]
+    },
+    "main_blade_2_droop": {
+     "rotation": [
+      0,
+      0,
+      -3
+     ]
+    },
+    "main_blade_2_tip": {
+     "rotation": [
+      0,
+      0,
+      -5
+     ]
+    },
+    "main_blade_3_droop": {
+     "rotation": [
+      0,
+      0,
+      -3
+     ]
+    },
+    "main_blade_3_tip": {
+     "rotation": [
+      0,
+      0,
+      -5
+     ]
+    },
+    "main_blade_4_droop": {
+     "rotation": [
+      0,
+      0,
+      -3
+     ]
+    },
+    "main_blade_4_tip": {
+     "rotation": [
+      0,
+      0,
+      -5
+     ]
+    },
+    "main_blade_5_droop": {
+     "rotation": [
+      0,
+      0,
+      -3
+     ]
+    },
+    "main_blade_5_tip": {
+     "rotation": [
+      0,
+      0,
+      -5
+     ]
+    },
+    "sling_hook": {
+     "scale": [
+      0,
+      0,
+      0
+     ]
+    },
+    "sling_cables": {
+     "scale": [
+      0,
+      0,
+      0
+     ]
+    },
+    "sling_rig_clamp": {
+     "scale": [
+      0,
+      0,
+      0
+     ]
+    },
+    "clamshell_door_left": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "clamshell_door_right": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  "animation.mi17_hip.sling": {
+   "loop": true,
+   "animation_length": 0.3,
+   "bones": {
+    "main_rotor": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.3": [
+       0,
+       360,
+       0
+      ]
+     }
+    },
+    "tail_rotor": {
+     "rotation": {
+      "0.0": [
+       0,
+       0,
+       0
+      ],
+      "0.3": [
+       720,
+       0,
+       0
+      ]
+     }
+    },
+    "main_blade_1_droop": {
+     "rotation": [
+      0,
+      0,
+      -3
+     ]
+    },
+    "main_blade_1_tip": {
+     "rotation": [
+      0,
+      0,
+      -5
+     ]
+    },
+    "main_blade_2_droop": {
+     "rotation": [
+      0,
+      0,
+      -3
+     ]
+    },
+    "main_blade_2_tip": {
+     "rotation": [
+      0,
+      0,
+      -5
+     ]
+    },
+    "main_blade_3_droop": {
+     "rotation": [
+      0,
+      0,
+      -3
+     ]
+    },
+    "main_blade_3_tip": {
+     "rotation": [
+      0,
+      0,
+      -5
+     ]
+    },
+    "main_blade_4_droop": {
+     "rotation": [
+      0,
+      0,
+      -3
+     ]
+    },
+    "main_blade_4_tip": {
+     "rotation": [
+      0,
+      0,
+      -5
+     ]
+    },
+    "main_blade_5_droop": {
+     "rotation": [
+      0,
+      0,
+      -3
+     ]
+    },
+    "main_blade_5_tip": {
+     "rotation": [
+      0,
+      0,
+      -5
+     ]
+    },
+    "clamshell_door_left": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "clamshell_door_right": {
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "sling_hook": {
+     "scale": [
+      1,
+      1,
+      1
+     ]
+    },
+    "sling_cables": {
+     "scale": [
+      1,
+      1,
+      1
+     ]
+    },
+    "sling_rig_clamp": {
+     "scale": [
+      1,
+      1,
+      1
+     ]
+    }
+   }
+  },
+  "animation.mi17_hip.cargo_open": {
+   "loop": true,
+   "bones": {
+    "sling_hook": {
+     "scale": [
+      0,
+      0,
+      0
+     ]
+    },
+    "sling_cables": {
+     "scale": [
+      0,
+      0,
+      0
+     ]
+    },
+    "sling_rig_clamp": {
+     "scale": [
+      0,
+      0,
+      0
+     ]
+    },
+    "clamshell_door_left": {
+     "rotation": [
+      0,
+      110,
+      0
+     ]
+    },
+    "clamshell_door_right": {
+     "rotation": [
+      0,
+      -110,
+      0
+     ]
+    }
+   }
+  }
+ }
+}

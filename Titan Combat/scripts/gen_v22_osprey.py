@@ -268,7 +268,7 @@ def paint_texture():
     for y in range(64):
         for x in range(64):
             c = (48, 50, 52)
-            if x % 5 in (1, 2) and y % 4 == 1: c = (20, 24, 22) if (x + y) % 3 else (70, 200, 110)  # MFD screens
+            c = (54, 57, 60) if (x % 16 == 0 or y % 16 == 0) else (62, 65, 68)
             put(a + x, b + y, c)
     a, b = cell(TIP)                                                           # blade tip bands
     for y in range(64):

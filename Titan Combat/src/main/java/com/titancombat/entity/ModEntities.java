@@ -143,6 +143,18 @@ public class ModEntities {
             ENTITY_TYPES.register("lcac_hovercraft", () -> EntityType.Builder.of(com.titancombat.entity.transport.TitanLcacHovercraftEntity::new, MobCategory.MISC)
                     .sized(7.25F, 3.0F).clientTrackingRange(16).updateInterval(2).build("lcac_hovercraft"));
 
+    public static final RegistryObject<EntityType<com.titancombat.entity.transport.TitanPatrolBoatEntity>> PATROL_BOAT =
+            ENTITY_TYPES.register("patrol_boat", () -> EntityType.Builder.of(com.titancombat.entity.transport.TitanPatrolBoatEntity::new, MobCategory.MISC)
+                    .sized(3.0F, 2.2F).clientTrackingRange(16).updateInterval(2).build("patrol_boat"));
+
+    public static final RegistryObject<EntityType<com.titancombat.entity.transport.TitanPatrolFrigateEntity>> PATROL_FRIGATE =
+            ENTITY_TYPES.register("patrol_frigate", () -> EntityType.Builder.of(com.titancombat.entity.transport.TitanPatrolFrigateEntity::new, MobCategory.MISC)
+                    .sized(6.0F, 3.0F).clientTrackingRange(16).updateInterval(2).build("patrol_frigate"));
+
+    public static final RegistryObject<EntityType<com.titancombat.entity.transport.TitanSkyCarrierEntity>> SKY_CARRIER =
+            ENTITY_TYPES.register("sky_carrier", () -> EntityType.Builder.of(com.titancombat.entity.transport.TitanSkyCarrierEntity::new, MobCategory.MISC)
+                    .sized(10.0F, 4.0F).clientTrackingRange(16).updateInterval(2).build("sky_carrier"));
+
     public static final RegistryObject<EntityType<com.titancombat.entity.transport.TitanC130HerculesEntity>> C130_HERCULES =
             ENTITY_TYPES.register("c130_hercules", () -> EntityType.Builder.of(com.titancombat.entity.transport.TitanC130HerculesEntity::new, MobCategory.MISC)
                     .sized(6.0F, 6.0F).clientTrackingRange(16).updateInterval(2).build("c130_hercules"));

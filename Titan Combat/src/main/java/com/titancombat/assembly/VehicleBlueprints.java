@@ -45,7 +45,10 @@ public final class VehicleBlueprints {
             new Blueprint(() -> ModItems.SKYCRANE_DRONE.get(), "AIR", List.of(p(CHASSIS, 1), p(REACTOR, 2), p(ACTUATOR, 2), p(IRON_BLOCK, 4))),
             new Blueprint(() -> ModItems.LCAC_HOVERCRAFT.get(), "SEA", List.of(p(CHASSIS, 2), p(COCKPIT, 1), p(REACTOR, 2), p(WOOL, 16), p(IRON_BLOCK, 6))),
             new Blueprint(() -> ModItems.CARGO_BARGE.get(), "SEA", List.of(p(CHASSIS, 1), p(COCKPIT, 1), p(PLANKS, 32), p(IRON_BLOCK, 4))),
-            new Blueprint(() -> ModItems.OCEAN_CARRIER.get(), "SEA", List.of(p(CHASSIS, 8), p(COCKPIT, 2), p(REACTOR, 6), p(ACTUATOR, 6), p(MOUNT, 3), p(IRON_BLOCK, 48)))
+            new Blueprint(() -> ModItems.OCEAN_CARRIER.get(), "SEA", List.of(p(CHASSIS, 8), p(COCKPIT, 2), p(REACTOR, 6), p(ACTUATOR, 6), p(MOUNT, 3), p(IRON_BLOCK, 48))),
+            new Blueprint(() -> ModItems.PATROL_BOAT.get(), "SEA", List.of(p(CHASSIS, 1), p(COCKPIT, 1), p(REACTOR, 1), p(PLANKS, 16), p(IRON_BLOCK, 3))),
+            new Blueprint(() -> ModItems.PATROL_FRIGATE.get(), "SEA", List.of(p(CHASSIS, 4), p(COCKPIT, 1), p(REACTOR, 3), p(ACTUATOR, 3), p(MOUNT, 2), p(IRON_BLOCK, 24))),
+            new Blueprint(() -> ModItems.SKY_CARRIER.get(), "AIR", List.of(p(CHASSIS, 10), p(COCKPIT, 2), p(REACTOR, 8), p(ACTUATOR, 8), p(MOUNT, 4), p(GLASS, 16), p(IRON_BLOCK, 64)))
     );
 
     private VehicleBlueprints() {}

@@ -29,31 +29,51 @@ PROP_Y = 86
 ENG_X = (70, 142)           # inboard / outboard nacelle x
 
 
-def shell(z0, z1, hw, yb, yt, w=4, floor=True, inner=BAY, c=None, roof=True):
-    """Hollow rounded fuselage ring slice: walls, roof, floor, with two chamfer steps so it reads round."""
-    c = c if c is not None else min(10, (yt - yb) / 4, hw / 2)
+def _zones(yb, yt, R, n=4):
+    """Rounded cross-section: (y0, y1, inset, zone) bands, quarter-ellipse corners top and bottom."""
     out = []
-    for s in (-1, 1):
-        f = {"west": inner} if s > 0 else {"east": inner}
-        out += [box(s * (hw - w), yb + c, z0, s * hw, yt - c, z1, HULL, **f),
-                box(s * (hw - w - c * 0.35), yt - c, z0, s * (hw - c * 0.35), yt - c * 0.35, z1, HULL, **f),
-                box(s * (hw - w - c * 0.35), yb + c * 0.35, z0, s * (hw - c * 0.35), yb + c, z1, BELLY, **f)]
-    if roof:
-        out.append(box(-(hw - c), yt - w, z0, hw - c, yt, z1, HULL, down=inner))
-    if floor:
-        out.append(box(-(hw - c), yb, z0, hw - c, yb + w, z1, BELLY, up=inner))
+    for i in range(n):
+        y0 = yb + R * i / n; y1 = yb + R * (i + 1) / n
+        d = R - (y0 + y1) / 2 + yb
+        out.append((y0, y1, R - (R * R - d * d) ** 0.5, "b"))
+    out.append((yb + R, yt - R, 0, "m"))
+    for i in range(n):
+        y0 = yt - R + R * i / n; y1 = yt - R + R * (i + 1) / n
+        d = (y0 + y1) / 2 - (yt - R)
+        out.append((y0, y1, R - (R * R - d * d) ** 0.5, "t"))
+    return [z for z in out if z[1] - z[0] > 0.01]
+
+
+def shell(z0, z1, hw, yb, yt, w=4, floor=True, inner=BAY, c=None, roof=True):
+    """Hollow fuselage ring slice with a smooth (4-step per corner) rounded profile."""
+    R = min(14, (yt - yb) / 3.2, hw * 0.55)
+    out = []
+    for y0, y1, ins, zone in _zones(yb, yt, R):
+        ox = hw - ins; ix = ox - w; mat = BELLY if zone == "b" else HULL
+        if zone == "t" and roof and y0 >= yt - w:
+            out.append(box(-ox, y0, z0, ox, y1, z1, HULL, down=inner)); continue
+        if zone == "b" and floor and y1 <= yb + w:
+            out.append(box(-ox, y0, z0, ox, y1, z1, BELLY, up=inner)); continue
+        if ix <= 0.5:
+            out.append(box(-ox, y0, z0, ox, y1, z1, mat)); continue
+        for s in (-1, 1):
+            out.append(box(s * ix, y0, z0, s * ox, y1, z1, mat, **({"west": inner} if s > 0 else {"east": inner})))
+        if zone == "t" and roof and y1 > yt - w: pass
     return out
 
 
 def solid(z0, z1, hw, yb, yt, mat=HULL, c=None, **faces):
-    c = c if c is not None else min(8, (yt - yb) / 3.2, hw / 2.2)
-    faces.setdefault("down", BELLY)
-    nd = {k: v for k, v in faces.items() if k != "down"}
-    return [box(-hw, yb + c, z0, hw, yt - c, z1, mat, **faces),
-            box(-hw + c * 0.35, yt - c, z0, hw - c * 0.35, yt - c * 0.35, z1, mat, **nd),
-            box(-hw + c, yt - c * 0.35, z0, hw - c, yt, z1, mat, **nd),
-            box(-hw + c * 0.35, yb + c * 0.35, z0, hw - c * 0.35, yb + c, z1, mat, **faces),
-            box(-hw + c, yb, z0, hw - c, yb + c * 0.35, z1, mat, **faces)]
+    R = min(12, (yt - yb) / 2.6, hw * 0.6)
+    out = []
+    for y0, y1, ins, zone in _zones(yb, yt, R):
+        f = dict(faces)
+        if zone != "b": f.pop("down", None)
+        else: f.setdefault("down", BELLY)
+        if zone == "b" and y1 < yb + R * 0.99: f.pop("down", None)
+        if zone == "b" and y0 > yb + 0.01: f.pop("down", None)
+        if zone != "t": f.pop("up", None)
+        out.append(box(-(hw - ins), y0, z0, hw - ins, y1, z1, mat, **f))
+    return out
 
 
 def lerp(a, b, t):
@@ -73,9 +93,11 @@ def build():
     fus, cockpit, wings, tail, gear, ramp, door, straps = [], [], [], [], [], [], [], []
 
     # --- nose (radome -> flight deck), solid below the flight deck floor
-    for z0, z1, hw, yb, yt in [(-224, -219, 7, 32, 48), (-219, -213, 14, 24, 56), (-213, -206, 20, 17, 62),
-                               (-206, -198, 25, 12, 66), (-198, -190, 29, 8, 68)]:
-        fus += solid(z0, z1, hw, yb, yt, c=min(6, hw / 2.5), up=HULL)
+    import math as _m
+    for i in range(18):                              # smooth ellipsoid radome: 2 px slices
+        z0 = -226 + 2 * i
+        f = _m.sqrt(1 - (1 - (i + 1) / 18) ** 2)
+        fus += solid(z0, z0 + 2, 4 + 26 * f, 34 - 26 * f, 46 + 22 * f, c=4, up=HULL)
     fus += [box(-26, 66, -206, 26, 68, -198, DEICE)]                    # radome / hull seam
     fus += solid(-190, -132, HW, 6, 52, c=8)                             # nose-gear bay + under-deck avionics
     fus += solid(-132, BAY_Z0, HW, 6, FLOOR, c=6)                         # forward floor block
@@ -87,10 +109,10 @@ def build():
     # windscreen: frames + glass steps (glass = alpha-0 texels)
     for z0, z1, y0, y1, hw in [(-190, -184, 68, 74, 28), (-184, -177, 74, 81, 30), (-177, -170, 81, 88, 30)]:
         cockpit += [box(-hw, y0, z0, hw, y1, z1, GLASS)]
-    cockpit += [box(-29, 66, -191, 29, 68, -189, DARK),                  # sill
-                box(-1, 68, -190, 1, 88, -169, DARK)]                   # centre post
+    cockpit += [box(-29, 66, -191, 29, 68, -189, HULL),                  # sill
+                box(-0.6, 68, -190, 0.6, 88, -169, HULL)]                   # centre post
     for s in (-1, 1):
-        cockpit += [box(s * 13, 68, -190, s * 15, 88, -169, DARK),       # windscreen posts
+        cockpit += [box(s * 13, 68, -190, s * 14.2, 88, -169, HULL),       # windscreen posts
                     box(s * 28, 68, -190, s * 31, 88, -169, HULL),       # A-pillar
                     box(s * 28.5, 64, -168, s * 32.2, 80, -150, GLASS),  # side windows
                     box(s * 28.3, 64, -150, s * 32.2, 82, -148, DARK),
@@ -144,6 +166,17 @@ def build():
                 box(s * HW, 7, 64, s * 35, 20, 74)]
         fus += [cbox(s * 41, 20, -46, 4, 6, 5, GRILLE)]                  # APU / gtc intake
 
+    # --- AC-130 gunship battery on the port (+X) side: 25 mm Gatling, 40 mm Bofors, 105 mm howitzer
+    for z, kind in ((-92, "25"), (-44, "40"), (8, "105")):
+        L = {"25": 14, "40": 24, "105": 34}[kind]; r = {"25": 3, "40": 3.5, "105": 5}[kind]
+        fus += [box(HW - 1, 44, z - 9, HW + 7, 66, z + 9, HULL), box(HW + 7, 48, z - 6, HW + 9, 62, z + 6, DARK),
+                box(HW + 9, 51, z - 4, HW + 13, 59, z + 4, DARK),                                   # cradle
+                cbox(HW + 13 + L / 2, 55, z, L, r * 1.4, r * 1.4, DARK), cbox(HW + 13 + L, 55, z, 3.5, r * 2.2, r * 2.2, SOOT),
+                cbox(HW + 20, 55, z, 3, r * 2.4, r * 2.4, DARK), box(HW + 3, 66, z - 5, HW + 6, 70, z + 5, DARK)]   # ammo feed
+        if kind == "25":
+            for dz in (-2.4, 0, 2.4): fus += [cbox(HW + 22, 55, z + dz, 12, 1.6, 1.6, DARK)]
+    fus += [cbox(26, 12, -150, 12, 12, 14, DARK), cbox(26, 12, -150, 8.5, 8.5, 16, GRILLE)]           # EO/IR ball turret
+    fus += [box(-1.5, TOP, -120, 1.5, TOP + 10, -118, DARK), box(-1.5, TOP, 100, 1.5, TOP + 8, 102, DARK)]   # blade antennas
     # --- aft upswept fuselage (hollow over ramp/door so cargo can exit)
     zs = list(range(BAY_Z1, 226, 8))
     for z0 in zs[:-1]:
@@ -200,7 +233,8 @@ def build():
               box(x + s * 10.5, cy + 2, -10, x + s * 13, cy + 6, 10, SOOT),        # exhaust stack (outboard side)
               box(x - 11.6, cy - 6, -60, x + 11.6, cy - 5, 4, DARK),               # cowl seam
               box(x - 9, cy + 8.8, -84, x + 9, TOP + 1, 30, HULL),                 # pylon into wing
-              box(x - 8, cy - 15, -40, x + 8, cy - 14.5, 0, DEICE)]
+              box(x - 8, cy - 15, -40, x + 8, cy - 14.5, 0, DEICE),
+              box(x - 4.5, cy - 4.5, 52, x + 4.5, cy + 4.5, 58, SOOT), box(x - 2.5, cy - 2.5, 58, x + 2.5, cy + 2.5, 62, DARK)]   # jet-pipe cone
         return n
 
     def prop(x):
@@ -295,6 +329,14 @@ def paint():
             for x in range(64):
                 put(a + x, b + y, fn(x, y))
 
+    ga, gb = cell(GLASS)
+    for y in range(64):
+        for x in range(64):
+            edge = x < 2 or y < 2 or x > 61 or y > 61
+            streak = (x + y) % 16 in (0, 1) or (x + y) % 16 == 7 and y % 2 == 0
+            if edge: put(ga + x, gb + y, (70, 76, 84))
+            elif streak: px[gb + y][ga + x] = (150, 200, 230, 170)
+            elif (x * 3 + y) % 11 == 0: px[gb + y][ga + x] = (110, 160, 190, 90)
     G = (196, 199, 201)              # lighter than the Osprey so faction tints read well
     for m in (HULL,):
         a, b = cell(m)

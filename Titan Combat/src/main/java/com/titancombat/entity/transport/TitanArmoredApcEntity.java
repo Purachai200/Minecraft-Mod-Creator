@@ -75,6 +75,11 @@ public class TitanArmoredApcEntity extends BaseTransportVehicleEntity {
     }
 
     @Override
+    public int getPlayerSeatCapacity() {
+        return 5; // 1 pilot/driver + 4 troops
+    }
+
+    @Override
     protected boolean canAddPassenger(net.minecraft.world.entity.Entity passenger) {
         if (com.titancombat.util.CrossModCargoHelper.isCargoEligible(passenger)) {
             return !hasCargo();
